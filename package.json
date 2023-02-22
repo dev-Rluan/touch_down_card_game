@@ -1,0 +1,28 @@
+{
+  "name": "touch_down_card_game",
+  "version": "1.0.0",
+  "description": "touch_down_card_game",
+  "scripts": {
+    "dev": "nodemon"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dev-Rluan/touch_down_card_game.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dev-Rluan/touch_down_card_game/issues"
+  },
+  "homepage": "https://github.com/dev-Rluan/touch_down_card_game#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.21.0",
+    "@babel/core": "^7.21.0",
+    "@babel/node": "^7.20.7",
+    "@babel/preset-env": "^7.20.2",
+    "express": "^4.18.2",
+    "nodemon": "^2.0.20",
+    "socket.io": "^4.6.1"
+  }
+}
