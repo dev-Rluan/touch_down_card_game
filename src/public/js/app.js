@@ -11,7 +11,7 @@ function handleNickFormSubmit(event){
     input.value='';
 }
 nickForm.addEventListener("submit", handleNickFormSubmit);
-
+// default 이름
 socket.on('change name', (msg)=>{
     const li = document.createElement('li');
     li.innerText = msg;
@@ -19,7 +19,6 @@ socket.on('change name', (msg)=>{
 })
 
 socket.on('name change successful',(msg) => {
-    console.log("결과:" + msg);
     document.getElementById('nick')
     .querySelector("li").textContent=msg;
 })
