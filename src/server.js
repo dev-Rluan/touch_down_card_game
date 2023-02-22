@@ -28,7 +28,7 @@ io.on('connection', (socket) => {
   socket.on('change name', (name) => {
     console.log(`User ${socket.id} changed name to ${name}`);
     connectedClients[socket.id] = name;
-    io.emit('name change successful',name);
+    socket.emit('name change successful',name);
   });
 
   // 클라이언트로부터 'chat message' 이벤트를 받았을 때 실행됩니다.
