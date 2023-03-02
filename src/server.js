@@ -22,7 +22,7 @@ io.on('connection', (socket) => {
 
     // 기본 이름을 지정하고 클라이언트에게 전달
   const defaultName = `User ${socket.id}`;
-  socket.emit('change name', defaultName);
+  socket.emit('connecting', defaultName);
   
   // 클라이언트에서 이름 변경 시
   socket.on('change name', (name) => {
@@ -42,7 +42,24 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('클라이언트와의 연결이 끊어졌습니다.');
   });
+
+  // 새로운 게임 방을 만들었을 때 실행됩니다.
+  socket.on('createRoom',(name) => {
+    console.log("방 생성 요청");
+    socket.emit('createResult', createRoomResult(name));
+  })
 });
+// socket end
+
+// function start
+function createRoomResult(name){
+  return {
+    success: true,
+    message: '요청 처리 완료',
+    roomname: name
+  };
+}
+// function end
 
 // 서버를 시작합니다.
 const PORT = process.env.PORT || 3000;
