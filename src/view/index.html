@@ -9,20 +9,28 @@
     
 </head>
 <body>
-    <h1>Touch Down bell</h1>
-    
-    <div>
-        <span>Your Nickname</span>
-        <span><ul id="nick"></ul></span>
-        <form id = "nickForm">
-            <input placeholder="nickname", required, type="text">
-            <button type="submit">수정</button>
-        </form>
-        
+    <div id="lobby">    
+        <h1>Touch Down bell</h1>
+        <span id="connectStatus">연결 중</span>
+        <div>
+            <span>Your Nickname</span>
+            <span><ul id="nick"></ul></span>
+            <form id = "nickForm">
+                <input placeholder="nickname", required, type="text">
+                <button type="submit">수정</button>
+            </form>            
+        </div>
+        <div class="roomList">
+            <form id = "createForm">
+                <input placeholder="방이름", required, type="text">
+                <button>방 생성하기</button>
+            </form>
+            <h3>roomList</h3>
+            <ul id="rooms"></ul>
+        </div>
     </div>
-    <div class="roomList">
-        <h3>roomList</h3>
-        <ul id="rooms"></ul>
+    <div id="gameroom">
+
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="../public/js/app.js"></script>
