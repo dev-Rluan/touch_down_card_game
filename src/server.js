@@ -3,6 +3,7 @@ const express = require('express');
 const app = express();
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
+const { v4: uuidv4 } = require('uuid');
 
 // 정적 파일을 제공하기 위해 public 폴더를 지정합니다.
 app.set("views", __dirname + "/views");
@@ -15,6 +16,8 @@ app.get('/', (req, res) => {
 
 // 연결된 모든 클라이언트의 정보를 저장하는 객체
 const connectedClients = {};
+// 연결된 방 리스트들의 정보를 저장하는 객체
+const roomList = [];
 
 // Socket.IO 이벤트 핸들러를 설정합니다.
 io.on('connection', (socket) => {
@@ -44,9 +47,19 @@ io.on('connection', (socket) => {
   });
 
   // 새로운 게임 방을 만들었을 때 실행됩니다.
-  socket.on('createRoom',(name) => {
+  socket.on('createRoom',(roomName) => {
     console.log("방 생성 요청");
-    socket.emit('createResult', createRoomResult(name));
+    const roomId = uuidv4();
+    const newRoom = {
+      id: roomId,
+      name: roomName,
+      users: [],
+      gameStarted: false
+    }
+    newRoom.users.push(connectedClients[socket.id]);
+    roomList.push(newRoom);
+    io.emit('roomList', roomList);
+    socket.emit('createResult', createRoomResult(roomName));
   })
 });
 // socket end
@@ -58,6 +71,9 @@ function createRoomResult(name){
     message: '요청 처리 완료',
     roomname: name
   };
+}
+function createRoom(){
+
 }
 // function end
 

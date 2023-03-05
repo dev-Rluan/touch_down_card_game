@@ -27,9 +27,8 @@ nickForm.addEventListener("submit", handleNickFormSubmit);
 createForm.addEventListener("submit", handleCreateFormSubmit);
 // event end
 
-// socket start
+// recv socket start
 // default 이름
-
 
 socket.on('connecting', (msg)=>{
     const li = document.createElement('li');
@@ -42,6 +41,10 @@ socket.on('name change successful',(msg) => {
     document.getElementById('nick')
     .querySelector("li").textContent=msg;
 })
+
+// roomList
+socket.on('roomList',())
+
 // 방 생성 결과 반환
 socket.on('createResult',(data) => {
     if(data.success){
