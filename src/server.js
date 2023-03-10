@@ -49,27 +49,41 @@ io.on('connection', (socket) => {
   // 새로운 게임 방을 만들었을 때 실행됩니다.
   socket.on('createRoom',(roomName) => {
     console.log("방 생성 요청");
-    const roomId = uuidv4();
-    const newRoom = {
-      id: roomId,
-      name: roomName,
-      users: [],
-      gameStarted: false
+    let roomExists = roomList.some((room) => {
+      return room.name === roomName;
+    });
+    if (roomExists) {
+      socket.emit('createRoomError', '이미 존재하는 방 이름입니다.');
+    } else{
+      const roomId = uuidv4();
+      let room = {
+        id: roomId,
+        name: roomName,
+        users: [],
+        gameStarted: false
+      }
+      roomList.push(room);
+      socket.emit('createResult',createRoomResult(room));
+      socket.join(roomName);
+      socket.emit('createResult', createRoomResult(room));
+      
     }
-    newRoom.users.push(connectedClients[socket.id]);
-    roomList.push(newRoom);
-    io.emit('roomList', roomList);
-    socket.emit('createResult', createRoomResult(roomName));
+   
+  })
+
+  socket.on('roomList', () => {
+    console.log("룸 조회");
+    socket.emit('roomList', roomList);
   })
 });
 // socket end
 
 // function start
-function createRoomResult(name){
+function createRoomResult(name, room){
   return {
     success: true,
     message: '요청 처리 완료',
-    roomname: name
+    room: room
   };
 }
 function createRoom(){
