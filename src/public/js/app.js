@@ -5,6 +5,8 @@ const createForm = document.getElementById("createForm");
 const connectStatus = document.getElementById("connectStatus");
 const lobby = document.getElementById("lobby");
 const gameroom = document.getElementById("gameroom");
+const rooms = document.getElementById("rooms");
+const refreshRoom = document.getElementById("refreshRoom");
 
 // function start
 function handleNickFormSubmit(event){
@@ -20,16 +22,20 @@ function handleCreateFormSubmit(event){
     socket.emit("createRoom", input.value);
     input.value='';
 }
+function handleRefreshRoom(event){
+    event.preventDefault();
+    socket.emit("roomList");
+}
 // function end
 
 // event start
 nickForm.addEventListener("submit", handleNickFormSubmit);
 createForm.addEventListener("submit", handleCreateFormSubmit);
+refreshRoom.addEventListener("submit", handleRefreshRoom);
 // event end
 
-// socket start
+// recv socket start
 // default 이름
-
 
 socket.on('connecting', (msg)=>{
     const li = document.createElement('li');
@@ -42,6 +48,18 @@ socket.on('name change successful',(msg) => {
     document.getElementById('nick')
     .querySelector("li").textContent=msg;
 })
+
+// roomList
+socket.on('roomList',(roomList) => {
+    rooms.innerHTML = "";
+    let lis = "";    
+    roomList.forEach(function(room) {
+        lis += `<li>룸 이름 :  ${room.name}</li>`;        
+        console.log(room);
+    });
+    rooms.innerHTML = lis;
+})
+
 // 방 생성 결과 반환
 socket.on('createResult',(data) => {
     if(data.success){
@@ -55,6 +73,10 @@ socket.on('createResult',(data) => {
     } else {
                 connectStatus.textContent = `에러: ${data.message}`;
     }
+})
+// 방 생성 실패
+socket.on('createRoomError',(msg) =>{
+    alert(msg);
 })
 // socket end
 
