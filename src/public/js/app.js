@@ -6,6 +6,8 @@ const connectStatus = document.getElementById("connectStatus");
 const lobby = document.getElementById("lobby");
 const gameroom = document.getElementById("gameroom");
 const rooms = document.getElementById("rooms");
+const roomname = document.getElementById("roomname");
+const headCount = document.getElementById("headCount");
 const refreshRoom = document.getElementById("refreshRoom");
 
 // function start
@@ -50,26 +52,46 @@ socket.on('name change successful',(msg) => {
 })
 
 // roomList
-socket.on('roomList',(roomList) => {
+socket.on('roomList', (roomInfos) => {
+    console.log(roomInfos);
+    console.log('룸 리스트 새로고침');
+    const roomList = JSON.parse(roomInfos);
+    console.log(roomList);
     rooms.innerHTML = "";
     let lis = "";    
-    roomList.forEach(function(room) {
-        lis += `<li>룸 이름 :  ${room.name}</li>`;        
-        console.log(room);
-    });
+    console.log('here');
+    for (const roomId in roomList) {
+        console.log('here');
+        if (roomList.hasOwnProperty(roomId)) {
+          const room = roomList[roomId];
+          lis += `<li>룸 이름 :  ${room.name}</li>`;        
+          console.log(room);
+        }
+      }
     rooms.innerHTML = lis;
 })
 
 // 방 생성 결과 반환
 socket.on('createResult',(data) => {
-    if(data.success){
-        console.log("test2");
-        lobby.remove();       
-        const ul = document.createElement('ul');
-        const li = document.createElement('li');
-        li.innerText=data.roomname;
-        ul.appendChild(li);
-        gameroom.appendChild(ul);
+    if(data.success){        
+        lobby.remove();     
+
+        const roomInfo = data.roomInfo;
+        console.log(data);
+        console.log(roomInfo)
+        roomname.innerText=roomInfo.name;
+
+        const users = roomInfo.users;
+        headCount.innerHtml = "";
+        users.forEach(user => {
+            const userItem = document.createElement('li');
+            userItem.textContent =user.name;
+            console.log('user : ' + user.id);
+
+            headCount.appendChild(userItem);
+        })
+
+        
     } else {
                 connectStatus.textContent = `에러: ${data.message}`;
     }

@@ -25,6 +25,7 @@ io.on('connection', (socket) => {
 
     // 기본 이름을 지정하고 클라이언트에게 전달
   const defaultName = `User ${socket.id}`;
+  connectedClients[socket.id] = defaultName;
   socket.emit('connecting', defaultName);
   
   // 클라이언트에서 이름 변경 시
@@ -49,41 +50,45 @@ io.on('connection', (socket) => {
   // 새로운 게임 방을 만들었을 때 실행됩니다.
   socket.on('createRoom',(roomName) => {
     console.log("방 생성 요청");
-    let roomExists = roomList.some((room) => {
-      return room.name === roomName;
-    });
-    if (roomExists) {
-      socket.emit('createRoomError', '이미 존재하는 방 이름입니다.');
-    } else{
-      const roomId = uuidv4();
-      let room = {
-        id: roomId,
-        name: roomName,
-        users: [],
-        gameStarted: false
-      }
-      roomList.push(room);
-      socket.emit('createResult',createRoomResult(room));
-      socket.join(roomName);
-      socket.emit('createResult', createRoomResult(room));
-      
+    const roomId = uuidv4();
+    if(roomName == ''){
+      roomName = connectedClients[socket.id] + '님의 게임';
     }
-   
+    roomList.push({
+      roomId: roomId,
+      name: roomName,
+      users: [],
+      status: 'waiting'
+    });
+
+    roomList[roomId].users.push({id: socket.id, name : connectedClients[socket.id], status:'waiting' });    
+    io.emit('roomList', JSON.stringify(roomList), ()=>{
+      console.log('roomList 전송 완료')
+    });
+
+    socket.join(roomName);
+    console.log(roomList);
+    console.log(roomList[roomId]);
+    
+    socket.emit('createResult', createRoomResult(roomList[roomId])) ;
   })
 
+  // 방 새로고침 요청
   socket.on('roomList', () => {
-    console.log("룸 조회");
-    socket.emit('roomList', roomList);
+    console.log('방 새로고침 요청');
+    socket.emit('roomList', JSON.stringify(roomList), ()=>{
+      console.log('roomList 전송 완료')
+    });
   })
 });
 // socket end
 
 // function start
-function createRoomResult(name, room){
+function createRoomResult(room){
   return {
     success: true,
     message: '요청 처리 완료',
-    room: room
+    roomInfo: room
   };
 }
 function createRoom(){
