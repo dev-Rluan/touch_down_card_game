@@ -59,7 +59,7 @@ socket.on('roomList', (roomInfos) => {
     console.log(roomList);
     rooms.innerHTML = "";
     let lis = "";    
-    console.log('here');
+    
     for (const roomId in roomList) {
         console.log('here');
         if (roomList.hasOwnProperty(roomId)) {
