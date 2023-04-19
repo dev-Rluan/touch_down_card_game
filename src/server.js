@@ -48,30 +48,48 @@ io.on('connection', (socket) => {
   });
 
   // 새로운 게임 방을 만들었을 때 실행됩니다.
-  socket.on('createRoom',(roomName) => {
-    console.log("방 생성 요청");
-    const roomId = uuidv4();
-    if(roomName == ''){
-      roomName = connectedClients[socket.id] + '님의 게임';
-    }
-    roomList.push({
-      roomId: roomId,
-      name: roomName,
-      users: [],
-      status: 'waiting'
-    });
+  // socket.on('createRoom',(roomName) => {
+  //   console.log("방 생성 요청");
+  //   const roomId = uuidv4();
+  //   if(roomName == ''){
+  //     roomName = connectedClients[socket.id] + '님의 게임';
+  //   }
+  //   createRoom(socket, roomName);
 
-    roomList[roomId].users.push({id: socket.id, name : connectedClients[socket.id], status:'waiting' });    
+   
+  //   io.emit('roomList', JSON.stringify(roomList), ()=>{
+  //     console.log('roomList 전송 완료')
+  //   });
+
+  //   socket.join(roomName);
+  //   console.log(roomList);
+  //   console.log(roomList[roomId]);
+    
+  //   socket.emit('createResult', createRoomResult(roomList[roomId])) ;
+  // })
+
+  // 방 생성 요청 받으면 새로운 방 생성 및 성공 응답 전송
+  socket.on('createRoom', (roomName, callback) => {
+    console.log(`방 생성 요청 받음 - 방 이름: ${roomName}`);
+    const roomId = socket.id;
+    if (!roomList[roomId]) {
+      // 해당 roomId에 방이 없을 경우에만 새로 생성
+      roomList[roomId] = {
+        name: roomName,
+        users: [],
+        status: 'waiting'
+      };
+      console.log(`방 생성 완료 - roomId: ${roomId}`);
+      callback(true, roomId);
+    } else {
+      console.log(`방 생성 실패 - 이미 존재하는 roomId: ${roomId}`);
+      callback(false, roomId);
+    }
+
     io.emit('roomList', JSON.stringify(roomList), ()=>{
       console.log('roomList 전송 완료')
     });
-
-    socket.join(roomName);
-    console.log(roomList);
-    console.log(roomList[roomId]);
-    
-    socket.emit('createResult', createRoomResult(roomList[roomId])) ;
-  })
+  });
 
   // 방 새로고침 요청
   socket.on('roomList', () => {
@@ -91,9 +109,36 @@ function createRoomResult(room){
     roomInfo: room
   };
 }
-function createRoom(){
+// 방을 생성하는 함수
+function createRoom(socket, data) {
+  const { roomName } = data;
 
+  // 이미 같은 이름의 방이 존재하는지 확인
+  const existingRoom = rooms.find(room => room.name === roomName);
+  if (existingRoom) {
+    socket.emit('createRoomError', '이미 같은 이름의 방이 존재합니다.');
+    return;
+  }
+
+  // 방 정보를 추가하고, 해당 방의 id를 반환
+  const roomId = uuidv4();
+  rooms.push({
+    id: roomId,
+    name: roomName,
+    users: [{
+      id: socket.id,
+      name: connectedClients[socket.id]
+    }],
+    status: 'waiting'
+  });
+
+  // 해당 방에 참여하도록 설정
+  socket.join(roomId);
+
+  // 방 정보를 생성한 클라이언트에게 반환
+  socket.emit('roomCreated', roomId);
 }
+
 // function end
 
 // 서버를 시작합니다.
