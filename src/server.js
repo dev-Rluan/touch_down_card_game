@@ -69,22 +69,30 @@ io.on('connection', (socket) => {
   // })
 
   // 방 생성 요청 받으면 새로운 방 생성 및 성공 응답 전송
-  socket.on('createRoom', (roomName, callback) => {
+  // 1. roomName이 같은 방이 있는지 확인
+  // 2. roomName이 같은 방이 없으면 새로운 방을 생성한다.
+  // 2-1. rooom 객체는 roomList에 새로운 랜덤시드로 roomId 생성 
+  //  - 랜덤시드로 만든다고해도 우연으로 같은 roomId가 될 수도 있으니 같은 roomId가 있으면 한번 더 만들기 -> 해당기능 function으로 빼기
+
+
+  socket.on('createRoom', (roomName) => {
     console.log(`방 생성 요청 받음 - 방 이름: ${roomName}`);
-    const roomId = socket.id;
-    if (!roomList[roomId]) {
-      // 해당 roomId에 방이 없을 경우에만 새로 생성
-      roomList[roomId] = {
-        name: roomName,
-        users: [],
-        status: 'waiting'
-      };
-      console.log(`방 생성 완료 - roomId: ${roomId}`);
-      callback(true, roomId);
-    } else {
-      console.log(`방 생성 실패 - 이미 존재하는 roomId: ${roomId}`);
-      callback(false, roomId);
-    }
+    // const roomId = socket.id;
+    createRoom(socket, roomName);
+
+    // if (!roomList[roomId]) {
+    //   // 해당 roomId에 방이 없을 경우에만 새로 생성
+    //   roomList[roomId] = {
+    //     name: roomName,
+    //     users: [],
+    //     status: 'waiting'
+    //   };
+    //   console.log(`방 생성 완료 - roomId: ${roomId}`);
+    //   // callback(true, roomId);
+    // } else {
+    //   console.log(`방 생성 실패 - 이미 존재하는 roomId: ${roomId}`);
+    //   // callback(false, roomId);
+    // }
 
     io.emit('roomList', JSON.stringify(roomList), ()=>{
       console.log('roomList 전송 완료')
@@ -111,33 +119,61 @@ function createRoomResult(room){
 }
 // 방을 생성하는 함수
 function createRoom(socket, data) {
-  const { roomName } = data;
+    const { roomName } = data;
 
-  // 이미 같은 이름의 방이 존재하는지 확인
-  const existingRoom = rooms.find(room => room.name === roomName);
-  if (existingRoom) {
-    socket.emit('createRoomError', '이미 같은 이름의 방이 존재합니다.');
-    return;
+    // 이미 같은 이름의 방이 존재하는지 확인
+    const existingRoom = roomList.find(room => room.name === roomName);
+    console.log("roomName: " ,roomName) ;
+    if (existingRoom) {
+      socket.emit('createRoomError', '이미 같은 이름의 방이 존재합니다.');
+      return;
+    }
+
+    // 방 정보를 추가하고, 해당 방의 id를 반환
+    const roomId = createRoomId();  
+    // roomList.push({
+    //   id: roomId,
+    //   name: roomName,
+    //   users: [{
+    //     id: socket.id,
+    //     name: connectedClients[socket.id],
+    //     readyStatus : 'waiting'
+    //   }],
+    //   status: 'waiting'
+    // });
+
+    roomList[roomId] ={
+      name: data,
+      users: [{
+        id: socket.id,
+        name: connectedClients[socket.id],
+        readyStatus : 'waiting'
+      }],
+      status: 'waiting'
+    };
+
+    // 해당 방에 참여하도록 설정
+    socket.join(roomId);
+
+    console.log(roomList[roomId]);
+    // 방 정보를 생성한 클라이언트에게 반환
+    socket.emit('roomCreated', roomList[roomId]);
+
   }
 
-  // 방 정보를 추가하고, 해당 방의 id를 반환
-  const roomId = uuidv4();
-  rooms.push({
-    id: roomId,
-    name: roomName,
-    users: [{
-      id: socket.id,
-      name: connectedClients[socket.id]
-    }],
-    status: 'waiting'
-  });
-
-  // 해당 방에 참여하도록 설정
-  socket.join(roomId);
-
-  // 방 정보를 생성한 클라이언트에게 반환
-  socket.emit('roomCreated', roomId);
-}
+  //2-1. rooomID 생성 함수
+  function createRoomId(){    
+    let isComple = true;
+    console.log(roomList);
+    let roomId = "";
+    while(isComple){
+      roomId = uuidv4();
+      if(!roomList.find(room => room.id === roomId)){
+        isComple = false;
+      }
+    }    
+    return roomId;
+  }
 
 // function end
 

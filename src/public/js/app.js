@@ -28,6 +28,9 @@ function handleRefreshRoom(event){
     event.preventDefault();
     socket.emit("roomList");
 }
+function handleCreateRoom(event){
+
+}
 // function end
 
 // event start
@@ -70,11 +73,30 @@ socket.on('roomList', (roomInfos) => {
       }
     rooms.innerHTML = lis;
 })
+// 방 생성 성공
+socket.on('roomCreated', (roomInfo)=>{
+    lobby.style.display = 'none';
+    
+        console.log(roomInfo);
+        console.log(roomInfo.name)
+        roomname.innerText=roomInfo.name;
+
+        const users = roomInfo.users;
+        headCount.innerHtml = "";
+        users.forEach(user => {
+            const userItem = document.createElement('li');
+            userItem.textContent =user.name;
+            console.log('user : ' + user.id);
+
+            headCount.appendChild(userItem);
+        })
+})
+
 
 // 방 생성 결과 반환
 socket.on('createResult',(data) => {
     if(data.success){        
-        lobby.remove();     
+        lobby.style.display = 'block';
 
         const roomInfo = data.roomInfo;
         console.log(data);
