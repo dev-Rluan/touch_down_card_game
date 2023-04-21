@@ -102,7 +102,8 @@ io.on('connection', (socket) => {
   // 방 새로고침 요청
   socket.on('roomList', () => {
     console.log('방 새로고침 요청');
-    socket.emit('roomList', JSON.stringify(roomList), ()=>{
+    console.log(roomList);
+    socket.emit('roomList', roomList.filter(room => room.status === 'waiting'), ()=>{
       console.log('roomList 전송 완료')
     });
   })

@@ -1,6 +1,6 @@
 const socket = io();
 const nickForm = document.getElementById("nickForm");
-const nick = document.querySelector("nick");
+const nick = document.getElementById("nick");
 const createForm = document.getElementById("createForm");
 const connectStatus = document.getElementById("connectStatus");
 const lobby = document.getElementById("lobby");
@@ -9,6 +9,8 @@ const rooms = document.getElementById("rooms");
 const roomname = document.getElementById("roomname");
 const headCount = document.getElementById("headCount");
 const refreshRoom = document.getElementById("refreshRoom");
+
+const user = [];
 
 // function start
 function handleNickFormSubmit(event){
@@ -43,22 +45,28 @@ refreshRoom.addEventListener("submit", handleRefreshRoom);
 // default 이름
 
 socket.on('connecting', (msg)=>{
-    const li = document.createElement('li');
-    li.innerText = msg;
-    document.getElementById('nick').appendChild(li);
+    // const li = document.createElement('li');
+    // li.innerText = msg;
+    // document.getElementById('nick').appendChild(li);
+    user.push({nickname : msg});
+    nick.textContent = msg;
+
     connectStatus.textContent = `연결 성공`;
 })
 
 socket.on('name change successful',(msg) => {
-    document.getElementById('nick')
-    .querySelector("li").textContent=msg;
+    nick.textContent = msg;
+    // document.getElementById('nick')
+    // .querySelector("li").textContent=msg;
 })
 
 // roomList
 socket.on('roomList', (roomInfos) => {
+    // alert(roomInfos);
     console.log(roomInfos);
+    console.log(roomInfos.name);
     console.log('룸 리스트 새로고침');
-    const roomList = JSON.parse(roomInfos);
+    const roomList = roomInfos;
     console.log(roomList);
     rooms.innerHTML = "";
     let lis = "";    
