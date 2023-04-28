@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>touch down bell</title>
+    <style>
+        
+    </style>
+    
+</head>
+<body>
+    <nav>
+    <div>
+      <a href="#">My Logo</a>
+    </div>
+    <ul>
+      <li><a href="/">Home</a></li>
+      <li><a href="#">About Us</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </nav>
+    <div id="lobby">    
+        <h1>Touch Down bell</h1>
+        <span id="connectStatus">연결 중</span>
+        <div>
+            <p><h2>Your Nickname</h2></p>
+            <p id="nick">
+                test
+            </p>
+            <form id = "nickForm">
+                <input placeholder="nickname", required, type="text">
+                <button type="submit">수정</button>
+            </form>            
+        </div>
+        <div class="roomList">
+            <form id = "createForm">
+                <input placeholder="방이름", required, type="text">
+                <button>방 생성하기</button>
+            </form>
+            <h3>roomList</h3>
+            <form id = "refreshRoom">
+                <button>방 새로고침</button>
+            </form>
+            <ul id="rooms">
+                
+            </ul>
+        </div>
+    </div>
+    <div id="gameroom">
+        <button id="reaveRoom">방 나가기</button>
+        <h1 id="roomname"></h1>
+        <ul id ="headCount">
+            
+        </ul>
+
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="../public/js/app.js"></script>
+    <link rel="stylesheet" href="../public/css/styles.css">
+</body>
+</html>
