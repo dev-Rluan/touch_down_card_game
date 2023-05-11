@@ -3,6 +3,7 @@ const express = require('express');
 const app = express();
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
+const cardGame = require('./cardGame.js');
 const { v4: uuidv4 } = require('uuid');
 
 // 정적 파일을 제공하기 위해 public 폴더를 지정합니다.
@@ -148,9 +149,12 @@ function createRoom(socket, data) {
       users: [{
         id: socket.id,
         name: connectedClients[socket.id],
-        readyStatus : 'waiting'
+        readyStatus : 'waiting', 
+        cardPack : []      
       }],
-      status: 'waiting'
+      status: 'waiting',
+      cardPack : cardGame.setTouchDownCardPack(),
+      upCardList : []      
     };
 
     // 해당 방에 참여하도록 설정
