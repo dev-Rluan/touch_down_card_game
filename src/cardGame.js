@@ -198,4 +198,11 @@ function checkCardSumTd(cardList){
     return sum;
 }
   
-
+module.exports = {
+    setTouchDownCardPack,
+    setTrumpCardPack,
+    pullCard,
+    getCardByNum,
+    divideSuffleCardTd,
+    checkCardSumTd
+  }
