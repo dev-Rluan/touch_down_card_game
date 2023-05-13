@@ -28,11 +28,11 @@
                 <div class="card-body">
                     <h4 class="card-title">Touch down bell</h4>
                     <h6 class="text-muted card-subtitle mb-2" id="connectStatus">Subtitle</h6>
-                    <p class="card-text" id="nick">Your NIck Name</p>
+                    <p><span>Your NIck Name : </span><span class="card-text" id="nick">Your NIck Name</span></p>
                     <form id="nickForm"><input class="form-control" type="text" id="nickname"><button class="btn btn-primary m-2" type="submit">수정</button></form>
                 </div>
             </div>
-            <div class="card" id="roomList">
+            <div class="card" id="roomList" >
                 <div class="card-body" id="refreshRoom"><button class="btn btn-primary float-end" type="button" data-bs-target="#modal_createRoom" data-bs-toggle="modal">방 만들기</button>
                     <h4 class="card-title">RoomList</h4>
                     <h6 class="text-muted card-subtitle mb-2">대기중인 방 목록</h6><button class="btn btn-primary d-xl-flex" type="button">새로고침</button>
@@ -50,14 +50,14 @@
                 </div>
             </div>
         </div>
-        <div class="container" id="gameroom">
+        <div class="container" id="gameroom" style="display: none;">
             <div class="card">
                 <div class="card-body"><button class="btn btn-primary float-end" id="reaveRoom" type="button">방나가기</button><button class="btn btn-primary float-end" type="button">Ready</button><button class="btn btn-secondary float-end" type="button"><i class="icon ion-android-settings"></i></button>
                     <h4 class="card-title" id="roomname">RoomName</h4>
                     <h6 class="text-muted card-subtitle mb-2"></h6>
                     <h4>UserList</h4>
-                    <div></div><span>head/maxCount</span>
-                    <ul class="list-group">
+                    <div></div><span id ="headCount">head/maxCount</span>
+                    <ul class="list-group "  id = "userList">
                         <li class="list-group-item">
                             <div class="row" id="userList">
                                 <div class="col"><span>List Group Item 1</span></div>

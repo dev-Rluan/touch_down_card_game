@@ -3,7 +3,7 @@ const express = require('express');
 const app = express();
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
-const cardGame = require('./cardGame.js');
+const cardGame = require('./cardGame');
 const { v4: uuidv4 } = require('uuid');
 
 // 정적 파일을 제공하기 위해 public 폴더를 지정합니다.
@@ -14,6 +14,8 @@ app.use("/public", express.static(__dirname + "/public"));
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/view/index.html');
 });
+
+
 
 // 연결된 모든 클라이언트의 정보를 저장하는 객체
 const connectedClients = {};
@@ -76,10 +78,10 @@ io.on('connection', (socket) => {
   //  - 랜덤시드로 만든다고해도 우연으로 같은 roomId가 될 수도 있으니 같은 roomId가 있으면 한번 더 만들기 -> 해당기능 function으로 빼기
 
 
-  socket.on('createRoom', (roomName) => {
+  socket.on('createRoom', (roomName, maxCnt) => {
     console.log(`방 생성 요청 받음 - 방 이름: ${roomName}`);
     // const roomId = socket.id;
-    createRoom(socket, roomName);
+    createRoom(socket, roomName, maxCnt);
 
     // if (!roomList[roomId]) {
     //   // 해당 roomId에 방이 없을 경우에만 새로 생성
@@ -108,6 +110,15 @@ io.on('connection', (socket) => {
       console.log('roomList 전송 완료')
     });
   })
+  socket.on('joinRoom', (roomId) =>{
+    console.log('방 입장 요청');
+    if(roomList[roomId].maxUserCnt <= (roomList[roomId].users.length)){
+      socket.emit('faildJoinRoom');
+    } else{
+      socket.join(roomId);
+      socket.emit('successJoinRoom');
+    }
+  })
 });
 // socket end
 
@@ -120,9 +131,10 @@ function createRoomResult(room){
   };
 }
 // 방을 생성하는 함수
-function createRoom(socket, data) {
+function createRoom(socket, data, maxCnt) {
     const { roomName } = data;
 
+    console.log("max: "+maxCnt);
     // 이미 같은 이름의 방이 존재하는지 확인
     const existingRoom = roomList.find(room => room.name === roomName);
     console.log("roomName: " ,roomName) ;
@@ -153,6 +165,7 @@ function createRoom(socket, data) {
         cardPack : []      
       }],
       status: 'waiting',
+      maxUserCnt : maxCnt,
       cardPack : cardGame.setTouchDownCardPack(),
       upCardList : []      
     };
@@ -160,7 +173,7 @@ function createRoom(socket, data) {
     // 해당 방에 참여하도록 설정
     socket.join(roomId);
 
-    console.log(roomList[roomId]);
+    // console.log(roomList[roomId]);
     // 방 정보를 생성한 클라이언트에게 반환
     socket.emit('roomCreated', roomList[roomId]);
 

@@ -8,7 +8,9 @@ const gameroom = document.getElementById("gameroom");
 const rooms = document.getElementById("rooms");
 const roomname = document.getElementById("roomname");
 const headCount = document.getElementById("headCount");
+const headCountList = document.getElementById("headCountList");
 const refreshRoom = document.getElementById("refreshRoom");
+const userList = document.getElementById("userList");
 
 const user = [];
 
@@ -23,7 +25,7 @@ function handleNickFormSubmit(event){
 function handleCreateFormSubmit(event){
     event.preventDefault();
     const input = createForm.querySelector("input");
-    socket.emit("createRoom", input.value);
+    socket.emit("createRoom", input.value, 4);
     input.value='';
 }
 function handleRefreshRoom(event){
@@ -84,19 +86,24 @@ socket.on('roomList', (roomInfos) => {
 // 방 생성 성공
 socket.on('roomCreated', (roomInfo)=>{
     lobby.style.display = 'none';
+    gameroom.style.display = 'block'
     
         console.log(roomInfo);
         console.log(roomInfo.name)
         roomname.innerText=roomInfo.name;
 
         const users = roomInfo.users;
-        headCount.innerHtml = "";
+        headCount.textContent = users.length + " / " + roomInfo.maxUserCnt;
+        // headCount.innerHtml = 
+        
+        console.log( "dd:" + users.length);
+        console.log("ff:" + users);
         users.forEach(user => {
             const userItem = document.createElement('li');
             userItem.textContent =user.name;
             console.log('user : ' + user.id);
 
-            headCount.appendChild(userItem);
+            // headCountList.appendChild(userItem);
         })
 })
 
@@ -112,7 +119,8 @@ socket.on('createResult',(data) => {
         roomname.innerText=roomInfo.name;
 
         const users = roomInfo.users;
-        headCount.innerHtml = "";
+        headCount.textContent = users.length;
+       
         users.forEach(user => {
             const userItem = document.createElement('li');
             userItem.textContent =user.name;
