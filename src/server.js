@@ -119,6 +119,20 @@ io.on('connection', (socket) => {
       socket.emit('successJoinRoom');
     }
   })
+
+  socket.on('ready',() => {
+    // 현재 접속한 유저가 ready 요청을 보내면 현재 접속되어있는 방의 본인 상태를 ready로 바꾼다
+    // 현재 상태를 현재 접속되어있는 방 인원에게 상태 전송
+    // 만약 현재 접속한 유저의 상태가 전부 ready라면 3초뒤 게임 시작
+    
+  })
+
+  socket.on('reaveRoom', ()=>{
+    // 현재 접속중인 방에서 나가기
+    // 나가기 반환 함수 실행
+  })
+
+
 });
 // socket end
 
