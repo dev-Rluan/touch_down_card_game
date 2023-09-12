@@ -97,7 +97,7 @@ io.on('connection', (socket) => {
     //   // callback(false, roomId);
     // }
 
-    io.emit('roomList', JSON.stringify(roomList), ()=>{
+    io.emit('roomList',roomList.filter(room => room.status === 'waiting'), ()=>{
       console.log('roomList 전송 완료')
     });
   });
@@ -106,7 +106,14 @@ io.on('connection', (socket) => {
   socket.on('roomList', () => {
     console.log('방 새로고침 요청');
     console.log(roomList);
+    console.log('=============1');
+
+    // console.log(roomList.);
+
+    console.log(roomList.filter(room => room.status === 'waiting'));
     socket.emit('roomList', roomList.filter(room => room.status === 'waiting'), ()=>{
+      console.log('============');
+      console.log(roomList.filter(room => room.status === 'waiting'));
       console.log('roomList 전송 완료')
     });
   })
@@ -148,7 +155,7 @@ function createRoomResult(room){
 function createRoom(socket, data, maxCnt) {
     const { roomName } = data;
 
-    console.log("max: "+maxCnt);
+    console.log("max: "+ maxCnt);
     // 이미 같은 이름의 방이 존재하는지 확인
     const existingRoom = roomList.find(room => room.name === roomName);
     console.log("roomName: " ,roomName) ;
@@ -170,7 +177,8 @@ function createRoom(socket, data, maxCnt) {
     //   status: 'waiting'
     // });
 
-    roomList[roomId] ={
+    roomList.push({
+      id : roomId,
       name: data,
       users: [{
         id: socket.id,
@@ -182,14 +190,14 @@ function createRoom(socket, data, maxCnt) {
       maxUserCnt : maxCnt,
       cardPack : cardGame.setTouchDownCardPack(),
       upCardList : []      
-    };
+    });
 
     // 해당 방에 참여하도록 설정
     socket.join(roomId);
 
     // console.log(roomList[roomId]);
     // 방 정보를 생성한 클라이언트에게 반환
-    socket.emit('roomCreated', roomList[roomId]);
+    socket.emit('roomCreated', roomList.find(room => room.id === roomId));
 
   }
 

@@ -29,18 +29,28 @@ function handleCreateFormSubmit(event){
     input.value='';
 }
 function handleRefreshRoom(event){
-    event.preventDefault();
+    event.preventDefault();    
+    console.log("refreshRoom");
     socket.emit("roomList");
 }
 function handleCreateRoom(event){
 
 }
+
+function isEmptyArr(arr)  {
+    if(Array.isArray(arr) && arr.length === 0)  {
+      return true;
+    }
+    
+    return false;
+  }
 // function end
 
 // event start
 nickForm.addEventListener("submit", handleNickFormSubmit);
 createForm.addEventListener("submit", handleCreateFormSubmit);
 refreshRoom.addEventListener("submit", handleRefreshRoom);
+
 // event end
 
 // recv socket start
@@ -64,23 +74,28 @@ socket.on('name change successful',(msg) => {
 
 // roomList
 socket.on('roomList', (roomInfos) => {
-    // alert(roomInfos);
+    
     console.log(roomInfos);
     console.log(roomInfos.name);
     console.log('룸 리스트 새로고침');
     const roomList = roomInfos;
+    console.log("========");
     console.log(roomList);
     rooms.innerHTML = "";
     let lis = "";    
-    
-    for (const roomId in roomList) {
+    if(isEmptyArr(roomList)){
+        rooms.innerHTML = `<li>현재 생성된 방이 없습니다.</li>`;
+        return;
+    }
+    console.log('GGGG: ');
+   
+
+    roomList.forEach(room => {
         console.log('here');
-        if (roomList.hasOwnProperty(roomId)) {
-          const room = roomList[roomId];
-          lis += `<li>룸 이름 :  ${room.name}</li>`;        
-          console.log(room);
-        }
-      }
+        lis += `<li>룸 이름 :  ${room.name}</li>`;
+        console.log(room);
+        
+      });
     rooms.innerHTML = lis;
 })
 // 방 생성 성공
