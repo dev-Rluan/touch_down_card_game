@@ -36,6 +36,9 @@ function handleRefreshRoom(event){
 function handleCreateRoom(event){
 
 }
+function joinRoom(roomId){
+    socket.emit("joinRoom",roomId);
+}
 
 function isEmptyArr(arr)  {
     if(Array.isArray(arr) && arr.length === 0)  {
@@ -60,8 +63,24 @@ socket.on('connecting', (msg)=>{
     // const li = document.createElement('li');
     // li.innerText = msg;
     // document.getElementById('nick').appendChild(li);
-    user.push({nickname : msg});
-    nick.textContent = msg;
+    user.push({nickname : msg.nickname});
+    nick.textContent = msg.nickname;
+
+    rooms.innerHTML = "";
+    let lis = "";    
+    debugger;
+    const roomList = msg.roomList;
+    if(isEmptyArr(roomList)){
+        rooms.innerHTML = `<li>현재 생성된 방이 없습니다.</li>`;
+        return;
+    }
+    roomList.forEach(room => {
+        console.log('here');
+        lis += `<li><span style='margin-right: 5px'>${room.users.length}/${room.maxUserCnt} | </span>룸 이름 :  ${room.name} <button style='float:right' onclick="joinRoom('${room.id}')">방입장</button></li>    `;
+        console.log(room);
+        
+      });
+    rooms.innerHTML = lis;
 
     connectStatus.textContent = `연결 성공`;
 })

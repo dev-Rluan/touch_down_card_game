@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
 // 연결된 모든 클라이언트의 정보를 저장하는 객체
 const connectedClients = {};
 // 연결된 방 리스트들의 정보를 저장하는 객체
-const roomList = [];
+const roomList = new Map();
 
 // Socket.IO 이벤트 핸들러를 설정합니다.
 io.on('connection', (socket) => {
@@ -29,7 +29,9 @@ io.on('connection', (socket) => {
     // 기본 이름을 지정하고 클라이언트에게 전달
   const defaultName = `User ${socket.id}`;
   connectedClients[socket.id] = defaultName;
-  socket.emit('connecting', defaultName);
+
+  const result = {nickname:  connectedClients[socket.id], roomList:roomList.filter(room => room.status === 'waiting')}
+  socket.emit('connecting', result);
   
   // 클라이언트에서 이름 변경 시
   socket.on('change name', (name) => {
@@ -118,10 +120,16 @@ io.on('connection', (socket) => {
     });
   })
   socket.on('joinRoom', (roomId) =>{
+    console.log(roomId);
     console.log('방 입장 요청');
-    if(roomList[roomId].maxUserCnt <= (roomList[roomId].users.length)){
+    console.log(roomList);
+    const room = roomList.find(room => room.id === roomId);
+    console.log(room);
+    if(room.maxUserCnt <= room.users.length ){
       socket.emit('faildJoinRoom');
-    } else{
+      console.log('faildJoinRoom : maxRoom');
+    }else{
+      
       socket.join(roomId);
       socket.emit('successJoinRoom');
     }
