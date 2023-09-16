@@ -12,6 +12,9 @@ const headCountList = document.getElementById("headCountList");
 const refreshRoom = document.getElementById("refreshRoom");
 const userList = document.getElementById("userList");
 
+
+let maxUserCnt = 0;
+
 const user = [];
 
 // function start
@@ -47,6 +50,8 @@ function isEmptyArr(arr)  {
     
     return false;
   }
+
+  
 // function end
 
 // event start
@@ -109,12 +114,15 @@ socket.on('roomList', (roomInfos) => {
     console.log('GGGG: ');
    
 
+    
     roomList.forEach(room => {
         console.log('here');
-        lis += `<li>룸 이름 :  ${room.name}</li>`;
+        lis += `<li><span style='margin-right: 5px'>${room.users.length}/${room.maxUserCnt} | </span>룸 이름 :  ${room.name} <button style='float:right' onclick="joinRoom('${room.id}')">방입장</button></li>    `;
         console.log(room);
         
-      });
+        });
+        
+    
     rooms.innerHTML = lis;
 })
 // 방 생성 성공
@@ -125,20 +133,22 @@ socket.on('roomCreated', (roomInfo)=>{
         console.log(roomInfo);
         console.log(roomInfo.name)
         roomname.innerText=roomInfo.name;
-
+        maxUserCnt = roomInfo.maxUserCnt;
         const users = roomInfo.users;
-        headCount.textContent = users.length + " / " + roomInfo.maxUserCnt;
+        
+        headCount.textContent = users.length + " / " + maxUserCnt;
         // headCount.innerHtml = 
         
         console.log( "dd:" + users.length);
         console.log("ff:" + users);
+        let userListHtml = '';
         users.forEach(user => {
-            const userItem = document.createElement('li');
-            userItem.textContent =user.name;
-            console.log('user : ' + user.id);
-
-            // headCountList.appendChild(userItem);
+            
+            userListHtml  += `<div class="row"><div class="col"><span>user : ${user.name}</span></div>
+            <div class="col"><span>status : ${user.readyStatus}</span></div></div>`;
+            
         })
+        userList.innerHTML=userListHtml;
 })
 
 
@@ -146,15 +156,15 @@ socket.on('roomCreated', (roomInfo)=>{
 socket.on('createResult',(data) => {
     if(data.success){        
         lobby.style.display = 'block';
-
+        
         const roomInfo = data.roomInfo;
         console.log(data);
         console.log(roomInfo)
         roomname.innerText=roomInfo.name;
 
         const users = roomInfo.users;
-        headCount.textContent = users.length;
-       
+        headCount.textContent = users.length ;
+        let userListHtml = '';
         users.forEach(user => {
             const userItem = document.createElement('li');
             userItem.textContent =user.name;
@@ -171,6 +181,46 @@ socket.on('createResult',(data) => {
 // 방 생성 실패
 socket.on('createRoomError',(msg) =>{
     alert(msg);
+})
+// 방 입장 성공
+socket.on('successJoinRoom', (roomInfo) =>{
+    console.log('방입장 성공');
+    lobby.style.display = 'none';
+    gameroom.style.display = 'block';
+    roomname.innerText=roomInfo.name;
+
+        const users = roomInfo.users;
+        maxUserCnt = roomInfo.maxUserCnt;
+        headCount.textContent = users.length + " / " + maxUserCnt;
+        let userListHtml = '';
+        users.forEach(user => {
+            const userItem = document.createElement('li');
+            userItem.textContent = user.name;
+            
+            userListHtml  += `<div class="row"><div class="col"><span>user : ${user.name}</span></div>
+            <div class="col"><span>status : ${user.readyStatus}</span></div></div>`;
+            
+            // const userItem = document.createElement('li');
+            // userItem.textContent =user.name;
+            console.log('user : ' + user.id);
+
+            // headCount.appendChild(userItem);
+        });
+        userList.innerHTML=userListHtml;
+})
+
+socket.on('joinUser', (userInfo)=>{
+    headCount.textContent = userInfo.userCnt + " / " + maxUserCnt;
+    
+    let userListHtml = '';
+    userListHtml  += `<div class="row"><div class="col"><span>user : ${userInfo.name}</span></div>
+    <div class="col"><span>status : ${userInfo.readyStatus}</span></div></div>`;
+    userList.innerHTML=userListHtml;
+
+})
+
+socket.on('leaveUser', (userId)=>{
+    
 })
 // socket end
 

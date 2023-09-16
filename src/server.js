@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
 // 연결된 모든 클라이언트의 정보를 저장하는 객체
 const connectedClients = {};
 // 연결된 방 리스트들의 정보를 저장하는 객체
-const roomList = new Map();
+const roomList = [];
 
 // Socket.IO 이벤트 핸들러를 설정합니다.
 io.on('connection', (socket) => {
@@ -28,15 +28,15 @@ io.on('connection', (socket) => {
 
     // 기본 이름을 지정하고 클라이언트에게 전달
   const defaultName = `User ${socket.id}`;
-  connectedClients[socket.id] = defaultName;
+  connectedClients[socket.id] = {name: defaultName, roomId: ''};
 
-  const result = {nickname:  connectedClients[socket.id], roomList:roomList.filter(room => room.status === 'waiting')}
+  const result = {nickname:  connectedClients[socket.id].name, roomList:roomList.filter(room => room.status === 'waiting')}
   socket.emit('connecting', result);
   
   // 클라이언트에서 이름 변경 시
   socket.on('change name', (name) => {
     console.log(`User ${socket.id} changed name to ${name}`);
-    connectedClients[socket.id] = name;
+    connectedClients[socket.id].name = name;
     socket.emit('name change successful',name);
   });
 
@@ -49,6 +49,35 @@ io.on('connection', (socket) => {
 
   // 클라이언트와의 연결이 끊어졌을 때 실행됩니다.
   socket.on('disconnect', () => {
+    const roomId = connectedClients[socket.id].roomId;
+    console.log(roomId);
+    if(roomId != ''){
+      console.log('방삭제로직시작');
+      let roomInfo = roomList.find(room => room.id ===roomId);
+      if(roomInfo){
+        if(roomInfo.users.length <= 1){
+          var index = roomList.findIndex(room => room.id === roomId);
+          console.log('test');
+          roomList.splice(index, 1);    
+        }else{
+          roomInfo.users = roomInfo.users.filter(user => user.id != socket.id);
+          socket.to(roomId).emit('leaveUser');
+        }    
+      }
+      console.log(roomInfo);
+
+      // roomList.find(room => room.id === roomId).users.filter(user => user.id != socket.id);
+      socket.leave(connectedClients[socket.id].roomId);
+      
+      console.log(roomList);
+      console.log('방삭제로직종료');
+    }
+
+    io.emit('roomList',roomList.filter(room => room.status === 'waiting'), ()=>{
+      console.log('roomList 전송 완료')
+    });
+    
+
     console.log('클라이언트와의 연결이 끊어졌습니다.');
   });
 
@@ -129,9 +158,18 @@ io.on('connection', (socket) => {
       socket.emit('faildJoinRoom');
       console.log('faildJoinRoom : maxRoom');
     }else{
-      
+      console.log('방입장성공');
       socket.join(roomId);
-      socket.emit('successJoinRoom');
+      connectedClients[socket.id].roomId = roomId;
+      socket.to(roomId).emit('reviceMessage');
+      roomList.find(room => room.id === roomId).users.push({
+        id: socket.id,
+        name: connectedClients[socket.id].name,
+        readyStatus : 'waiting', 
+        cardPack : []      
+      });
+      socket.emit('successJoinRoom', roomList.find(room => room.id === roomId));
+      console.log('결과반환 완료');
     }
   })
 
@@ -142,9 +180,29 @@ io.on('connection', (socket) => {
     
   })
 
-  socket.on('reaveRoom', ()=>{
+  socket.on('reaveRoom', (roomId)=>{
     // 현재 접속중인 방에서 나가기
     // 나가기 반환 함수 실행
+    if(roomId != ''){
+      console.log('방삭제로직시작');
+      let roomInfo = roomList.find(room => room.id ===roomId);
+      if(roomInfo){
+        if(roomInfo.users.length <= 1){
+          roomList.filter(room => room.id !== roomId);    
+        }else{
+          roomInfo.users = roomInfo.users.filter(user => user.id != socket.id);
+          socket.to(roomId).emit('leaveUser');
+        }        
+      }
+
+      console.log(roomInfo);
+
+      // roomList.find(room => room.id === roomId).users.filter(user => user.id != socket.id);
+      socket.leave(connectedClients[socket.id].roomId);
+      
+      console.log(roomList);
+      console.log('방삭제로직종료');
+    }
   })
 
 
@@ -190,7 +248,7 @@ function createRoom(socket, data, maxCnt) {
       name: data,
       users: [{
         id: socket.id,
-        name: connectedClients[socket.id],
+        name: connectedClients[socket.id].name,
         readyStatus : 'waiting', 
         cardPack : []      
       }],
@@ -202,6 +260,7 @@ function createRoom(socket, data, maxCnt) {
 
     // 해당 방에 참여하도록 설정
     socket.join(roomId);
+    connectedClients[socket.id].roomId = roomId;
 
     // console.log(roomList[roomId]);
     // 방 정보를 생성한 클라이언트에게 반환
