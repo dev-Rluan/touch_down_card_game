@@ -158,16 +158,20 @@ io.on('connection', (socket) => {
       socket.emit('faildJoinRoom');
       console.log('faildJoinRoom : maxRoom');
     }else{
+      
       console.log('방입장성공');
       socket.join(roomId);
       connectedClients[socket.id].roomId = roomId;
-      socket.to(roomId).emit('reviceMessage');
-      roomList.find(room => room.id === roomId).users.push({
+      // socket.to(roomId).emit('reviceMessage');
+      let userInfo = {
         id: socket.id,
         name: connectedClients[socket.id].name,
         readyStatus : 'waiting', 
         cardPack : []      
-      });
+      };
+      
+      roomList.find(room => room.id === roomId).users.push(userInfo);
+      socket.to(roomId).emit('joinUser', roomList.find(room => room.id === roomId).users, roomList.find(room => room.id === roomId).maxUserCnt);
       socket.emit('successJoinRoom', roomList.find(room => room.id === roomId));
       console.log('결과반환 완료');
     }
@@ -180,29 +184,46 @@ io.on('connection', (socket) => {
     
   })
 
-  socket.on('reaveRoom', (roomId)=>{
+  socket.on('leaveRoom', (roomId)=>{
     // 현재 접속중인 방에서 나가기
     // 나가기 반환 함수 실행
+
     if(roomId != ''){
       console.log('방삭제로직시작');
+      console.log("roomId : " + roomId);
       let roomInfo = roomList.find(room => room.id ===roomId);
+      console.log("시작전 RoomInfo 확인 \n" + roomInfo);
       if(roomInfo){
+        console.log('테스트1');
         if(roomInfo.users.length <= 1){
-          roomList.filter(room => room.id !== roomId);    
+          console.log('테스트2');
+          var index = roomList.findIndex(room => room.id === roomId);
+          
+          roomList.splice(index, 1);   
+          //roomList.filter(room => room.id !== roomId);    
         }else{
+          console.log('테스트3');
           roomInfo.users = roomInfo.users.filter(user => user.id != socket.id);
-          socket.to(roomId).emit('leaveUser');
+          socket.to(roomId).emit('leaveUser', roomList.find(room => room.id === roomId).users);
         }        
       }
 
-      console.log(roomInfo);
+      
 
+      console.log("삭제후 RoomInfo 확인 \n" + roomInfo);
+      console.log("삭제후 roomList 확인 \n" + roomList);
       // roomList.find(room => room.id === roomId).users.filter(user => user.id != socket.id);
       socket.leave(connectedClients[socket.id].roomId);
-      
+        
+        socket.emit("leaveRoomResult", {status : 200, message : "successLeaveRoom"});
+
       console.log(roomList);
+      io.emit('roomList',roomList.filter(room => room.status === 'waiting'), ()=>{
+        console.log('roomList 전송 완료')
+      });
       console.log('방삭제로직종료');
     }
+    
   })
 
 

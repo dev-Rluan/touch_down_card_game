@@ -11,6 +11,8 @@ const headCount = document.getElementById("headCount");
 const headCountList = document.getElementById("headCountList");
 const refreshRoom = document.getElementById("refreshRoom");
 const userList = document.getElementById("userList");
+const roomId = document.getElementById("roomId");
+
 
 
 let maxUserCnt = 0;
@@ -40,6 +42,7 @@ function handleCreateRoom(event){
 
 }
 function joinRoom(roomId){
+   
     socket.emit("joinRoom",roomId);
 }
 
@@ -51,6 +54,10 @@ function isEmptyArr(arr)  {
     return false;
   }
 
+function leaveRoom(){   
+    alert(roomId.value);  
+    socket.emit("leaveRoom",roomId.value);
+}
   
 // function end
 
@@ -129,6 +136,7 @@ socket.on('roomList', (roomInfos) => {
 socket.on('roomCreated', (roomInfo)=>{
     lobby.style.display = 'none';
     gameroom.style.display = 'block'
+    roomId.value = roomInfo.id;
     
         console.log(roomInfo);
         console.log(roomInfo.name)
@@ -144,8 +152,13 @@ socket.on('roomCreated', (roomInfo)=>{
         let userListHtml = '';
         users.forEach(user => {
             
-            userListHtml  += `<div class="row"><div class="col"><span>user : ${user.name}</span></div>
-            <div class="col"><span>status : ${user.readyStatus}</span></div></div>`;
+            userListHtml  += 
+            `<div id="${user.id}">
+                <div class="row">
+                    <div class="col"><span>user : ${user.name}</span></div>
+                    <div class="col"><span>status : ${user.readyStatus}</span></div>
+                </div>
+            </div>`;
             
         })
         userList.innerHTML=userListHtml;
@@ -188,6 +201,8 @@ socket.on('successJoinRoom', (roomInfo) =>{
     lobby.style.display = 'none';
     gameroom.style.display = 'block';
     roomname.innerText=roomInfo.name;
+    console.log("roomInfo : " + roomInfo);
+    roomId.value = roomInfo.id;
 
         const users = roomInfo.users;
         maxUserCnt = roomInfo.maxUserCnt;
@@ -197,8 +212,13 @@ socket.on('successJoinRoom', (roomInfo) =>{
             const userItem = document.createElement('li');
             userItem.textContent = user.name;
             
-            userListHtml  += `<div class="row"><div class="col"><span>user : ${user.name}</span></div>
-            <div class="col"><span>status : ${user.readyStatus}</span></div></div>`;
+            userListHtml  += 
+            `<div id="${user.id}">
+                <div class="row">
+                    <div class="col"><span>user : ${user.name}</span></div>
+                    <div class="col"><span>status : ${user.readyStatus}</span></div>
+                </div>
+            </div>`;
             
             // const userItem = document.createElement('li');
             // userItem.textContent =user.name;
@@ -209,18 +229,75 @@ socket.on('successJoinRoom', (roomInfo) =>{
         userList.innerHTML=userListHtml;
 })
 
-socket.on('joinUser', (userInfo)=>{
-    headCount.textContent = userInfo.userCnt + " / " + maxUserCnt;
+socket.on('joinUser', (users, maxUserCnt)=>{
+
+    console.log('joinUser list : ' + users);        
+    headCount.textContent = users.length + " / " + maxUserCnt;
     
     let userListHtml = '';
-    userListHtml  += `<div class="row"><div class="col"><span>user : ${userInfo.name}</span></div>
-    <div class="col"><span>status : ${userInfo.readyStatus}</span></div></div>`;
+    users.forEach(user => {
+        const userItem = document.createElement('li');
+        userItem.textContent = user.name;
+        
+        userListHtml  += 
+        `<div id="${user.id}">
+            <div class="row">
+                <div class="col"><span>user : ${user.name}</span></div>
+                <div class="col"><span>status : ${user.readyStatus}</span></div>
+            </div>
+        </div>`;
+        
+        // const userItem = document.createElement('li');
+        // userItem.textContent =user.name;
+        console.log('user : ' + user.id);
+
+        // headCount.appendChild(userItem);
+    });
+    // userListHtml  += `<div class="row"><div class="col"><span>user : ${userInfo.name}</span></div>
+    // <div class="col"><span>status : ${userInfo.readyStatus}</span></div></div>`;
     userList.innerHTML=userListHtml;
 
 })
 
-socket.on('leaveUser', (userId)=>{
+socket.on('leaveRoomResult', (result) => {
+    // 방정보 삭제
+    roomId.value = "";
+    // 방 html li삭제후 숨기기
+    roomname.innerText = "roomName";
+    userList.innerHTML = "";
+    lobby.style.display = 'block';
+    gameroom.style.display = 'none';
+    headCount.textContent = "0/0";
+
+})
+
+socket.on('leaveUser', (users)=>{
+    headCount.textContent = users.length + " / " + maxUserCnt;
     
+    let userListHtml = '';
+    users.forEach(user => {
+        const userItem = document.createElement('li');
+        userItem.textContent = user.name;
+        
+        userListHtml  += 
+        `<div id="${user.id}">
+            <div class="row">
+                <div class="col"><span>user : ${user.name}</span></div>
+                <div class="col"><span>status : ${user.readyStatus}</span></div>
+            </div>
+        </div>`;
+        
+        // const userItem = document.createElement('li');
+        // userItem.textContent =user.name;
+        console.log('user : ' + user.id);
+
+        // headCount.appendChild(userItem);
+    });
+    // userListHtml  += `<div class="row"><div class="col"><span>user : ${userInfo.name}</span></div>
+    // <div class="col"><span>status : ${userInfo.readyStatus}</span></div></div>`;
+    userList.innerHTML=userListHtml;
+
+   
 })
 // socket end
 
