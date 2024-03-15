@@ -12,6 +12,7 @@ const headCountList = document.getElementById("headCountList");
 const refreshRoom = document.getElementById("refreshRoom");
 const userList = document.getElementById("userList");
 const roomId = document.getElementById("roomId");
+const readyButton = document.getElementById("readyButton");
 
 
 
@@ -59,6 +60,9 @@ function leaveRoom(){
     socket.emit("leaveRoom",roomId.value);
 }
   
+function ready(){
+    socket.emit("ready");
+}
 // function end
 
 // event start
