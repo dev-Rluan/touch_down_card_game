@@ -303,6 +303,17 @@ function createRoom(socket, data, maxCnt) {
     return roomId;
   }
 
+  function divCard(){
+    // 필요한 로직
+    // 1. player만큼 카드를 나눠준다
+    // 2. 플레이어별 카드 덱 정보 저장
+    // 3. start player 저장 
+    // 4. user별 남은 카드 수 저장
+    // end 방안의 유저들에게 줄 객체 반환
+    // - {startuser, playerCardDecks[], startTime} -> gameStart event로 보냄
+    // 
+  }
+
 // function end
 
 // 서버를 시작합니다.
