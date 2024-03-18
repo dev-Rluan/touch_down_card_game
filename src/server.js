@@ -203,7 +203,23 @@ io.on('connection', (socket) => {
           roomList.splice(index, 1);   
           //roomList.filter(room => room.id !== roomId);    
         }else{
-          console.log('테스트3');
+          console.log('테스트33');
+          // 유저가 방장인지 확인
+          // 바꿀 유저 찾고
+          // 유저 객체변경
+          // 바뀐 
+          console.log("testsssssss");
+          console.log(roomInfo.users.filter(user => user.id == socket.id));
+          if(roomInfo.users.filter(user => user.id == socket.id)[0].manager){
+            console.log('테스트4');
+            roomInfo.users = roomInfo.users.filter(user => user.id != socket.id)[0];
+            console.log(roomInfo.users);
+            console.log('test5');
+            roomInfo.users.manger = true;            
+            console.log(roomInfo.users);
+            console.log("test6");
+            console.log(roomInfo.find(room => room.id === roomId));
+          }
           roomInfo.users = roomInfo.users.filter(user => user.id != socket.id);
           socket.to(roomId).emit('leaveUser', roomList.find(room => room.id === roomId).users);
         }        
@@ -272,6 +288,9 @@ function createRoom(socket, data, maxCnt) {
         id: socket.id,
         name: connectedClients[socket.id].name,
         readyStatus : 'waiting', 
+        score : 0,
+        order : 0,
+        manager : true, 
         cardPack : []      
       }],
       status: 'waiting',
@@ -304,15 +323,29 @@ function createRoom(socket, data, maxCnt) {
     return roomId;
   }
 
-  function divCard(){
-    // 필요한 로직
+  function gameStart(){
+  // 필요한 로직
     // 1. player만큼 카드를 나눠준다
     // 2. 플레이어별 카드 덱 정보 저장
+    divCard();    
     // 3. start player 저장 
     // 4. user별 남은 카드 수 저장
     // end 방안의 유저들에게 줄 객체 반환
     // - {startuser, playerCardDecks[], startTime} -> gameStart event로 보냄
     // 
+  }
+  /** 1. player만큼 카드를 나눠준다
+      2. 플레이어별 카드 덱 정보 저장
+   * 
+   */
+  function divCard(){
+    
+  }
+  function  dropCard(){
+
+  }
+  function endGame(){ // 종료 로직
+
   }
 
 // function end
