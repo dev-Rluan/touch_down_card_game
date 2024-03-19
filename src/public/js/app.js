@@ -216,11 +216,13 @@ socket.on('successJoinRoom', (roomInfo) =>{
             const userItem = document.createElement('li');
             userItem.textContent = user.name;
             
+            
             userListHtml  += 
             `<div id="${user.id}">
                 <div class="row">
                     <div class="col"><span>user : ${user.name}</span></div>
                     <div class="col"><span>status : ${user.readyStatus}</span></div>
+                    <div class="col"><span>${user.manager?'manager' : ''}</span></div>
                 </div>
             </div>`;
             
@@ -248,6 +250,7 @@ socket.on('joinUser', (users, maxUserCnt)=>{
             <div class="row">
                 <div class="col"><span>user : ${user.name}</span></div>
                 <div class="col"><span>status : ${user.readyStatus}</span></div>
+                <div class="col"><span> ${user.manager?'manager' : ''}</span></div>
             </div>
         </div>`;
         
@@ -288,6 +291,7 @@ socket.on('leaveUser', (users)=>{
             <div class="row">
                 <div class="col"><span>user : ${user.name}</span></div>
                 <div class="col"><span>status : ${user.readyStatus}</span></div>
+                <div class="col"><span> ${user.manager?'manager' : ''}</span></div>
             </div>
         </div>`;
         
@@ -301,7 +305,6 @@ socket.on('leaveUser', (users)=>{
     // <div class="col"><span>status : ${userInfo.readyStatus}</span></div></div>`;
     userList.innerHTML=userListHtml;
 
-   
 })
 // socket end
 

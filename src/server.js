@@ -81,27 +81,6 @@ io.on('connection', (socket) => {
     console.log('클라이언트와의 연결이 끊어졌습니다.');
   });
 
-  // 새로운 게임 방을 만들었을 때 실행됩니다.
-  // socket.on('createRoom',(roomName) => {
-  //   console.log("방 생성 요청");
-  //   const roomId = uuidv4();
-  //   if(roomName == ''){
-  //     roomName = connectedClients[socket.id] + '님의 게임';
-  //   }
-  //   createRoom(socket, roomName);
-
-   
-  //   io.emit('roomList', JSON.stringify(roomList), ()=>{
-  //     console.log('roomList 전송 완료')
-  //   });
-
-  //   socket.join(roomName);
-  //   console.log(roomList);
-  //   console.log(roomList[roomId]);
-    
-  //   socket.emit('createResult', createRoomResult(roomList[roomId])) ;
-  // })
-
   // 방 생성 요청 받으면 새로운 방 생성 및 성공 응답 전송
   // 1. roomName이 같은 방이 있는지 확인
   // 2. roomName이 같은 방이 없으면 새로운 방을 생성한다.
@@ -167,6 +146,9 @@ io.on('connection', (socket) => {
         id: socket.id,
         name: connectedClients[socket.id].name,
         readyStatus : 'waiting', 
+        score : 0,
+        order : 0, // 게임 시작시 초기화
+        manager : false,
         cardPack : []      
       };
       
@@ -192,13 +174,14 @@ io.on('connection', (socket) => {
     if(roomId != ''){
       console.log('방삭제로직시작');
       console.log("roomId : " + roomId);
+      let index = roomList.findIndex(room=> room.id === roomId);
       let roomInfo = roomList.find(room => room.id ===roomId);
       console.log("시작전 RoomInfo 확인 \n" + roomInfo);
       if(roomInfo){
         console.log('테스트1');
         if(roomInfo.users.length <= 1){
           console.log('테스트2');
-          var index = roomList.findIndex(room => room.id === roomId);
+          
           
           roomList.splice(index, 1);   
           //roomList.filter(room => room.id !== roomId);    
@@ -210,28 +193,29 @@ io.on('connection', (socket) => {
           // 바뀐 
           console.log("testsssssss");
           console.log(roomInfo.users.filter(user => user.id == socket.id));
-          if(roomInfo.users.filter(user => user.id == socket.id)[0].manager){
+          if(roomList[index].users.filter(user => user.id == socket.id)[0].manager){
             console.log('테스트4');
-            roomInfo.users = roomInfo.users.filter(user => user.id != socket.id)[0];
-            console.log(roomInfo.users);
-            console.log('test5');
-            roomInfo.users.manger = true;            
-            console.log(roomInfo.users);
-            console.log("test6");
-            console.log(roomInfo.find(room => room.id === roomId));
-          }
+            const tempManger = roomList[index].users.findIndex(user => user.manager === false);
+            // roomInfo.users = roomInfo.users.filter(user => user.id != socket.id)[0];
+            roomList[index].users[tempManger].manager = true;
+            console.log(roomList[index]);
+          } 
+
           roomInfo.users = roomInfo.users.filter(user => user.id != socket.id);
-          socket.to(roomId).emit('leaveUser', roomList.find(room => room.id === roomId).users);
+          socket.to(roomId).emit('leaveUser', getLeaveRoomInfo(index));
         }        
       }
 
       
 
-      console.log("삭제후 RoomInfo 확인 \n" + roomInfo);
-      console.log("삭제후 roomList 확인 \n" + roomList);
+      console.log("삭제후 RoomInfo 확인 \n" + roomInfo.users);
+      console.log(roomInfo);
+      console.log(roomInfo.users);
+      console.log("삭제후 roomList 확인 \n" + roomList[index]);
+      console.log(roomList[index].users);
       // roomList.find(room => room.id === roomId).users.filter(user => user.id != socket.id);
-      socket.leave(connectedClients[socket.id].roomId);
-        
+      socket.leave(connectedClients[socket.id].roomId); // socket.io 방 객체에서 방나가기
+      connectedClients[socket.id].roomId = ''; // 유저객체 방 초기화
         socket.emit("leaveRoomResult", {status : 200, message : "successLeaveRoom"});
 
       console.log(roomList);
@@ -289,23 +273,23 @@ function createRoom(socket, data, maxCnt) {
         name: connectedClients[socket.id].name,
         readyStatus : 'waiting', 
         score : 0,
-        order : 0,
-        manager : true, 
+        order : 0, // 게임시작시 초기화 
+        manager : true,
         cardPack : []      
       }],
       status: 'waiting',
       maxUserCnt : maxCnt,
-      cardPack : cardGame.setTouchDownCardPack(),
-      upCardList : []      
+      upCardList : [],
+      turn : 0      
     });
 
     // 해당 방에 참여하도록 설정
     socket.join(roomId);
     connectedClients[socket.id].roomId = roomId;
-
+    let roomIndex = roomList.findIndex((room)=> room.id === roomId);
     // console.log(roomList[roomId]);
     // 방 정보를 생성한 클라이언트에게 반환
-    socket.emit('roomCreated', roomList.find(room => room.id === roomId));
+    socket.emit('roomCreated', getReturnRoomInfo(roomIndex));
 
   }
 
@@ -322,9 +306,34 @@ function createRoom(socket, data, maxCnt) {
     }    
     return roomId;
   }
+  function setGameRoom(roomId){
 
-  function gameStart(){
-  // 필요한 로직
+  }
+  function setRoomUserInfo(roomId, socket){
+    return {
+      id: socket.id,
+        name: connectedClients[socket.id].name,
+        readyStatus : 'waiting', 
+        score : 0,
+        order : getOrder(roomId),
+        manager : true,
+        cardPack : []      
+    }
+  }
+  function getOrder(roomId){
+    return roomList.find((room) => room.id == roomId).users.length + 1;
+  }
+  function getLeaveRoomInfo(roomId){
+    return roomList[roomId].users.map(({cardPack, ...item}) => item);
+  }
+  function getReturnRoomInfo(roomId){
+    let roomInfo = roomList[roomId];
+    roomInfo.users = roomList[roomId].users.map(({cardPack, ...item}) => item);
+    return roomInfo;
+  }
+
+  function divCard(){
+    // 필요한 로직
     // 1. player만큼 카드를 나눠준다
     // 2. 플레이어별 카드 덱 정보 저장
     divCard();    
@@ -334,17 +343,13 @@ function createRoom(socket, data, maxCnt) {
     // - {startuser, playerCardDecks[], startTime} -> gameStart event로 보냄
     // 
   }
-  /** 1. player만큼 카드를 나눠준다
-      2. 플레이어별 카드 덱 정보 저장
-   * 
-   */
-  function divCard(){
-    
-  }
-  function  dropCard(){
+  function gameStart(){
 
   }
-  function endGame(){ // 종료 로직
+  function dropCard(){
+
+  }
+  function endGame(){
 
   }
 
