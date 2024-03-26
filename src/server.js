@@ -332,18 +332,58 @@ function createRoom(socket, data, maxCnt) {
     return roomInfo;
   }
 
+  /*
+    유저 객체 반환용 리스트 조회(게임)
+  */ 
+  function getPlayUsers(roomId){
+    let users = roomList[roomIdx];
+    let result = [];
+    for(const user of users){
+      let resultMap = {
+        id : user.id,
+        name : user.name,
+        readyStatus : user.readyStatus,
+        score : user.score,
+        manager : user.manager
+      } 
+      result.push(resultMap);
+    }
+    return result;
+
+  }
+  // 레디 상태 변경
+  function updateReadyStatus(roomId, userId, status){
+    roomList[getRoomIdx(roomId)].users[getUserIdx(roomId,userId)].readyStatus = status;
+    return getPlayUsers(roomIdx);
+  }
+
+  // 방 번호 구하기
+  function getRoomIdx(roomId){
+    return roomList.findIndex(room=> room.id === roomId);
+  }
+
+  // 방의 유저 번호 구하기
+  function getUserIdx(roomId, userId){
+    return roomList[getRoomIdx(roomId)].users.findIndex(user => user.id === userId);
+  }
+
   function divCard(){
     // 필요한 로직
     // 1. player만큼 카드를 나눠준다
+    // 
     // 2. 플레이어별 카드 덱 정보 저장
-    divCard();    
     // 3. start player 저장 
     // 4. user별 남은 카드 수 저장
     // end 방안의 유저들에게 줄 객체 반환
     // - {startuser, playerCardDecks[], startTime} -> gameStart event로 보냄
-    // 
+    // 반환 객체 재 정의 필요
   }
   function gameStart(){
+    // 인원수만 큼 카드 나누기 
+    dicCard();
+    // 방 상태 바꾸기
+
+    // 게임상태 바꾸기
 
   }
   function dropCard(){
@@ -360,3 +400,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`서버가 ${PORT}번 포트에서 시작되었습니다.`);
 });
+
+
