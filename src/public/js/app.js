@@ -306,5 +306,37 @@ socket.on('leaveUser', (users)=>{
     userList.innerHTML=userListHtml;
 
 })
+
+// ready 버튼 클릭 이벤트 연결
+readyButton.addEventListener('click', function() {
+    ready();
+});
+
+// 준비 상태 갱신 시
+socket.on('updateReadyStatus', function(users) {
+    // users 배열을 이용해 각 유저의 준비 상태를 화면에 표시
+    let userListHtml = '';
+    users.forEach(user => {
+        userListHtml  += 
+        `<div id="${user.id}">
+            <div class="row">
+                <div class="col"><span>user : ${user.name}</span></div>
+                <div class="col"><span>status : ${user.readyStatus}</span></div>
+            </div>
+        </div>`;
+    });
+    userList.innerHTML = userListHtml;
+});
+
+// 모든 유저가 준비 완료 시
+socket.on('allReady', function(users) {
+    alert('모든 유저가 준비되었습니다! 곧 게임이 시작됩니다.');
+});
+
+// 게임 시작 시
+socket.on('gameStart', function(data) {
+    alert(data.message); // "게임이 시작됩니다!"
+    // 실제 게임 시작 로직 추가 가능
+});
 // socket end
 

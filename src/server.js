@@ -159,13 +159,24 @@ io.on('connection', (socket) => {
     }
   })
 
-  socket.on('ready',() => {
-    // 현재 접속한 유저가 ready 요청을 보내면 현재 접속되어있는 방의 본인 상태를 ready로 바꾼다
-    // 현재 상태를 현재 접속되어있는 방 인원에게 상태 전송
-    // 만약 현재 접속한 유저의 상태가 전부 ready라면 3초뒤 게임 시작
-    roomInfo.users = roomInfo.users.filter(user => user.id != socket.id);
-    
-  })
+  socket.on('ready', () => {
+    const roomId = connectedClients[socket.id].roomId;
+    const room = roomList.find(room => room.id === roomId);
+    if (!room) return;
+    // 본인 상태 ready로 변경
+    const user = room.users.find(user => user.id === socket.id);
+    if (user) user.readyStatus = 'ready';
+    // 모든 유저가 ready면 게임 시작
+    if (room.users.length > 0 && room.users.every(u => u.readyStatus === 'ready')) {
+      io.to(roomId).emit('allReady', room.users);
+      setTimeout(() => {
+        io.to(roomId).emit('gameStart', { message: '게임이 시작됩니다!' });
+        // 실제 게임 시작 로직 호출(필요시 gameStart 함수 등)
+      }, 3000);
+    } else {
+      io.to(roomId).emit('updateReadyStatus', room.users);
+    }
+  });
 
   socket.on('leaveRoom', (roomId)=>{
     // 현재 접속중인 방에서 나가기
