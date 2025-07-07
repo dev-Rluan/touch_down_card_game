@@ -61,7 +61,8 @@ function leaveRoom(){
 }
   
 function ready(){
-    socket.emit("ready");
+    console.log("ready clicked", roomId.value);
+    socket.emit("ready", { roomId: roomId.value });
 }
 // function end
 
@@ -306,5 +307,27 @@ socket.on('leaveUser', (users)=>{
     userList.innerHTML=userListHtml;
 
 })
+
+socket.on('readyStatusChanged', (users) => {
+    let userListHtml = '';
+    users.forEach(user => {
+        userListHtml += `
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col"><span>user : ${user.name}</span></div>
+                    <div class="col"><span>status : ${user.readyStatus === true || user.readyStatus === 'ready' ? 'Ready' : '대기'}</span></div>
+                </div>
+            </li>
+        `;
+    });
+    document.getElementById('userList2').innerHTML = userListHtml;
+});
+
 // socket end
+
+document.addEventListener("DOMContentLoaded", function() {
+    if (readyButton) {
+        readyButton.addEventListener("click", ready);
+    }
+});
 

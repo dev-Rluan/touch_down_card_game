@@ -1,9 +1,10 @@
 // /services/roomService.js
 const { v4: uuidv4 } = require('uuid');
-const userService = require('./userService');
+const userService = require('./userServices');
 
 // 방 목록 예시: [{ id, name, users, status, maxUserCnt, etc. }]
 const roomList = [];
+const rooms = new Map();
 
 function createRoom(socketId, roomName, maxCnt) {
   // 중복 이름 체크
@@ -113,9 +114,14 @@ function _createRoomId() {
   return roomId;
 }
 
+function findRoom(roomId) {
+  return roomList.find(r => r.id === roomId);
+}
+
 module.exports = {
   createRoom,
   joinRoom,
   leaveRoom,
   getWaitingRooms,
+  findRoom,
 };

@@ -1,9 +1,9 @@
-// 필요한 모듈들을 가져옵니다.
+// -- 서버 섹션 시작
+//  필요한 모듈들을 가져옵니다.
 const express = require('express');
 const app = express();
 const server = require('http').Server(app);
 const io = require('socket.io')(server);
-const cardGame = require('./cardGame');
 const { v4: uuidv4 } = require('uuid');
 
 // 정적 파일을 제공하기 위해 public 폴더를 지정합니다.
@@ -15,7 +15,7 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/view/index.html');
 });
 
-
+// -- 서버 섹션 종료
 
 // 연결된 모든 클라이언트의 정보를 저장하는 객체
 const connectedClients = {};
@@ -70,7 +70,7 @@ io.on('connection', (socket) => {
       socket.leave(connectedClients[socket.id].roomId);
       
       console.log(roomList);
-      console.log('방삭제로직종료');
+        console.log('방삭제로직종료');
     }
 
     io.emit('roomList',roomList.filter(room => room.status === 'waiting'), ()=>{
@@ -159,13 +159,26 @@ io.on('connection', (socket) => {
     }
   })
 
-  socket.on('ready',() => {
-    // 현재 접속한 유저가 ready 요청을 보내면 현재 접속되어있는 방의 본인 상태를 ready로 바꾼다
-    // 현재 상태를 현재 접속되어있는 방 인원에게 상태 전송
-    // 만약 현재 접속한 유저의 상태가 전부 ready라면 3초뒤 게임 시작
-    roomInfo.users = roomInfo.users.filter(user => user.id != socket.id);
-    
-  })
+  socket.on('ready', () => {
+    // socket.id가 속한 방을 찾는다
+    const userRoomId = connectedClients[socket.id]?.roomId;
+    if (!userRoomId) return;
+
+    const roomInfo = roomList.find(room => room.id === userRoomId);
+    if (!roomInfo) return;
+
+    // 해당 유저의 readyStatus를 true로 변경
+    const user = roomInfo.users.find(user => user.id === socket.id);
+    if (user) user.readyStatus = true;
+
+    // 모든 유저의 readyStatus가 true면 게임 시작 로직 등 추가 가능
+
+    // 상태를 방의 모든 유저에게 전송
+    io.to(userRoomId).emit('readyStatusChanged', roomInfo.users);
+
+    // (필요시) 콘솔 로그
+    console.log(`[ready] ${socket.id} is ready in room ${userRoomId}`);
+  });
 
   socket.on('leaveRoom', (roomId)=>{
     // 현재 접속중인 방에서 나가기

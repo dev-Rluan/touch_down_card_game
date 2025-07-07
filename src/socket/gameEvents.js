@@ -2,8 +2,8 @@
 const gameController = require('../controllers/gameController');
 
 module.exports = (socket, io) => {
-  socket.on("ready", () => {
-    gameController.ready(socket, io);
+  socket.on("ready", (data) => {
+    gameController.ready(socket, data);
   });
 
   socket.on("startGame", () => {
