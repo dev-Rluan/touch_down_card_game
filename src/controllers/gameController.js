@@ -7,17 +7,16 @@ const gameService = require("../services/gameService");
  * @param {Socket} socket
  * @param {object} data - { roomId }
  */
-async function ready(socket, data) {
+async function ready(socket, io, data) {
   try {
     const updatedRoom = await gameService.userReady(socket.id, data.roomId);
     
     // 같은 방 유저들에게 현재 레디 현황 알리기
-    socket.to(data.roomId).emit("readyStatusChanged", updatedRoom.users);
+    io.to(data.roomId).emit("readyStatusChanged", updatedRoom.users);
 
-    // 만약 모든 유저가 레디라면 게임 시작 로직 호출, 또는 방장(매니저)가 start를 누를 때까지 대기
+    // 만약 모든 유저가 레디라면 게임 시작 로직 호출
     if (gameService.checkAllReady(updatedRoom)) {
-      // 자동으로 startGame을 호출할 수도 있음
-      // await startGame(socket, { roomId: data.roomId });
+      await startGame(socket, io, { roomId: data.roomId });
     }
 
   } catch (error) {
@@ -29,15 +28,30 @@ async function ready(socket, data) {
 /**
  * 게임 시작
  * @param {Socket} socket
+ * @param {Server} io
  * @param {object} data - { roomId }
  */
-async function startGame(socket, data) {
+async function startGame(socket, io, data) {
   try {
-    const gameInfo = await gameService.startGame(data.roomId);
-    
-    // 방 상태를 playing으로 바꾸고, 각 유저 카드 분배 등 처리
-    socket.to(data.roomId).emit("gameStarted", gameInfo);
-    socket.emit("gameStarted", gameInfo);
+    const room = await gameService.startGame(data.roomId);
+
+    // 각 플레이어에게 개인화된 게임 정보 전송
+    room.users.forEach(user => {
+      io.to(user.id).emit("gameStarted", {
+        roomId: room.id,
+        roomName: room.name,
+        players: room.users.map(u => ({
+          id: u.id,
+          name: u.name,
+          cardCount: u.cardPack.length,
+          score: u.score
+        })),
+        myCards: user.cardPack, // 현재 유저의 카드 정보
+        centerCards: room.gameState.centerCards,
+        currentTurn: room.gameState.currentTurn,
+        gameStartTime: room.gameState.gameStartTime
+      });
+    });
 
   } catch (error) {
     console.error("[startGame Error]", error);

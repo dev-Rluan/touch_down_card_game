@@ -491,3 +491,99 @@ body {
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
+
+/* 게임 보드 스타일 */
+.game-board {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    display: grid;
+    grid-template-areas:
+        "top top top"
+        "left center right"
+        "bottom bottom bottom";
+    grid-template-rows: auto 1fr auto;
+    grid-template-columns: 150px 1fr 150px;
+    gap: 1.5rem;
+    min-height: 600px;
+}
+
+.common-area {
+    grid-area: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+}
+
+.card-deck, .played-cards {
+    width: 120px;
+    height: 180px;
+}
+
+.card-placeholder {
+    width: 100%;
+    height: 100%;
+    border: 3px dashed rgba(255, 255, 255, 0.4);
+    border-radius: 0.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.other-player-area {
+    grid-area: top;
+    /* 추가 스타일링 */
+}
+
+.player-hand-area {
+    grid-area: bottom;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.my-cards {
+    flex-grow: 1;
+}
+
+.my-cards h6, .my-deck h6 {
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.card-list {
+    display: flex;
+    gap: 0.5rem;
+    min-height: 120px;
+}
+
+.my-deck {
+    width: 100px;
+    height: 150px;
+}
+
+.card-item {
+    width: 80px;
+    height: 120px;
+    background: white;
+    border-radius: 0.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    box-shadow: var(--card-shadow);
+    transition: var(--transition);
+}
+
+.card-item:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: var(--card-shadow-lg);
+}

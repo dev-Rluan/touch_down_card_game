@@ -2,23 +2,23 @@
 const gameController = require('../controllers/gameController');
 
 module.exports = (socket, io) => {
-  socket.on("ready", () => {
-    gameController.ready(socket, io);
+  socket.on("ready", (data) => {
+    gameController.ready(socket, io, data);
   });
 
-  socket.on("startGame", () => {
-    gameController.startGame(socket, io);
+  socket.on("startGame", (data) => {
+    gameController.startGame(socket, io, data);
   });
 
-  socket.on("playTurn", () => {
-    gameController.playTurn(socket, io);
+  socket.on("playTurn", (data) => {
+    gameController.playTurn(socket, io, data);
   });
 
-  socket.on("ringBell", () => {
-    gameController.ringBell(socket, io);
+  socket.on("ringBell", (data) => {
+    gameController.ringBell(socket, io, data);
   });
 
-  socket.on("endGame", () => {
-    gameController.endGame(socket, io);
+  socket.on("endGame", (data) => {
+    gameController.endGame(socket, io, data);
   });
 };

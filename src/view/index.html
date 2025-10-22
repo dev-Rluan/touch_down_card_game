@@ -132,13 +132,42 @@
                             </div>
 
                             <!-- 플레이어 목록 -->
-                            <div class="player-section">
-                                <h6 class="text-muted mb-3">
-                                    <i class="icon ion-ios-people me-1"></i>
-                                    플레이어 목록
-                                </h6>
+                            <div class="player-section mb-4">
+                                <h6 class="text-muted mb-3"><i class="icon ion-ios-people me-1"></i> 플레이어 목록</h6>
                                 <div id="userList" class="player-grid">
                                     <!-- 플레이어 목록이 여기에 동적으로 추가됩니다 -->
+                                </div>
+                            </div>
+
+                            <!-- 게임 보드 -->
+                            <div class="game-board">
+                                <!-- 중앙 공용 공간 -->
+                                <div class="common-area">
+                                    <div class="card-deck">
+                                        <div class="card-placeholder">덱</div>
+                                    </div>
+                                    <div class="played-cards">
+                                        <div class="card-placeholder">놓은 카드</div>
+                                    </div>
+                                </div>
+
+                                <!-- 다른 플레이어 공간 (상단) -->
+                                <div class="other-player-area top">
+                                    <!-- 다른 플레이어 UI -->
+                                </div>
+
+                                <!-- 플레이어 공간 (하단) -->
+                                <div class="player-hand-area">
+                                    <div class="my-cards">
+                                        <h6>내 카드</h6>
+                                        <div class="card-list">
+                                            <!-- 내 카드가 여기에 표시됩니다 -->
+                                        </div>
+                                    </div>
+                                    <div class="my-deck">
+                                        <h6>내 덱</h6>
+                                        <div class="card-placeholder"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -90,7 +90,7 @@ function leaveRoom(){
 }
   
 function ready(){
-    socket.emit("ready");
+    socket.emit("ready", { roomId: roomId.value });
 }
 // function end
 
@@ -681,18 +681,16 @@ socket.on('updateReadyStatus', function(users) {
     }
 });
 
-// 모든 유저가 준비 완료 시
-socket.on('allReady', function(users) {
-    alert('모든 유저가 준비되었습니다! 곧 게임이 시작됩니다.');
-});
+
 
 // 게임 시작 시
-socket.on('gameStart', function(data) {
+socket.on('gameStarted', function(data) {
     console.log('게임 시작:', data);
     
     // 게임 UI 표시
-    if (data && data.gameData) {
-        showGameUI(data.gameData);
+    if (data) {
+        showGameUI(data);
+        renderMyCards(data.myCards);
     } else {
         console.error('게임 데이터가 없습니다:', data);
         showNotification('게임 데이터를 받지 못했습니다.', 'error');
@@ -700,314 +698,24 @@ socket.on('gameStart', function(data) {
     }
     
     // 게임 시작 알림
-    showNotification(data.message || '게임이 시작됩니다!', 'success');
+    showNotification('게임이 시작됩니다!', 'success');
 });
 
-// 게임 시작 에러
-socket.on('gameStartError', function(error) {
-    showNotification('게임 시작 실패: ' + error, 'error');
-});
-
-// 게임 상태 업데이트
-socket.on('gameState', function(gameState) {
-    updateGameUI(gameState);
-});
-
-// 카드 내기 결과
-socket.on('cardPlayed', function(data) {
-    console.log('카드 내기:', data);
-    updateGameDisplay(data);
-});
-
-// 할리갈리 결과
-socket.on('halliGalliResult', function(data) {
-    console.log('할리갈리 결과:', data);
-    showHalliGalliResult(data);
-});
-
-// 게임 종료
-socket.on('gameEnd', function(data) {
-    console.log('게임 종료:', data);
-    showGameEnd(data);
-});
-// socket end
-
-// 게임 관련 함수들
-let currentGameData = null;
-let myCards = [];
-let isMyTurn = false;
-
-/**
- * 게임 UI 표시
- */
 function showGameUI(gameData) {
-    console.log('showGameUI 호출됨:', gameData);
-    
-    if (!gameData) {
-        console.error('gameData가 없습니다');
-        showNotification('게임 데이터가 없습니다.', 'error');
-        return;
-    }
-    
-    currentGameData = gameData;
-    myCards = [];
-    
-    // 게임룸 섹션 표시
-    if (gameroom && lobby) {
-        gameroom.style.display = 'block';
-        lobby.style.display = 'none';
-    } else {
-        console.error('gameroom 또는 lobby 요소를 찾을 수 없습니다');
-        return;
-    }
-    
-    // 게임 UI 초기화
-    initializeGameUI();
-    
-    // 게임 UI 업데이트
-    updateGameUI(gameData);
-    
-    // 게임 상태 요청
-    socket.emit('getGameState');
+    lobby.style.display = 'none';
+    gameroom.style.display = 'block';
+    // other UI updates
 }
 
-/**
- * 게임 UI 초기화
- */
-function initializeGameUI() {
-    // 기존 게임 UI 요소들 제거
-    const existingElements = ['centerCards', 'turnIndicator', 'myCards', 'halliGalliBtn'];
-    existingElements.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.remove();
-        }
+function renderMyCards(cards) {
+    const myCardList = document.querySelector('.player-hand-area .card-list');
+    myCardList.innerHTML = '';
+    cards.forEach(card => {
+        const cardElement = document.createElement('div');
+        cardElement.classList.add('card-item'); // You'll need to style this class
+        cardElement.innerHTML = `<span>${card.fruit} ${card.count}</span>`;
+        myCardList.appendChild(cardElement);
     });
-    
-    // 게임 영역 초기화
-    const gameArea = document.querySelector('.player-section');
-    if (gameArea) {
-        // 기존 게임 관련 요소들 제거
-        const gameElements = gameArea.querySelectorAll('.center-cards, .turn-indicator, .my-cards, #halliGalliBtn');
-        gameElements.forEach(element => element.remove());
-    }
-}
-
-/**
- * 게임 UI 업데이트
- */
-function updateGameUI(gameState) {
-    console.log('updateGameUI 호출됨:', gameState);
-    
-    if (!gameState) {
-        console.error('gameState가 없습니다');
-        return;
-    }
-    
-    try {
-        // 플레이어 정보 업데이트
-        if (gameState.players && Array.isArray(gameState.players)) {
-            updatePlayersInfo(gameState.players);
-        }
-        
-        // 중앙 카드 업데이트
-        if (gameState.centerCards && Array.isArray(gameState.centerCards)) {
-            updateCenterCards(gameState.centerCards);
-        }
-        
-        // 턴 표시 업데이트
-        if (typeof gameState.currentTurn === 'number') {
-            updateTurnDisplay(gameState.currentTurn);
-        }
-        
-        // 내 카드 업데이트
-        if (gameState.players && Array.isArray(gameState.players)) {
-            const myPlayer = gameState.players.find(p => p.id === socket.id);
-            if (myPlayer) {
-                updateMyCards(myPlayer);
-            }
-        }
-    } catch (error) {
-        console.error('updateGameUI 에러:', error);
-        showNotification('게임 UI 업데이트 중 오류가 발생했습니다.', 'error');
-    }
-}
-
-/**
- * 플레이어 정보 업데이트
- */
-function updatePlayersInfo(players) {
-    console.log('updatePlayersInfo 호출됨:', players);
-    
-    if (!players || !Array.isArray(players)) {
-        console.error('players가 배열이 아닙니다:', players);
-        return;
-    }
-    
-    if (!userList) {
-        console.error('userList 요소를 찾을 수 없습니다');
-        return;
-    }
-    
-    try {
-        let playerListHtml = '';
-        players.forEach(player => {
-            if (!player || !player.id || !player.name) {
-                console.warn('잘못된 플레이어 데이터:', player);
-                return;
-            }
-            
-            playerListHtml += 
-            `<div class="player-card ${player.isActive ? 'active' : ''}" id="${player.id}">
-                <div class="player-info">
-                    <div class="player-avatar">
-                        ${player.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div class="player-details">
-                        <h6>${player.name}</h6>
-                        <div class="player-status">
-                            <span class="badge bg-info">카드: ${player.cardCount || 0}장</span>
-                            <span class="badge bg-success">점수: ${player.score || 0}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        });
-        userList.innerHTML = playerListHtml;
-    } catch (error) {
-        console.error('updatePlayersInfo 에러:', error);
-    }
-}
-
-/**
- * 중앙 카드 업데이트
- */
-function updateCenterCards(centerCards) {
-    console.log('updateCenterCards 호출됨:', centerCards);
-    
-    if (!centerCards || !Array.isArray(centerCards)) {
-        console.warn('centerCards가 배열이 아닙니다:', centerCards);
-        return;
-    }
-    
-    let centerCardsContainer = document.getElementById('centerCards');
-    if (!centerCardsContainer) {
-        // 중앙 카드 컨테이너 생성
-        const gameArea = document.querySelector('.player-section');
-        if (!gameArea) {
-            console.error('player-section을 찾을 수 없습니다');
-            return;
-        }
-        
-        const centerCardsDiv = document.createElement('div');
-        centerCardsDiv.id = 'centerCards';
-        centerCardsDiv.className = 'center-cards mb-4';
-        centerCardsDiv.innerHTML = '<h6 class="text-muted mb-2"><i class="icon ion-ios-grid me-1"></i>중앙 카드</h6><div class="cards-grid"></div>';
-        gameArea.appendChild(centerCardsDiv);
-        centerCardsContainer = centerCardsDiv;
-    }
-    
-    const cardsGrid = document.querySelector('.cards-grid');
-    if (!cardsGrid) {
-        console.error('cards-grid를 찾을 수 없습니다');
-        return;
-    }
-    
-    try {
-        let cardsHtml = '';
-        centerCards.forEach((card, index) => {
-            if (!card || !card.fruit || typeof card.count !== 'number') {
-                console.warn('잘못된 카드 데이터:', card);
-                return;
-            }
-            
-            cardsHtml += `
-            <div class="center-card" data-card-id="${index}">
-                <div class="card-fruit">${getFruitEmoji(card.fruit)}</div>
-                <div class="card-count">${card.count}</div>
-            </div>`;
-        });
-        cardsGrid.innerHTML = cardsHtml;
-    } catch (error) {
-        console.error('updateCenterCards 에러:', error);
-    }
-}
-
-/**
- * 턴 표시 업데이트
- */
-function updateTurnDisplay(currentTurn) {
-    const turnIndicator = document.getElementById('turnIndicator');
-    if (!turnIndicator) {
-        const gameArea = document.querySelector('.player-section');
-        const turnDiv = document.createElement('div');
-        turnDiv.id = 'turnIndicator';
-        turnDiv.className = 'turn-indicator mb-3';
-        gameArea.appendChild(turnDiv);
-    }
-    
-    const currentPlayer = currentGameData?.players[currentTurn];
-    if (currentPlayer) {
-        isMyTurn = currentPlayer.id === socket.id;
-        document.getElementById('turnIndicator').innerHTML = `
-        <div class="alert ${isMyTurn ? 'alert-success' : 'alert-info'}">
-            <i class="icon ion-ios-play me-2"></i>
-            ${isMyTurn ? '당신의 턴입니다!' : `${currentPlayer.name}의 턴입니다`}
-        </div>`;
-    }
-}
-
-/**
- * 내 카드 업데이트
- */
-function updateMyCards(player) {
-    console.log('updateMyCards 호출됨:', player);
-    
-    if (!player) {
-        console.error('player 데이터가 없습니다');
-        return;
-    }
-    
-    myCards = player.cardPack || [];
-    
-    let myCardsContainer = document.getElementById('myCards');
-    if (!myCardsContainer) {
-        const gameArea = document.querySelector('.player-section');
-        if (!gameArea) {
-            console.error('player-section을 찾을 수 없습니다');
-            return;
-        }
-        
-        const myCardsDiv = document.createElement('div');
-        myCardsDiv.id = 'myCards';
-        myCardsDiv.className = 'my-cards mb-4';
-        gameArea.appendChild(myCardsDiv);
-        myCardsContainer = myCardsDiv;
-    }
-    
-    try {
-        let cardsHtml = '<h6 class="text-muted mb-2"><i class="icon ion-ios-card me-1"></i>내 카드</h6><div class="my-cards-grid">';
-        
-        if (myCards && Array.isArray(myCards)) {
-            myCards.forEach((card, index) => {
-                if (!card || !card.fruit || typeof card.count !== 'number') {
-                    console.warn('잘못된 카드 데이터:', card);
-                    return;
-                }
-                
-                cardsHtml += `
-                <div class="my-card ${isMyTurn ? 'clickable' : ''}" data-card-index="${index}" onclick="${isMyTurn ? `playCard(${index})` : ''}">
-                    <div class="card-fruit">${getFruitEmoji(card.fruit)}</div>
-                    <div class="card-count">${card.count}</div>
-                </div>`;
-            });
-        }
-        
-        cardsHtml += '</div>';
-        myCardsContainer.innerHTML = cardsHtml;
-    } catch (error) {
-        console.error('updateMyCards 에러:', error);
-    }
 }
 
 /**

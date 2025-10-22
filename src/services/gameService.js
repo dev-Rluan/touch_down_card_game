@@ -48,19 +48,7 @@ const startGame = (roomId) => {
 
   console.log(`[Game] 게임 시작 - 방: ${room.name}, 플레이어: ${room.users.length}명`);
   
-  return {
-    roomId: room.id,
-    roomName: room.name,
-    players: room.users.map(user => ({
-      id: user.id,
-      name: user.name,
-      cardCount: user.cardPack.length,
-      score: user.score
-    })),
-    centerCards: room.gameState.centerCards,
-    currentTurn: room.gameState.currentTurn,
-    gameStartTime: room.gameState.gameStartTime
-  };
+  return room;
 };
 
 /**
