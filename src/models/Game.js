@@ -36,20 +36,24 @@ class Game {
     // ...
   }
 
-  // 기본 카드 덱 생성 (할리갈리 규칙)
   createDeck() {
-    // 예: strawberry, banana, lemon, plum 각 1~5
-    // 실제 할리갈리는 1부터 5까지 각 과일 4종, 총 20장 * 4 = 80장(확장팩마다 다름)
-    const fruits = ['strawberry','banana','lemon','plum'];
-    const counts = [1, 2, 3, 4, 5];
-    for (let fruit of fruits) {
-      for (let count of counts) {
-        // 필요 장수만큼 push (원래 할리갈리는 각 조합이 여러 장)
-        this.deck.push(new Card(fruit, count));
-        this.deck.push(new Card(fruit, count)); // 2장씩, 필요에 따라 반복
+    const fruits = ['strawberry', 'banana', 'plum', 'lemon'];
+    const counts = [
+      { count: 1, num: 5 },
+      { count: 2, num: 3 },
+      { count: 3, num: 3 },
+      { count: 4, num: 2 },
+      { count: 5, num: 1 },
+    ];
+
+    this.deck = [];
+    for (const fruit of fruits) {
+      for (const item of counts) {
+        for (let i = 0; i < item.num; i++) {
+          this.deck.push(new Card(fruit, item.count));
+        }
       }
     }
-    // ...
   }
 
   // 카드 덱 셔플
