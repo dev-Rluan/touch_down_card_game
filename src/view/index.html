@@ -141,32 +141,38 @@
 
                             <!-- 게임 보드 -->
                             <div class="game-board">
-                                <!-- 중앙 공용 공간 -->
-                                <div class="common-area">
-                                    <div class="card-deck">
-                                        <div class="card-placeholder">덱</div>
+                                <!-- 중앙 플레이어별 카드 더미 영역 -->
+                                <div class="center-play-area" id="centerPlayArea">
+                                    <h6 class="text-white text-center mb-3">플레이어별 카드 더미</h6>
+                                    <div class="player-stacks" id="playerStacks">
+                                        <!-- 각 플레이어의 카드 더미가 여기에 표시됩니다 -->
                                     </div>
-                                    <div class="played-cards">
-                                        <div class="card-placeholder">놓은 카드</div>
+                                    
+                                    <!-- 할리갈리 벨 버튼 -->
+                                    <div class="halli-galli-bell-container">
+                                        <button type="button" class="halli-galli-bell" id="halliGalliBell" onclick="halliGalli()">
+                                            <div class="bell-icon">🔔</div>
+                                            <div class="bell-text">TOUCH!</div>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- 버림 카드 더미 (공용) -->
+                                    <div class="discard-pile-container">
+                                        <h6 class="text-white text-center mb-2">버림 카드</h6>
+                                        <div id="discardPile" class="discard-pile">
+                                            <div class="discard-placeholder">버림 카드 없음</div>
+                                        </div>
+                                        <div id="discardCount" class="discard-count">0장</div>
                                     </div>
                                 </div>
 
-                                <!-- 다른 플레이어 공간 (상단) -->
-                                <div class="other-player-area top">
-                                    <!-- 다른 플레이어 UI -->
-                                </div>
-
-                                <!-- 플레이어 공간 (하단) -->
-                                <div class="player-hand-area">
-                                    <div class="my-cards">
-                                        <h6>내 카드</h6>
-                                        <div class="card-list">
+                                <!-- 내 카드 덱 (하단) -->
+                                <div class="my-deck-area" id="myDeckArea">
+                                    <div class="my-deck-container">
+                                        <h6 class="text-white mb-2">내 덱</h6>
+                                        <div id="myDeckCard" class="my-deck-card-slot">
                                             <!-- 내 카드가 여기에 표시됩니다 -->
                                         </div>
-                                    </div>
-                                    <div class="my-deck">
-                                        <h6>내 덱</h6>
-                                        <div class="card-placeholder"></div>
                                     </div>
                                 </div>
                             </div>
@@ -208,6 +214,28 @@
                             <button type="submit" class="btn btn-primary">방 만들기</button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 게임 종료 모달 -->
+        <div class="modal fade" id="gameEndModal" tabindex="-1" aria-labelledby="gameEndModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content game-end-modal">
+                    <div class="modal-body text-center p-5">
+                        <div id="gameEndContent">
+                            <!-- 승리/패배 내용이 동적으로 추가됩니다 -->
+                        </div>
+                        <div class="game-end-scores mt-4">
+                            <h5 class="mb-3">최종 점수</h5>
+                            <div id="finalScoresList">
+                                <!-- 점수 리스트가 여기에 표시됩니다 -->
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button type="button" class="btn btn-primary btn-lg" onclick="closeGameEndModal()">확인</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
