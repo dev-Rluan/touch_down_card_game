@@ -10,6 +10,117 @@ const roomService = require('./services/roomService');
 const userService = require('./services/userServices');
 const gameService = require('./services/gameService');
 
+// 방별 게임 시작 카운트다운 타이머 관리
+const gameStartTimers = new Map(); // roomId -> { intervalId, timeoutId, secondsLeft }
+
+/**
+ * 방의 게임 시작 카운트다운을 취소하고 알림을 전송합니다.
+ * @param {string} roomId
+ * @param {string} reason
+ */
+function clearGameCountdown(roomId, reason = 'canceled') {
+  const timers = gameStartTimers.get(roomId);
+  if (timers) {
+    if (timers.intervalId) clearInterval(timers.intervalId);
+    if (timers.timeoutId) clearTimeout(timers.timeoutId);
+    gameStartTimers.delete(roomId);
+    io.to(roomId).emit('gameCountdownCanceled', { reason });
+  }
+}
+
+/**
+ * 모든 유저가 ready 상태이고 2명 이상인지 재검증합니다.
+ * @param {Object} room
+ * @returns {boolean}
+ */
+function canStartGame(room) {
+  if (!room) return false;
+  if (!Array.isArray(room.users) || room.users.length < 2) return false;
+  return room.users.every(u => u.readyStatus === 'ready');
+}
+
+/**
+ * 방에 대한 게임 시작 카운트다운을 시작합니다.
+ * @param {string} roomId
+ */
+function startGameCountdown(roomId) {
+  // 중복 실행 방지: 기존 타이머 제거
+  clearGameCountdown(roomId, 'restarting');
+
+  const room = roomService.getRoomById(roomId);
+  if (!canStartGame(room)) return; // 조건 불충족 시 무시
+
+  const totalSeconds = 3;
+  let secondsLeft = totalSeconds;
+  io.to(roomId).emit('gameCountdownStart', { total: totalSeconds });
+
+  const intervalId = setInterval(() => {
+    secondsLeft -= 1;
+    if (secondsLeft > 0) {
+      io.to(roomId).emit('gameCountdown', { secondsLeft });
+    }
+  }, 1000);
+
+  const timeoutId = setTimeout(() => {
+    // 종료 시점 재검증
+    const latestRoom = roomService.getRoomById(roomId);
+    if (!canStartGame(latestRoom)) {
+      clearGameCountdown(roomId, 'condition-changed');
+      return;
+    }
+
+    // 타이머 정리 후 게임 시작
+    clearGameCountdown(roomId, 'completed');
+    try {
+      const gameStartData = gameService.startGame(roomId);
+      // 공개 정보만 브로드캐스트
+      const publicData = {
+        roomId: gameStartData.id,
+        status: gameStartData.status,
+        players: gameStartData.users.map(u => ({
+          id: u.id,
+          name: u.name,
+          cardCount: Array.isArray(u.cardPack) ? u.cardPack.length : 0
+        })),
+        currentTurn: gameStartData.gameState?.currentTurn ?? 0,
+        centerCards: gameStartData.gameState?.centerCards?.length ?? 0
+      };
+      io.to(roomId).emit('gameStart', {
+        message: '게임이 시작됩니다!',
+        gameData: publicData
+      });
+
+      // 각 플레이어에게 자신의 핸드 개별 전송
+      const latestRoom = roomService.getRoomById(roomId);
+      if (latestRoom && Array.isArray(latestRoom.users)) {
+        latestRoom.users.forEach(u => {
+          try {
+            io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
+          } catch (e) {
+            console.error('[yourHand emit Error]', e);
+          }
+        });
+      }
+
+      setTimeout(() => {
+        try {
+          const gameState = gameService.getGameState(roomId);
+          io.to(roomId).emit('gameState', gameState);
+        } catch (err) {
+          console.error('[gameState emit after start Error]', err);
+        }
+      }, 100);
+    } catch (error) {
+      console.error('[Game Start Error]', error);
+      io.to(roomId).emit('gameStartError', error.message);
+    }
+  }, totalSeconds * 1000);
+
+  gameStartTimers.set(roomId, { intervalId, timeoutId, secondsLeft });
+  // 즉시 최초 카운트다운 표시
+  io.to(roomId).emit('gameCountdown', { secondsLeft });
+}
+
 // 정적 파일을 제공하기 위해 public 폴더를 지정합니다.
 app.set("views", __dirname + "/views");
 app.use("/public", express.static(__dirname + "/public"));
@@ -128,6 +239,8 @@ io.on('connection', (socket) => {
       
       // 소켓을 방에 참여시킴
       socket.join(roomId);
+      // 카운트다운 중이었다면 조건 변경으로 취소
+      clearGameCountdown(roomId, 'user-joined');
       
       // 입장 성공 응답
       socket.emit('successJoinRoom', room);
@@ -159,6 +272,8 @@ io.on('connection', (socket) => {
       
       // 소켓을 방에서 제거
       socket.leave(roomId);
+      // 카운트다운 취소 (인원/준비상태 변화)
+      clearGameCountdown(roomId, 'user-left');
       
       // 나가기 성공 응답
       socket.emit('leaveRoomResult', {
@@ -206,34 +321,14 @@ io.on('connection', (socket) => {
         // 방의 모든 사용자에게 준비 상태 업데이트
         io.to(currentRoom.id).emit('updateReadyStatus', currentRoom.users);
         
-        // 모든 사용자가 준비되었는지 확인
+        // 모든 사용자가 준비되었는지 확인 및 카운트다운 제어
         const allReady = currentRoom.users.every(u => u.readyStatus === 'ready');
         if (allReady && currentRoom.users.length >= 2) {
           io.to(currentRoom.id).emit('allReady', currentRoom.users);
-          
-          // 3초 후 게임 시작
-          setTimeout(() => {
-            try {
-              const gameStartData = gameService.startGame(currentRoom.id);
-              console.log(`[Game] 게임 시작 데이터:`, gameStartData);
-              
-              io.to(currentRoom.id).emit('gameStart', {
-                message: '게임이 시작됩니다!',
-                gameData: gameStartData
-              });
-              
-              // 게임 상태도 함께 전송
-              setTimeout(() => {
-                const gameState = gameService.getGameState(currentRoom.id);
-                io.to(currentRoom.id).emit('gameState', gameState);
-              }, 100);
-              
-              console.log(`[Game] 게임 시작 완료 - 방: ${currentRoom.name}`);
-            } catch (error) {
-              console.error('[Game Start Error]', error);
-              io.to(currentRoom.id).emit('gameStartError', error.message);
-            }
-          }, 3000);
+          startGameCountdown(currentRoom.id);
+        } else {
+          // 조건 불충족 시 카운트다운 취소
+          clearGameCountdown(currentRoom.id, 'not-all-ready');
         }
         
         console.log(`[Game] 준비 상태 변경 - 사용자: ${user.name}, 상태: ${user.readyStatus}`);
@@ -283,6 +378,18 @@ io.on('connection', (socket) => {
         result: result
       });
 
+      // 각 플레이어에게 업데이트된 핸드 전송
+      const latestRoom = roomService.getRoomById(currentRoom.id);
+      if (latestRoom && Array.isArray(latestRoom.users)) {
+        latestRoom.users.forEach(u => {
+          try {
+            io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
+          } catch (e) {
+            console.error('[yourHand update Error]', e);
+          }
+        });
+      }
+
       // 게임 종료 확인
       const gameEndResult = gameService.checkGameEnd(currentRoom.id);
       if (gameEndResult.isEnded) {
@@ -313,8 +420,21 @@ io.on('connection', (socket) => {
       io.to(currentRoom.id).emit('halliGalliResult', {
         playerId: socket.id,
         playerName: userService.getUserName(socket.id),
-        result: result
+        success: result.success,
+        scoreGained: result.scoreGained || 0,
+        centerCardsGained: result.centerCardsGained || 0,
+        discardedCardsGained: result.discardedCardsGained || 0,
+        newScore: result.newScore || 0,
+        discardedCard: result.discardedCard,
+        centerCards: result.centerCards,
+        discardedCards: result.discardedCards
       });
+
+      // 게임 상태 업데이트
+      setTimeout(() => {
+        const gameState = gameService.getGameState(currentRoom.id);
+        io.to(currentRoom.id).emit('gameState', gameState);
+      }, 100);
 
       console.log(`[Game] 할리갈리 - 플레이어: ${userService.getUserName(socket.id)}, 성공: ${result.success}`);
     } catch (error) {
@@ -334,6 +454,8 @@ io.on('connection', (socket) => {
       if (currentRoom) {
         // 방에서 사용자 제거
         const result = roomService.leaveRoom(socket.id, currentRoom.id);
+        // 카운트다운 취소 (인원/준비상태 변화)
+        clearGameCountdown(currentRoom.id, 'user-disconnected');
         
         // 방이 삭제되지 않았다면 다른 사용자들에게 알림
         if (!result.roomRemoved) {
