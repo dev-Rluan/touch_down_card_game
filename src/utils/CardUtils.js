@@ -6,15 +6,22 @@ const Card = require('../models/Card');
  */
 const createDeck = () => {
   const fruits = ['strawberry', 'banana', 'plum', 'lemon'];
-  const counts = [1, 2, 3, 4, 5];
+  const counts = [
+    { count: 1, num: 5 },
+    { count: 2, num: 3 },
+    { count: 3, num: 3 },
+    { count: 4, num: 2 },
+    { count: 5, num: 1 },
+  ];
   const deck = [];
-  
-  // 각 과일별로 1~5개까지의 카드 생성 (총 20장)
-  fruits.forEach(fruit => {
-    counts.forEach(count => {
-      deck.push(new Card(fruit, count));
-    });
-  });
+
+  for (const fruit of fruits) {
+    for (const item of counts) {
+      for (let i = 0; i < item.num; i++) {
+        deck.push(new Card(fruit, item.count));
+      }
+    }
+  }
   
   return deck;
 };
@@ -36,37 +43,18 @@ const shuffleCards = (cards = null) => {
  * @returns {Object} 분배 결과
  */
 const dealCards = (players, deck) => {
-  const playerCount = players.length;
-  const cardsPerPlayer = Math.floor(deck.length / playerCount);
-  const remainingCards = deck.length % playerCount;
-  
-  const result = {
-    playerCards: [],
-    centerCards: [],
-    remainingDeck: []
-  };
-  
-  let cardIndex = 0;
-  
-  // 각 플레이어에게 카드 분배
-  players.forEach((player, index) => {
-    const playerCardCount = cardsPerPlayer + (index < remainingCards ? 1 : 0);
-    const playerCards = deck.slice(cardIndex, cardIndex + playerCardCount);
-    
-    result.playerCards.push({
-      playerId: player.id,
-      playerName: player.name,
-      cards: playerCards
-    });
-    
-    cardIndex += playerCardCount;
+  const dealtCards = {};
+  players.forEach(player => {
+    dealtCards[player.id] = [];
   });
-  
-  // 중앙에 카드 배치 (게임 시작용)
-  result.centerCards = deck.slice(cardIndex, cardIndex + 4);
-  result.remainingDeck = deck.slice(cardIndex + 4);
-  
-  return result;
+
+  let playerIndex = 0;
+  deck.forEach(card => {
+    dealtCards[players[playerIndex].id].push(card);
+    playerIndex = (playerIndex + 1) % players.length;
+  });
+
+  return dealtCards;
 };
 
 /**
