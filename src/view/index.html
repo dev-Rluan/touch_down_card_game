@@ -1,95 +1,248 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>touch_down_game_dessign</title>
-    <link rel="stylesheet" href="../public/assets/bootstrap/css/bootstrap.min.css?h=3f30c2c47d7d23c7a994db0c862d45a5">
+    <title>Touch Down Card Game</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
-    <link rel="stylesheet" href="../public/assets/css/Navbar-Right-Links-icons.css?h=befd8a398792e305b7ffd4a176b5b585">
+    <link rel="stylesheet" href="/public/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS 로딩 실패 시 기본 스타일 -->
+    <style>
+        .game-body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+        .game-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1rem;
+        }
+        .player-card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .btn {
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+        }
+    </style>
 </head>
 
-<body>
-    <nav class="navbar navbar-light navbar-expand-md">
-        <div class="container-fluid"><a class="navbar-brand" href="#">Brand</a><button data-bs-toggle="collapse" class="navbar-toggler" data-bs-target="#navcol-1"><span class="visually-hidden">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
-            <div class="collapse navbar-collapse" id="navcol-1">
-                <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link active" href="#">First Item</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Second Item</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Third Item</a></li>
-                </ul>
+<body class="game-body">
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="icon ion-android-gamepad me-2"></i>
+                Touch Down Card Game
+            </a>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-success me-2" id="connectStatus">연결 중...</span>
+                <span class="text-light" id="nick">User</span>
             </div>
         </div>
     </nav>
-    <main>
-        <div class="container" id="lobby">
-            <div class="card">
-                <div class="card-body">
-                    <h4 class="card-title">Touch down bell</h4>
-                    <h6 class="text-muted card-subtitle mb-2" id="connectStatus">Subtitle</h6>
-                    <p><span>Your NIck Name : </span><span class="card-text" id="nick">Your NIck Name</span></p>
-                    <form id="nickForm"><input class="form-control" type="text" id="nickname"><button class="btn btn-primary m-2" type="submit">수정</button></form>
-                </div>
-            </div>
-            <div class="card" id="roomList" >
-                <div class="card-body" id="refreshRoom"><button class="btn btn-primary float-end" type="button" data-bs-target="#modal_createRoom" data-bs-toggle="modal">방 만들기</button>
-                    <h4 class="card-title">RoomList</h4>
-                    <h6 class="text-muted card-subtitle mb-2">대기중인 방 목록</h6><button class="btn btn-primary d-xl-flex" type="button">새로고침</button>
-                    <form id="createForm"><label class="form-label">방만들기</label>
-                        <div class="input-group"><span class="input-group-text">방이름</span><input class="form-control" type="text"><button class="btn btn-primary" type="submit">Button</button></div>
-                    </form><label class="form-label">방 리스트</label>
-                    <ul class="list-group">
-                        <li class="list-group-item">
-                            <div class="row" id="rooms">
-                                <div class="col"><span>List Group Item 1</span></div>
-                                <div class="col"><button class="btn btn-primary float-end" type="button">Button</button></div>
+    <main class="main-content">
+        <div class="container-fluid" id="lobby">
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-8 col-xl-6">
+                    <!-- 닉네임 설정 카드 -->
+                    <div class="card game-card mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <i class="icon ion-person me-2 text-primary"></i>
+                                <h5 class="card-title mb-0">닉네임 설정</h5>
                             </div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="container" id="gameroom" style="display: none;">
-            <div class="card">
-                <div class="card-body"><button class="btn btn-primary float-end" id="reaveRoom" type="button">방나가기</button><button class="btn btn-primary float-end" type="button">Ready</button><button class="btn btn-secondary float-end" type="button"><i class="icon ion-android-settings"></i></button>
-                    <h4 class="card-title" id="roomname">RoomName</h4>
-                    <h6 class="text-muted card-subtitle mb-2"></h6>
-                    <h4>UserList</h4>
-                    <div></div><span id ="headCount">head/maxCount</span>
-                    <ul class="list-group "  id = "userList">
-                        <li class="list-group-item">
-                            <div class="row" id="userList">
-                                <div class="col"><span>List Group Item 1</span></div>
-                                <div class="col"><span>status</span></div>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            <div class="card"></div>
-        </div>
-        <div class="container">
-            <div class="modal fade" role="dialog" tabindex="-1" id="modal">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h4 class="modal-title">방 만들기</h4><button class="btn-close" type="button" aria-label="Close" data-bs-dismiss="modal"></button>
+                            <form id="nickForm" class="d-flex gap-2">
+                                <input class="form-control" type="text" id="nickname" placeholder="닉네임을 입력하세요">
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="icon ion-checkmark"></i>
+                                </button>
+                            </form>
                         </div>
-                        <form>
-                            <div class="modal-body">
-                                <p>방 이름</p><input class="form-control" type="text">
+                    </div>
+
+                    <!-- 방 관리 카드 -->
+                    <div class="card game-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="icon ion-ios-people me-2 text-primary"></i>
+                                    <h5 class="card-title mb-0">게임 방</h5>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-primary btn-sm" type="button" id="refreshRoom">
+                                        <i class="icon ion-refresh"></i>
+                                    </button>
+                                    <button class="btn btn-primary btn-sm" type="button" data-bs-target="#modal_createRoom" data-bs-toggle="modal">
+                                        <i class="icon ion-plus"></i> 방 만들기
+                                    </button>
+                                </div>
                             </div>
-                            <div class="modal-footer"><button class="btn btn-light" type="button" data-bs-dismiss="modal">Close</button><button class="btn btn-primary" type="submit">Save</button></div>
-                        </form>
+                            
+                            <!-- 방 만들기 폼 -->
+                            <form id="createForm" class="mb-3">
+                                <div class="input-group">
+                                    <input class="form-control" type="text" placeholder="방 이름을 입력하세요">
+                                    <button class="btn btn-primary" type="submit">생성</button>
+                                </div>
+                            </form>
+
+                            <!-- 방 목록 -->
+                            <div class="room-list">
+                                <div id="rooms" class="list-group list-group-flush">
+                                    <!-- 방 목록이 여기에 동적으로 추가됩니다 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 게임룸 섹션 -->
+        <div class="container-fluid" id="gameroom" style="display: none;">
+            <div class="row justify-content-center">
+                <div class="col-12 col-lg-10 col-xl-8">
+                    <div class="card game-card">
+                        <div class="card-body">
+                            <input type="hidden" id="roomId" value="">
+                            
+                            <!-- 방 헤더 -->
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h4 class="card-title mb-1" id="roomname">Room Name</h4>
+                                    <span class="badge bg-info" id="headCount">0/4</span>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-danger btn-sm" id="leaveRoom" type="button" onClick="leaveRoom();">
+                                        <i class="icon ion-log-out"></i> 방나가기
+                                    </button>
+                                    <button class="btn btn-success btn-sm" type="button" id="readyButton">
+                                        <i class="icon ion-checkmark"></i> Ready
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 플레이어 목록 -->
+                            <div class="player-section mb-4">
+                                <h6 class="text-muted mb-3"><i class="icon ion-ios-people me-1"></i> 플레이어 목록</h6>
+                                <div id="userList" class="player-grid">
+                                    <!-- 플레이어 목록이 여기에 동적으로 추가됩니다 -->
+                                </div>
+                            </div>
+
+                            <!-- 게임 보드 -->
+                            <div class="game-board">
+                                <!-- 중앙 플레이어별 카드 더미 영역 -->
+                                <div class="center-play-area" id="centerPlayArea">
+                                    <h6 class="text-white text-center mb-3">플레이어별 카드 더미</h6>
+                                    <div class="player-stacks" id="playerStacks">
+                                        <!-- 각 플레이어의 카드 더미가 여기에 표시됩니다 -->
+                                    </div>
+                                    
+                                    <!-- 할리갈리 벨 버튼 -->
+                                    <div class="halli-galli-bell-container">
+                                        <button type="button" class="halli-galli-bell" id="halliGalliBell" onclick="halliGalli()">
+                                            <div class="bell-icon">🔔</div>
+                                            <div class="bell-text">TOUCH!</div>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- 버림 카드 더미 (공용) -->
+                                    <div class="discard-pile-container">
+                                        <h6 class="text-white text-center mb-2">버림 카드</h6>
+                                        <div id="discardPile" class="discard-pile">
+                                            <div class="discard-placeholder">버림 카드 없음</div>
+                                        </div>
+                                        <div id="discardCount" class="discard-count">0장</div>
+                                    </div>
+                                </div>
+
+                                <!-- 내 카드 덱 (하단) -->
+                                <div class="my-deck-area" id="myDeckArea">
+                                    <div class="my-deck-container">
+                                        <h6 class="text-white mb-2">내 덱</h6>
+                                        <div id="myDeckCard" class="my-deck-card-slot">
+                                            <!-- 내 카드가 여기에 표시됩니다 -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 방 만들기 모달 -->
+        <div class="modal fade" id="modal_createRoom" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="icon ion-plus me-2"></i>
+                            새 방 만들기
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form id="modalCreateForm">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">방 이름</label>
+                                <input class="form-control" type="text" placeholder="방 이름을 입력하세요" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">최대 인원</label>
+                                <select class="form-select">
+                                    <option value="2">2명</option>
+                                    <option value="3">3명</option>
+                                    <option value="4" selected>4명</option>
+                                    <option value="6">6명</option>
+                                    <option value="8">8명</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                            <button type="submit" class="btn btn-primary">방 만들기</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 게임 종료 모달 -->
+        <div class="modal fade" id="gameEndModal" tabindex="-1" aria-labelledby="gameEndModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content game-end-modal">
+                    <div class="modal-body text-center p-5">
+                        <div id="gameEndContent">
+                            <!-- 승리/패배 내용이 동적으로 추가됩니다 -->
+                        </div>
+                        <div class="game-end-scores mt-4">
+                            <h5 class="mb-3">최종 점수</h5>
+                            <div id="finalScoresList">
+                                <!-- 점수 리스트가 여기에 표시됩니다 -->
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button type="button" class="btn btn-primary btn-lg" onclick="closeGameEndModal()">확인</button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </main>
-    <script src="../public/assets/bootstrap/js/bootstrap.min.js?h=79ff9637b74326c362fb6f7f5801a7ba"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="../public/js/app.js"></script>
+    <script src="/public/js/app.js"></script>
 </body>
 
 </html>

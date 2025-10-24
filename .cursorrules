@@ -1,0 +1,277 @@
+# Touch Down Card Game - Cursor 개발 룰
+
+## 🎯 프로젝트 개요
+- **프로젝트명**: Touch Down Card Game (온라인 할리갈리)
+- **기술스택**: Node.js + Express + Socket.IO + HTML/CSS/JS
+- **아키텍처**: MVC 패턴 + 서비스 레이어
+
+## 📁 프로젝트 구조
+```
+src/
+├── server/              # 서버 코드 (server.js)
+├── services/            # 비즈니스 로직
+│   ├── roomService.js   # 방 관리 서비스
+│   ├── userServices.js # 사용자 관리 서비스
+│   └── gameService.js   # 게임 로직 서비스
+├── controllers/         # 컨트롤러
+├── models/              # 데이터 모델
+├── socket/              # Socket.IO 이벤트
+├── public/              # 정적 파일
+│   ├── js/app.js        # 클라이언트 JavaScript
+│   └── css/             # 스타일시트
+└── view/                # HTML 템플릿
+```
+
+## 🛠️ 개발 환경 설정
+
+### 필수 도구
+- Node.js 18+
+- npm 또는 yarn
+- Git
+
+### 스크립트 명령어
+```bash
+npm run dev      # 개발 서버 시작 (nodemon)
+npm start        # 프로덕션 서버 시작
+npm test         # 테스트 실행
+npm run lint     # 코드 린팅
+```
+
+## 📝 코딩 스타일 가이드
+
+### JavaScript 코딩 규칙
+1. **함수명**: camelCase 사용
+   ```javascript
+   // ✅ 좋은 예
+   function createRoom() {}
+   function getUserName() {}
+   
+   // ❌ 나쁜 예
+   function create_room() {}
+   function getUser_name() {}
+   ```
+
+2. **변수명**: 명확하고 의미있는 이름 사용
+   ```javascript
+   // ✅ 좋은 예
+   const roomList = [];
+   const maxUserCount = 4;
+   const isUserReady = true;
+   
+   // ❌ 나쁜 예
+   const rl = [];
+   const muc = 4;
+   const iur = true;
+   ```
+
+3. **JSDoc 주석**: 모든 함수에 문서화
+   ```javascript
+   /**
+    * 방 생성 함수
+    * @param {string} socketId - 소켓 ID
+    * @param {string} roomName - 방 이름
+    * @param {number} maxUserCnt - 최대 인원수
+    * @returns {Object} 생성된 방 정보
+    * @throws {Error} 방 이름 중복 또는 유효하지 않은 입력값
+    */
+   function createRoom(socketId, roomName, maxUserCnt) {
+     // 함수 구현
+   }
+   ```
+
+4. **에러 처리**: try-catch 블록 사용
+   ```javascript
+   // ✅ 좋은 예
+   try {
+     const room = roomService.createRoom(socketId, roomName, maxCnt);
+     socket.emit('roomCreated', room);
+   } catch (error) {
+     console.error('[createRoom Error]', error);
+     socket.emit('createRoomError', error.message);
+   }
+   ```
+
+5. **입력값 검증**: 모든 입력에 대한 유효성 검사
+   ```javascript
+   // ✅ 좋은 예
+   if (!socketId || !roomName || !roomName.trim()) {
+     throw new Error("필수 입력값이 누락되었습니다.");
+   }
+   ```
+
+### Socket.IO 이벤트 규칙
+1. **이벤트명**: kebab-case 사용
+   ```javascript
+   // ✅ 좋은 예
+   socket.emit('createRoom', data);
+   socket.emit('joinRoom', roomId);
+   socket.emit('leaveRoom', roomId);
+   
+   // ❌ 나쁜 예
+   socket.emit('create_room', data);
+   socket.emit('joinroom', roomId);
+   ```
+
+2. **이벤트 데이터**: 일관된 구조 사용
+   ```javascript
+   // ✅ 좋은 예
+   socket.emit('roomCreated', {
+     id: roomId,
+     name: roomName,
+     users: users,
+     status: 'waiting'
+   });
+   ```
+
+## 🔧 개발 워크플로우
+
+### Git 브랜치 전략
+- `main`: 프로덕션 브랜치
+- `develop`: 개발 브랜치
+- `feature/*`: 기능 개발 브랜치
+- `bugfix/*`: 버그 수정 브랜치
+- `hotfix/*`: 긴급 수정 브랜치
+
+### 커밋 메시지 규칙
+```
+feat: 새로운 기능 추가
+fix: 버그 수정
+docs: 문서 수정
+style: 코드 포맷팅
+refactor: 코드 리팩토링
+test: 테스트 추가
+chore: 빌드/설정 변경
+```
+
+### 예시
+```
+feat: 방 생성 기능 추가
+fix: 연결 해제 시 메모리 누수 수정
+docs: API 문서 업데이트
+refactor: roomService 리팩토링
+```
+
+## 📊 코드 품질 관리
+
+### 필수 체크리스트
+- [ ] 모든 함수에 JSDoc 주석 추가
+- [ ] 입력값 검증 로직 포함
+- [ ] 에러 처리 (try-catch) 구현
+- [ ] 로깅 메시지 추가
+- [ ] 테스트 케이스 작성
+
+### 코드 리뷰 포인트
+1. **성능**: 불필요한 반복문이나 중첩 구조 확인
+2. **보안**: 입력값 검증 및 SQL 인젝션 방지
+3. **가독성**: 변수명과 함수명이 명확한지 확인
+4. **재사용성**: 중복 코드 제거 및 모듈화
+
+## 🧪 테스트 가이드
+
+### 테스트 구조
+```
+src/tests/
+├── unit/              # 단위 테스트
+│   ├── services/
+│   ├── controllers/
+│   └── models/
+├── integration/       # 통합 테스트
+└── e2e/              # E2E 테스트
+```
+
+### 테스트 작성 규칙
+```javascript
+// ✅ 좋은 예
+describe('roomService', () => {
+  describe('createRoom', () => {
+    it('should create room with valid input', () => {
+      // 테스트 구현
+    });
+    
+    it('should throw error with invalid input', () => {
+      // 에러 케이스 테스트
+    });
+  });
+});
+```
+
+## 🚀 배포 및 운영
+
+### 환경 변수
+```bash
+NODE_ENV=development
+PORT=3000
+LOG_LEVEL=debug
+```
+
+### 로깅 규칙
+```javascript
+// 로그 레벨별 사용
+console.log('[Info]', message);      // 일반 정보
+console.warn('[Warning]', message); // 경고
+console.error('[Error]', message);   // 에러
+console.debug('[Debug]', message);   // 디버그
+```
+
+## 📚 문서화 규칙
+
+### API 문서
+- 모든 Socket.IO 이벤트에 대한 요청/응답 형식 명시
+- 데이터 구조 상세 정의
+- 에러 코드 및 메시지 목록
+
+### 코드 문서
+- JSDoc 형식의 함수 주석
+- 복잡한 로직에 대한 인라인 주석
+- README.md 업데이트
+
+## 🔍 디버깅 가이드
+
+### 로그 확인 포인트
+1. **연결**: 클라이언트 연결/해제 로그
+2. **방 관리**: 방 생성/입장/나가기 로그
+3. **게임**: 게임 시작/종료 로그
+4. **에러**: 모든 에러 상황 로그
+
+### 성능 모니터링
+- 동시 연결 수
+- 방 생성/삭제 빈도
+- 게임 진행 시간
+- 메모리 사용량
+
+## ⚠️ 주의사항
+
+### 보안
+- 사용자 입력 검증 필수
+- SQL 인젝션 방지
+- XSS 공격 방지
+- Rate limiting 적용
+
+### 성능
+- 메모리 누수 방지
+- 불필요한 이벤트 전송 최소화
+- 데이터베이스 쿼리 최적화
+
+### 호환성
+- Node.js 18+ 지원
+- 최신 브라우저 지원
+- 모바일 반응형 고려
+
+## 🎯 개발 우선순위
+
+### Phase 1: 기반 구축
+1. 프로젝트 구조 정리
+2. 기본 문서화 완성
+3. 코드 품질 개선
+
+### Phase 2: 기능 완성
+1. 게임 로직 구현
+2. UI/UX 개선
+3. 테스트 코드 작성
+
+### Phase 3: 최적화
+1. 성능 최적화
+2. 보안 강화
+3. 모니터링 구축
+
+이 룰을 따라 개발하면 일관되고 유지보수 가능한 코드를 작성할 수 있습니다.

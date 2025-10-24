@@ -1,29 +1,50 @@
 {
-  "name": "touch_down_card_game",
+  "name": "touch-down-card-game",
   "version": "1.0.0",
-  "description": "touch_down_card_game",
+  "description": "온라인 할리갈리 멀티플레이어 게임",
+  "main": "src/server.js",
   "scripts": {
-    "dev": "nodemon"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest",
+    "lint": "eslint src/",
+    "build": "babel src -d dist",
+    "docs": "jsdoc src/ -d docs/api"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dev-Rluan/touch_down_card_game.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "game",
+    "multiplayer",
+    "socket.io",
+    "node.js",
+    "halli-galli"
+  ],
+  "author": "dev-Rluan",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/dev-Rluan/touch_down_card_game/issues"
   },
   "homepage": "https://github.com/dev-Rluan/touch_down_card_game#readme",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1",
+    "uuid": "^9.0.0"
+  },
   "devDependencies": {
     "@babel/cli": "^7.21.0",
     "@babel/core": "^7.21.0",
     "@babel/node": "^7.20.7",
     "@babel/preset-env": "^7.20.2",
-    "express": "^4.18.2",
     "nodemon": "^2.0.20",
-    "socket.io": "^4.6.1",
-    "uuid": "^9.0.0"
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "jsdoc": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
