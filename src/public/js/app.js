@@ -683,38 +683,576 @@ socket.on('updateReadyStatus', function(users) {
 
 
 
-// 게임 시작 시
-socket.on('gameStarted', function(data) {
-    console.log('게임 시작:', data);
-    
-    // 게임 UI 표시
-    if (data) {
-        showGameUI(data);
-        renderMyCards(data.myCards);
-    } else {
-        console.error('게임 데이터가 없습니다:', data);
-        showNotification('게임 데이터를 받지 못했습니다.', 'error');
-        return;
+// 게임 시작 카운트다운 UI
+let countdownElement;
+function ensureCountdownElement() {
+    if (!countdownElement) {
+        countdownElement = document.createElement('div');
+        countdownElement.id = 'gameCountdown';
+        countdownElement.className = 'alert alert-info text-center position-fixed';
+        countdownElement.style.cssText = 'top: 80px; right: 20px; left: 20px; z-index: 9999;';
+        document.body.appendChild(countdownElement);
     }
+    return countdownElement;
+}
+
+socket.on('gameCountdownStart', ({ total }) => {
+    const el = ensureCountdownElement();
+    el.style.display = 'block';
+    el.className = 'alert alert-info text-center position-fixed';
+    el.textContent = `게임이 ${total}초 후 시작됩니다...`;
+});
+
+socket.on('gameCountdown', ({ secondsLeft }) => {
+    const el = ensureCountdownElement();
+    el.textContent = `게임이 ${secondsLeft}초 후 시작됩니다...`;
+});
+
+socket.on('gameCountdownCanceled', ({ reason }) => {
+    if (countdownElement) {
+        countdownElement.style.display = 'none';
+    }
+    if (reason !== 'completed') {
+        showNotification('게임 시작이 취소되었습니다. (조건 변경)', 'warning');
+    }
+});
+
+// 서버의 실제 시작 이벤트 수신
+socket.on('gameStart', ({ message, gameData }) => {
+    if (countdownElement) {
+        countdownElement.style.display = 'none';
+    }
+    console.log('게임 시작:', gameData);
+    showNotification(message || '게임이 시작됩니다!', 'success');
+    if (gameData) {
+        showGameUI(gameData);
+    }
+});
+
+// 서버가 내 핸드를 개별로 내려줌
+let mySocketId = null;
+socket.on('yourHand', ({ cards }) => {
+    console.log('내 핸드 수신:', cards);
+    if (Array.isArray(cards)) {
+        renderMyCards(cards);
+        // 내 덱 업데이트 (플레이어 카드 영역에)
+        updateMyDeckInPlayerCard(cards);
+    }
+});
+
+// 소켓 ID 저장
+socket.on('connecting', (msg) => {
+    mySocketId = socket.id;
+    // 기존 connecting 로직은 그대로 유지
+});
+
+// 카드를 낸 후 업데이트
+socket.on('cardPlayed', (data) => {
+    console.log('카드 플레이 결과:', data);
+    // 중앙에 카드 추가 표시
+    if (data.result && data.result.playedCard) {
+        addCenterCard(data.playerId, data.playerName, data.result.playedCard);
+    }
+    // 게임 상태를 다시 요청해서 업데이트
+    socket.emit('getGameState');
+});
+
+// 게임 상태 수신
+socket.on('gameState', (state) => {
+    console.log('게임 상태 수신:', state);
+    // 플레이어 카드 수 업데이트
+    updatePlayerCardCounts(state.players);
+    // 현재 턴 표시
+    updateTurnIndicator(state.currentTurn, state.players);
+    // 버림 카드 더미 업데이트
+    updateDiscardPile(state.discardedCards || []);
+});
+
+// 게임 종료 이벤트
+socket.on('gameEnd', (data) => {
+    console.log('게임 종료:', data);
+    showGameEnd(data);
+});
+
+// 할리갈리 결과 이벤트
+socket.on('halliGalliResult', (data) => {
+    console.log('할리갈리 결과:', data);
     
-    // 게임 시작 알림
-    showNotification('게임이 시작됩니다!', 'success');
+    const bell = document.getElementById('halliGalliBell');
+    if (!bell) return;
+    
+    if (data.success) {
+        // 성공 시 효과
+        showHalliGalliSuccess(data);
+        bell.classList.add('bell-success');
+        setTimeout(() => bell.classList.remove('bell-success'), 1000);
+        
+        // 중앙 카드 더미 및 버림 카드 더미 비우기
+        clearAllCenterCards();
+        clearDiscardPile();
+    } else {
+        // 실패 시 효과
+        showHalliGalliFailure(data);
+        bell.classList.add('bell-failure');
+        setTimeout(() => bell.classList.remove('bell-failure'), 500);
+        
+        // 실패 시 버림 카드 더미에 추가
+        if (data.discardedCard) {
+            updateDiscardPile(data.discardedCards || []);
+        }
+    }
 });
 
 function showGameUI(gameData) {
-    lobby.style.display = 'none';
-    gameroom.style.display = 'block';
-    // other UI updates
+    console.log('showGameUI 호출됨:', gameData);
+    // 게임 보드 영역 보이기
+    const gameBoard = document.querySelector('.game-board');
+    if (gameBoard) {
+        gameBoard.style.display = 'flex';
+    }
+    
+    // 중앙 플레이어별 카드 더미 초기화
+    if (gameData && gameData.players) {
+        initializePlayerStacks(gameData.players);
+    }
+}
+
+/**
+ * 중앙에 플레이어별 카드 더미 영역 초기화
+ */
+function initializePlayerStacks(players) {
+    if (!Array.isArray(players)) return;
+    
+    const playerStacks = document.getElementById('playerStacks');
+    if (!playerStacks) return;
+    
+    playerStacks.innerHTML = '';
+    
+    players.forEach(player => {
+        const stackContainer = document.createElement('div');
+        stackContainer.className = 'player-stack';
+        stackContainer.id = `stack-${player.id}`;
+        
+        // 플레이어 이름과 카드 수
+        const playerInfo = document.createElement('div');
+        playerInfo.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        `;
+        
+        const playerName = document.createElement('div');
+        playerName.className = 'player-stack-name';
+        playerName.textContent = player.name || 'Unknown';
+        
+        const cardCount = document.createElement('div');
+        cardCount.className = 'player-stack-count';
+        cardCount.id = `stack-count-${player.id}`;
+        cardCount.style.cssText = `
+            background: #6366f1;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 0.5rem;
+            font-size: 12px;
+            font-weight: bold;
+        `;
+        cardCount.textContent = `🃏 ${player.cardCount || 0}`;
+        
+        playerInfo.appendChild(playerName);
+        playerInfo.appendChild(cardCount);
+        
+        const stackCards = document.createElement('div');
+        stackCards.className = 'player-stack-cards';
+        stackCards.id = `stack-cards-${player.id}`;
+        
+        // 초기 플레이스홀더
+        const placeholder = document.createElement('div');
+        placeholder.className = 'stack-placeholder';
+        placeholder.textContent = '대기중';
+        stackCards.appendChild(placeholder);
+        
+        stackContainer.appendChild(playerInfo);
+        stackContainer.appendChild(stackCards);
+        playerStacks.appendChild(stackContainer);
+    });
+}
+
+/**
+ * 모든 플레이어의 덱 표시 초기화
+ */
+function initializePlayerDecks(players) {
+    if (!Array.isArray(players)) return;
+    
+    players.forEach(player => {
+        const playerCard = document.getElementById(player.id);
+        if (playerCard) {
+            // 기존 덱 영역 제거
+            const existingDeck = playerCard.querySelector('.player-deck-area');
+            if (existingDeck) {
+                existingDeck.remove();
+            }
+            
+            // 덱 영역 생성
+            const deckArea = document.createElement('div');
+            deckArea.className = 'player-deck-area';
+            deckArea.setAttribute('data-player-id', player.id);
+            deckArea.style.cssText = `
+                margin-top: 0.5rem;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            `;
+            
+            // 덱 카드 (뒷면) - 다른 플레이어용
+            const deckCard = document.createElement('div');
+            deckCard.className = 'deck-card back-card';
+            deckCard.style.cssText = `
+                width: 70px;
+                height: 100px;
+                background: linear-gradient(135deg, #6366f1, #4f46e5);
+                border: 2px solid #4f46e5;
+                border-radius: 0.5rem;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                color: white;
+                font-size: 32px;
+                font-weight: bold;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                cursor: default;
+            `;
+            deckCard.innerHTML = '🃏';
+            deckArea.appendChild(deckCard);
+            
+            playerCard.appendChild(deckArea);
+        }
+    });
+}
+
+/**
+ * 내 덱을 플레이어 카드 영역에 업데이트 (맨 위 카드 표시 + 클릭 가능)
+ */
+function updateMyDeckInPlayerCard(cards) {
+    if (!socket || !socket.id) return;
+    
+    const myPlayerCard = document.getElementById(socket.id);
+    if (!myPlayerCard) return;
+    
+    const deckArea = myPlayerCard.querySelector('.player-deck-area');
+    if (!deckArea) return;
+    
+    // 기존 덱 카드 제거
+    deckArea.innerHTML = '';
+    
+    if (cards.length > 0) {
+        const topCard = cards[0];
+        const deckCard = document.createElement('button');
+        deckCard.type = 'button';
+        deckCard.className = 'deck-card my-deck-card';
+        deckCard.style.cssText = `
+            width: 70px;
+            height: 100px;
+            background: white;
+            border: 3px solid #10b981;
+            border-radius: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: all 0.2s;
+        `;
+        deckCard.innerHTML = `
+            <div style="font-size:28px;">${getFruitEmoji(topCard.fruit)}</div>
+            <div style="font-size:18px; font-weight:bold; color:#333; margin-top:4px;">${topCard.count}</div>
+        `;
+        deckCard.onmouseover = () => {
+            deckCard.style.transform = 'translateY(-5px) scale(1.05)';
+            deckCard.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
+        };
+        deckCard.onmouseout = () => {
+            deckCard.style.transform = 'translateY(0) scale(1)';
+            deckCard.style.boxShadow = '0 4px 6px rgba(0,0,0,0.2)';
+        };
+        deckCard.onclick = () => {
+            playCard(0);
+        };
+        deckArea.appendChild(deckCard);
+    } else {
+        // 카드가 없을 때
+        const emptyDeck = document.createElement('div');
+        emptyDeck.className = 'deck-card empty';
+        emptyDeck.style.cssText = `
+            width: 70px;
+            height: 100px;
+            background: #e5e7eb;
+            border: 2px dashed #9ca3af;
+            border-radius: 0.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #6b7280;
+            font-size: 12px;
+        `;
+        emptyDeck.textContent = '덱 비움';
+        deckArea.appendChild(emptyDeck);
+    }
 }
 
 function renderMyCards(cards) {
-    const myCardList = document.querySelector('.player-hand-area .card-list');
-    myCardList.innerHTML = '';
-    cards.forEach(card => {
+    // 하단 내 덱 영역에 표시
+    const myDeckCard = document.getElementById('myDeckCard');
+    if (!myDeckCard) {
+        console.error('myDeckCard 영역을 찾을 수 없습니다');
+        return;
+    }
+    
+    myDeckCard.innerHTML = '';
+    
+    if (cards.length > 0) {
+        const topCard = cards[0];
+        const deckCard = document.createElement('button');
+        deckCard.type = 'button';
+        deckCard.className = 'deck-card';
+        deckCard.innerHTML = `
+            <div style="font-size:48px; margin-bottom:8px;">${getFruitEmoji(topCard.fruit)}</div>
+            <div style="font-size:28px; font-weight:bold; color:#333;">${topCard.count}</div>
+            <div style="font-size:12px; color:#666; margin-top:8px;">클릭하여 플레이</div>
+        `;
+        deckCard.onclick = () => {
+            playCard(0);
+        };
+        myDeckCard.appendChild(deckCard);
+    } else {
+        // 카드가 없을 때
+        const emptyCard = document.createElement('div');
+        emptyCard.style.cssText = `
+            width: 110px;
+            height: 160px;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 0.75rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+        `;
+        emptyCard.textContent = '덱 비움';
+        myDeckCard.appendChild(emptyCard);
+    }
+    
+    console.log(`내 카드 ${cards.length}장 (하단 덱에 표시됨)`);
+}
+
+/**
+ * 플레이어의 카드 더미에 카드 추가
+ */
+function addCenterCard(playerId, playerName, card) {
+    const stackCards = document.getElementById(`stack-cards-${playerId}`);
+    if (!stackCards) {
+        console.error(`플레이어 ${playerId}의 카드 더미를 찾을 수 없습니다`);
+        return;
+    }
+
+    // 기존 placeholder 제거
+    const placeholder = stackCards.querySelector('.stack-placeholder');
+    if (placeholder) {
+        placeholder.remove();
+    }
+
+    // 기존 카드들을 약간 뒤로 밀어내기
+    const existingCards = stackCards.querySelectorAll('.stack-card');
+    existingCards.forEach((card, idx) => {
+        card.style.transform = `translateY(${(idx + 1) * 3}px)`;
+        card.style.zIndex = idx;
+    });
+
+    // 새 카드 추가 (맨 위)
         const cardElement = document.createElement('div');
-        cardElement.classList.add('card-item'); // You'll need to style this class
-        cardElement.innerHTML = `<span>${card.fruit} ${card.count}</span>`;
-        myCardList.appendChild(cardElement);
+    cardElement.className = 'stack-card';
+    cardElement.style.zIndex = existingCards.length;
+    cardElement.innerHTML = `
+        <div style="font-size:36px; margin-bottom:4px;">${getFruitEmoji(card.fruit)}</div>
+        <div style="font-size:24px; font-weight:bold; color:#333;">${card.count}</div>
+    `;
+    
+    stackCards.appendChild(cardElement);
+    
+    // 최대 3장까지만 보이게 (오래된 카드 제거)
+    const allCards = stackCards.querySelectorAll('.stack-card');
+    if (allCards.length > 3) {
+        allCards[0].remove();
+    }
+}
+
+/**
+ * 버림 카드 더미 업데이트
+ */
+function updateDiscardPile(discardedCards) {
+    const discardPile = document.getElementById('discardPile');
+    const discardCount = document.getElementById('discardCount');
+    
+    if (!discardPile || !discardCount) return;
+    
+    // 카드 수 업데이트
+    discardCount.textContent = `${discardedCards.length}장`;
+    
+    // 버림 카드가 없으면 플레이스홀더 표시
+    if (discardedCards.length === 0) {
+        discardPile.innerHTML = '<div class="discard-placeholder">버림 카드 없음</div>';
+        return;
+    }
+    
+    // 맨 위 카드 표시 (가장 최근에 버린 카드)
+    const topCard = discardedCards[discardedCards.length - 1];
+    discardPile.innerHTML = `
+        <div class="discard-card">${getFruitEmoji(topCard.fruit)}</div>
+        <div class="discard-card-count">${topCard.count}</div>
+    `;
+}
+
+/**
+ * 버림 카드 더미 비우기 (할리갈리 성공 시)
+ */
+function clearDiscardPile() {
+    const discardPile = document.getElementById('discardPile');
+    const discardCount = document.getElementById('discardCount');
+    
+    if (!discardPile || !discardCount) return;
+    
+    // 페이드아웃 애니메이션
+    discardPile.style.transition = 'all 0.3s ease-out';
+    discardPile.style.opacity = '0';
+    discardPile.style.transform = 'scale(0.8)';
+    
+    setTimeout(() => {
+        discardPile.innerHTML = '<div class="discard-placeholder">버림 카드 없음</div>';
+        discardCount.textContent = '0장';
+        discardPile.style.opacity = '1';
+        discardPile.style.transform = 'scale(1)';
+    }, 300);
+}
+
+/**
+ * 모든 플레이어의 중앙 카드 더미 비우기 (할리갈리 성공 시)
+ */
+function clearAllCenterCards() {
+    const playerStacks = document.getElementById('playerStacks');
+    if (!playerStacks) return;
+    
+    const allStackCards = playerStacks.querySelectorAll('.player-stack-cards');
+    allStackCards.forEach(stackCards => {
+        // 모든 카드 제거
+        const cards = stackCards.querySelectorAll('.stack-card');
+        cards.forEach(card => {
+            // 페이드아웃 애니메이션 추가
+            card.style.transition = 'all 0.3s ease-out';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.5)';
+            setTimeout(() => card.remove(), 300);
+        });
+        
+        // 플레이스홀더 다시 추가
+        setTimeout(() => {
+            if (stackCards.children.length === 0) {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'stack-placeholder';
+                placeholder.textContent = '대기중';
+                stackCards.appendChild(placeholder);
+            }
+        }, 350);
+    });
+}
+
+/**
+ * 플레이어 카드 수 업데이트
+ */
+function updatePlayerCardCounts(players) {
+    if (!Array.isArray(players)) return;
+    
+    players.forEach(player => {
+        // 중앙 더미의 카드 수 업데이트
+        const stackCount = document.getElementById(`stack-count-${player.id}`);
+        if (stackCount) {
+            stackCount.textContent = `🃏 ${player.cardCount || 0}`;
+        }
+        
+        // 플레이어 카드 영역의 카드 수도 업데이트 (호환성)
+        const playerCard = document.getElementById(player.id);
+        if (playerCard) {
+            let cardCountBadge = playerCard.querySelector('.card-count-badge');
+            if (!cardCountBadge) {
+                cardCountBadge = document.createElement('div');
+                cardCountBadge.className = 'card-count-badge';
+                cardCountBadge.style.cssText = `
+                    position: absolute;
+                    top: 0.5rem;
+                    left: 0.5rem;
+                    background: linear-gradient(135deg, #6366f1, #4f46e5);
+                    color: white;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.375rem;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                `;
+                playerCard.appendChild(cardCountBadge);
+            }
+            cardCountBadge.innerHTML = `🃏 ${player.cardCount}장`;
+        }
+    });
+}
+
+/**
+ * 현재 턴 표시 (중앙 카드 더미에)
+ */
+function updateTurnIndicator(currentTurn, players) {
+    if (!Array.isArray(players)) return;
+    
+    players.forEach((player, idx) => {
+        const stackContainer = document.getElementById(`stack-${player.id}`);
+        if (!stackContainer) return;
+        
+        // 기존 턴 표시 제거
+        const existingBadge = stackContainer.querySelector('.turn-badge');
+        if (existingBadge) {
+            existingBadge.remove();
+        }
+        
+        // 기존 활성 스타일 제거
+        const stackCards = stackContainer.querySelector('.player-stack-cards');
+        if (stackCards) {
+            stackCards.style.border = 'none';
+            stackCards.style.boxShadow = 'none';
+        }
+        
+        // 현재 턴 플레이어에 표시 추가
+        if (idx === currentTurn) {
+            const badge = document.createElement('div');
+            badge.className = 'turn-badge';
+            badge.style.cssText = `
+                background: #10b981;
+                color: white;
+                padding: 6px 12px;
+                border-radius: 0.5rem;
+                font-size: 13px;
+                font-weight: bold;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                animation: pulse 1s infinite;
+                margin-top: 8px;
+            `;
+            badge.textContent = '🎯 현재 턴';
+            stackContainer.appendChild(badge);
+            
+            // 카드 영역에 하이라이트
+            if (stackCards) {
+                stackCards.style.border = '3px solid #10b981';
+                stackCards.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.5)';
+                stackCards.style.borderRadius = '0.5rem';
+            }
+        }
     });
 }
 
@@ -722,11 +1260,10 @@ function renderMyCards(cards) {
  * 카드 내기
  */
 function playCard(cardIndex) {
-    if (!isMyTurn) {
+    if (typeof isMyTurn !== 'undefined' && !isMyTurn) {
         showNotification('당신의 턴이 아닙니다!', 'warning');
         return;
     }
-    
     socket.emit('playCard', cardIndex);
 }
 
@@ -734,7 +1271,94 @@ function playCard(cardIndex) {
  * 할리갈리 버튼 클릭
  */
 function halliGalli() {
+    const bell = document.getElementById('halliGalliBell');
+    if (bell) {
+        bell.classList.add('bell-pressed');
+        playBellSound();
+        setTimeout(() => bell.classList.remove('bell-pressed'), 300);
+    }
     socket.emit('halliGalli');
+}
+
+/**
+ * 벨 소리 재생 (Web Audio API 사용)
+ */
+function playBellSound() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+        console.log('Sound playback not available:', error);
+    }
+}
+
+/**
+ * 할리갈리 성공 표시
+ */
+function showHalliGalliSuccess(data) {
+    const notification = document.createElement('div');
+    notification.className = 'halli-galli-notification success';
+    
+    // 중앙 카드와 버림 카드 획득 정보 표시
+    const centerInfo = data.centerCardsGained > 0 ? `중앙 ${data.centerCardsGained}장` : '';
+    const discardInfo = data.discardedCardsGained > 0 ? `버림 ${data.discardedCardsGained}장` : '';
+    const cardInfo = [centerInfo, discardInfo].filter(s => s).join(' + ');
+    
+    notification.innerHTML = `
+        <div class="notification-icon">🎉</div>
+        <div class="notification-text">
+            <strong>${data.playerName}님이 할리갈리 성공!</strong>
+            <div class="notification-score">+${data.scoreGained}점 획득! ${cardInfo ? `(${cardInfo})` : ''}</div>
+        </div>
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+/**
+ * 할리갈리 실패 표시
+ */
+function showHalliGalliFailure(data) {
+    const notification = document.createElement('div');
+    notification.className = 'halli-galli-notification failure';
+    notification.innerHTML = `
+        <div class="notification-icon">❌</div>
+        <div class="notification-text">
+            <strong>${data.playerName}님이 할리갈리 실패!</strong>
+            <div class="notification-score">카드 1장 버림</div>
+        </div>
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 2000);
 }
 
 /**
@@ -842,42 +1466,107 @@ function showHalliGalliResult(data) {
  * 게임 종료 표시
  */
 function showGameEnd(data) {
+    if (!socket || !socket.id) return;
+    
     const winner = data.winner;
     const finalScores = data.finalScores;
+    const isWinner = winner.id === socket.id;
     
-    let endMessage = `
-    <div class="text-center">
-        <h4 class="text-success mb-3">🎉 게임 종료! 🎉</h4>
-        <h5 class="mb-3">승자: ${winner.name} (${winner.score}점)</h5>
-        <h6 class="text-muted mb-3">최종 점수</h6>
-        <div class="list-group">
-    `;
+    // 게임 종료 콘텐츠 생성
+    const gameEndContent = document.getElementById('gameEndContent');
+    if (!gameEndContent) return;
     
-    finalScores.sort((a, b) => b.score - a.score).forEach((player, index) => {
-        endMessage += `
-        <div class="list-group-item d-flex justify-content-between align-items-center">
-            <span>${index + 1}. ${player.name}</span>
-            <span class="badge bg-primary">${player.score}점</span>
-        </div>`;
-    });
-    
-    endMessage += `
-        </div>
-        <button class="btn btn-primary mt-3" onclick="location.reload()">새 게임</button>
-    </div>`;
-    
-    // 모달로 게임 종료 표시
-    const modal = document.createElement('div');
-    modal.className = 'modal fade show';
-    modal.style.display = 'block';
-    modal.innerHTML = `
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-body">
-                ${endMessage}
+    gameEndContent.innerHTML = `
+        <div class="game-end-result ${isWinner ? 'victory' : 'defeat'}">
+            <div class="${isWinner ? 'victory-icon' : 'defeat-icon'}">
+                ${isWinner ? '🏆' : '😢'}
+            </div>
+            <div class="game-end-title">
+                ${isWinner ? 'VICTORY!' : 'DEFEAT'}
+            </div>
+            <div class="game-end-subtitle">
+                ${isWinner ? '축하합니다! 승리하셨습니다!' : '다음 기회에...'}
             </div>
         </div>
-    </div>`;
+    `;
     
-    document.body.appendChild(modal);
+    // 최종 점수 리스트 생성
+    const finalScoresList = document.getElementById('finalScoresList');
+    if (!finalScoresList) return;
+    
+    finalScoresList.innerHTML = '';
+    
+    // 카드 수 순으로 정렬
+    const sortedScores = [...finalScores].sort((a, b) => (b.cardCount || 0) - (a.cardCount || 0));
+    
+    sortedScores.forEach((player, index) => {
+        const scoreItem = document.createElement('div');
+        scoreItem.className = `score-item ${player.id === winner.id ? 'winner' : ''}`;
+        scoreItem.innerHTML = `
+            <span class="score-name">${player.name}</span>
+            <span class="score-value">${player.cardCount || 0}장 (${player.score}점)</span>
+        `;
+        finalScoresList.appendChild(scoreItem);
+    });
+    
+    // 모달 표시
+    const gameEndModal = new bootstrap.Modal(document.getElementById('gameEndModal'));
+    gameEndModal.show();
+    
+    // 승리 시 효과음/애니메이션 (선택사항)
+    if (isWinner) {
+        playVictoryEffect();
+    }
+}
+
+/**
+ * 게임 종료 모달 닫기
+ */
+function closeGameEndModal() {
+    const gameEndModal = bootstrap.Modal.getInstance(document.getElementById('gameEndModal'));
+    if (gameEndModal) {
+        gameEndModal.hide();
+    }
+    
+    // 게임 보드 숨기고 대기실로 돌아가기
+    const gameBoard = document.querySelector('.game-board');
+    if (gameBoard) {
+        gameBoard.style.display = 'none';
+    }
+}
+
+/**
+ * 승리 효과 (선택사항)
+ */
+function playVictoryEffect() {
+    // 간단한 색종이 효과
+    for (let i = 0; i < 50; i++) {
+        setTimeout(() => {
+            createConfetti();
+        }, i * 30);
+    }
+}
+
+/**
+ * 색종이 조각 생성
+ */
+function createConfetti() {
+    const confetti = document.createElement('div');
+    confetti.style.cssText = `
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        background: ${['#ff0', '#f0f', '#0ff', '#0f0', '#f00'][Math.floor(Math.random() * 5)]};
+        left: ${Math.random() * 100}vw;
+        top: -10px;
+        opacity: 1;
+        pointer-events: none;
+        z-index: 9999;
+        animation: confetti 3s linear forwards;
+    `;
+    document.body.appendChild(confetti);
+    
+    setTimeout(() => {
+        confetti.remove();
+    }, 3000);
 }
