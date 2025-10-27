@@ -1,4 +1,6 @@
-const socket = io();
+// 서버 URL 설정 (config.js에서 자동으로 환경 감지)
+// 수동으로 변경하려면: ClientConfig.setServerUrl('http://your-server:3000');
+const socket = io(ClientConfig.serverUrl, ClientConfig.socketOptions);
 
 // DOM 요소들을 안전하게 가져오기
 let nickForm, nick, createForm, connectStatus, lobby, gameroom, rooms, roomname, headCount, headCountList, refreshRoom, userList, roomId, readyButton;

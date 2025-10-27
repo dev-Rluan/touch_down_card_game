@@ -37,14 +37,21 @@ npm run dev
 
 ## 📚 문서
 
+### 게임 및 API
 - [🎮 게임 로직](./game_logic.md) - 게임 규칙 및 로직 상세 설명
 - [📖 API 통신 규격](./API_통신_규격_문서.md) - Socket.IO 이벤트 명세
 - [📋 소프트웨어 스펙](./소프트웨어_스펙_문서.md) - 전체 시스템 스펙
+
+### 실행 및 배포
 - [🐳 Docker 실행 가이드](./DOCKER.md) - Docker 실행 및 관리 방법
+- [🚀 Koyeb 배포 가이드](./docs/KOYEB_DEPLOYMENT.md) - 무료 클라우드 배포 (권장)
+- [🌐 클라이언트 설정](./docs/CLIENT_CONFIG.md) - 서버 URL 설정 및 연결 방법
+
+### 개발 및 기여
 - [🛠️ 개발 가이드](./docs/개발가이드.md) - 개발 환경 설정 및 가이드
 - [🤝 기여 가이드](./docs/CONTRIBUTING.md) - 기여 방법
 - [📝 코딩 스타일](./docs/CODING_STYLE.md) - 코드 스타일 가이드
-- [🚀 배포 가이드](./docs/DEPLOYMENT.md) - 배포 방법
+- [📦 배포 가이드](./docs/DEPLOYMENT.md) - 다양한 플랫폼 배포 방법
 
 ## 🏗️ 프로젝트 구조
 
@@ -189,6 +196,21 @@ docker inspect --format='{{json .State.Health}}' touch-down-game-server
 ```
 
 ### 클라우드 배포
+
+#### Koyeb 배포 (권장 - 무료)
+```bash
+# 1. GitHub에 코드 푸시 (완료!)
+# 2. Koyeb에서 저장소 연결
+# 3. Dockerfile 자동 감지
+# 4. 배포 완료!
+
+# 상세 가이드: docs/KOYEB_DEPLOYMENT.md
+```
+
+**무료로 전 세계 어디서나 친구들과 게임 가능!** 🌍
+
+#### 기타 플랫폼
+- **Koyeb**: [배포 가이드](./docs/KOYEB_DEPLOYMENT.md) ⭐ 권장
 - **AWS EC2**: [배포 가이드](./docs/DEPLOYMENT.md#aws-ec2-배포)
 - **Heroku**: [배포 가이드](./docs/DEPLOYMENT.md#heroku-배포)
 - **Vercel**: [배포 가이드](./docs/DEPLOYMENT.md#vercel-배포)
