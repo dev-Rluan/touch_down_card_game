@@ -40,6 +40,7 @@ npm run dev
 - [🎮 게임 로직](./game_logic.md) - 게임 규칙 및 로직 상세 설명
 - [📖 API 통신 규격](./API_통신_규격_문서.md) - Socket.IO 이벤트 명세
 - [📋 소프트웨어 스펙](./소프트웨어_스펙_문서.md) - 전체 시스템 스펙
+- [🐳 Docker 실행 가이드](./DOCKER.md) - Docker 실행 및 관리 방법
 - [🛠️ 개발 가이드](./docs/개발가이드.md) - 개발 환경 설정 및 가이드
 - [🤝 기여 가이드](./docs/CONTRIBUTING.md) - 기여 방법
 - [📝 코딩 스타일](./docs/CODING_STYLE.md) - 코드 스타일 가이드
@@ -108,12 +109,83 @@ src/tests/
 ## 🚀 배포
 
 ### Docker 배포
+
+#### 방법 1: Docker Compose 사용 (권장)
+```bash
+# Docker Compose로 실행
+docker-compose up -d
+
+# 로그 확인
+docker-compose logs -f
+
+# 중지
+docker-compose down
+
+# 재시작
+docker-compose restart
+```
+
+#### 방법 2: Docker 직접 사용
 ```bash
 # Docker 이미지 빌드
-docker build -t touch-down-game .
+docker build -t touch-down-game:latest .
 
 # 컨테이너 실행
-docker run -d -p 3000:3000 --name touch-down-game touch-down-game
+docker run -d \
+  -p 3000:3000 \
+  --name touch-down-game-server \
+  --restart unless-stopped \
+  -e NODE_ENV=production \
+  -e PORT=3000 \
+  touch-down-game:latest
+
+# 로그 확인
+docker logs -f touch-down-game-server
+
+# 컨테이너 중지
+docker stop touch-down-game-server
+
+# 컨테이너 시작
+docker start touch-down-game-server
+
+# 컨테이너 재시작
+docker restart touch-down-game-server
+
+# 컨테이너 삭제
+docker rm -f touch-down-game-server
+```
+
+#### Docker 이미지 관리
+```bash
+# 이미지 목록 확인
+docker images
+
+# 이미지 삭제
+docker rmi touch-down-game:latest
+
+# 사용하지 않는 이미지 정리
+docker image prune -a
+```
+
+#### 환경 변수 설정
+```bash
+# 환경 변수와 함께 실행
+docker run -d \
+  -p 3000:3000 \
+  --name touch-down-game-server \
+  -e NODE_ENV=production \
+  -e PORT=3000 \
+  -e LOG_LEVEL=info \
+  touch-down-game:latest
+```
+
+#### 헬스체크 확인
+```bash
+# 컨테이너 상태 확인
+docker ps
+
+# 헬스체크 상태 확인
+docker inspect --format='{{json .State.Health}}' touch-down-game-server
 ```
 
 ### 클라우드 배포

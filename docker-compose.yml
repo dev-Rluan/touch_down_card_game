@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Touch Down Card Game 서버
+  touch-down-game:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: touch-down-card-game:latest
+    container_name: touch-down-game-server
+    
+    # 포트 매핑 (호스트:컨테이너)
+    ports:
+      - "3000:3000"
+    
+    # 환경 변수 설정
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - LOG_LEVEL=info
+    
+    # 볼륨 마운트 (선택사항 - 개발 시 사용)
+    # volumes:
+    #   - ./src:/app/src
+    #   - ./public:/app/public
+    
+    # 재시작 정책
+    restart: unless-stopped
+    
+    # 헬스체크
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    
+    # 네트워크
+    networks:
+      - game-network
+
+# 네트워크 정의
+networks:
+  game-network:
+    driver: bridge
+
