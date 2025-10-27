@@ -80,7 +80,9 @@ function startGameCountdown(roomId) {
         players: gameStartData.users.map(u => ({
           id: u.id,
           name: u.name,
-          cardCount: Array.isArray(u.cardPack) ? u.cardPack.length : 0
+          cardCount: Array.isArray(u.cardPack) ? u.cardPack.length : 0,
+          readyStatus: u.readyStatus,
+          manager: u.manager
         })),
         currentTurn: gameStartData.gameState?.currentTurn ?? 0,
         centerCards: gameStartData.gameState?.centerCards?.length ?? 0

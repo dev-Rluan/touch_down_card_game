@@ -3,13 +3,15 @@
 const socket = io(ClientConfig.serverUrl, ClientConfig.socketOptions);
 
 // DOM 요소들을 안전하게 가져오기
-let nickForm, nick, createForm, connectStatus, lobby, gameroom, rooms, roomname, headCount, headCountList, refreshRoom, userList, roomId, readyButton;
+let nickForm, nick, modalCreateForm, modalRoomName, modalMaxUsers, connectStatus, lobby, gameroom, rooms, roomname, headCount, headCountList, refreshRoom, userList, roomId, readyButton;
 
 // DOM 로딩 완료 후 요소들 초기화
 function initializeElements() {
     nickForm = document.getElementById("nickForm");
     nick = document.getElementById("nick");
-    createForm = document.getElementById("createForm");
+    modalCreateForm = document.getElementById("modalCreateForm");
+    modalRoomName = document.getElementById("modalRoomName");
+    modalMaxUsers = document.getElementById("modalMaxUsers");
     connectStatus = document.getElementById("connectStatus");
     lobby = document.getElementById("lobby");
     gameroom = document.getElementById("gameroom");
@@ -25,7 +27,9 @@ function initializeElements() {
     console.log('DOM 요소들 초기화:', {
         nickForm: !!nickForm,
         nick: !!nick,
-        createForm: !!createForm,
+        modalCreateForm: !!modalCreateForm,
+        modalRoomName: !!modalRoomName,
+        modalMaxUsers: !!modalMaxUsers,
         connectStatus: !!connectStatus,
         lobby: !!lobby,
         gameroom: !!gameroom,
@@ -51,6 +55,63 @@ let maxUserCnt = 0;
 
 const user = [];
 
+/**
+ * 유저 상태를 한글로 표시
+ * @param {string} status - ready, playing, waiting
+ * @returns {string} 한글 상태
+ */
+function getStatusText(status) {
+    switch(status) {
+        case 'ready':
+            return '준비완료';
+        case 'playing':
+            return '게임중';
+        case 'waiting':
+            return '대기중';
+        default:
+            return '대기중';
+    }
+}
+
+/**
+ * 플레이어 리스트 UI 업데이트
+ * @param {Array} players - 플레이어 배열
+ */
+function updatePlayerList(players) {
+    if (!players || !Array.isArray(players) || !userList) {
+        return;
+    }
+    
+    let userListHtml = '';
+    players.forEach(player => {
+        if (!player || !player.id || !player.name) {
+            console.warn('잘못된 플레이어 데이터:', player);
+            return;
+        }
+        
+        userListHtml += 
+        `<div class="player-card ${player.readyStatus || ''} ${player.manager ? 'manager' : ''}" id="${player.id}">
+            <div class="player-info">
+                <div class="player-avatar">
+                    ${player.name.charAt(0).toUpperCase()}
+                </div>
+                <div class="player-details">
+                    <h6>${player.name}</h6>
+                    <div class="player-status">
+                        <span class="status-badge status-${player.readyStatus || 'waiting'}">
+                            ${getStatusText(player.readyStatus)}
+                        </span>
+                        ${player.manager ? '<span class="badge bg-warning">방장</span>' : ''}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    });
+    
+    userList.innerHTML = userListHtml;
+    console.log('[UI] 플레이어 리스트 업데이트:', players);
+}
+
 // function start
 function handleNickFormSubmit(event){
     // 기본 이벤트 막는 처리
@@ -59,11 +120,33 @@ function handleNickFormSubmit(event){
     socket.emit("change name", input.value);
     input.value='';
 }
-function handleCreateFormSubmit(event){
+
+/**
+ * 방 만들기 모달 폼 제출 처리
+ */
+function handleModalCreateFormSubmit(event){
     event.preventDefault();
-    const input = createForm.querySelector("input");
-    socket.emit("createRoom", input.value, 4);
-    input.value='';
+    
+    const roomName = modalRoomName.value.trim();
+    const maxUsers = parseInt(modalMaxUsers.value);
+    
+    if (!roomName) {
+        alert('방 이름을 입력해주세요.');
+        return;
+    }
+    
+    console.log('[방 생성] 이름:', roomName, '최대 인원:', maxUsers);
+    socket.emit("createRoom", roomName, maxUsers);
+    
+    // 입력 초기화
+    modalRoomName.value = '';
+    modalMaxUsers.value = '4';
+    
+    // 모달 닫기
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modal_createRoom'));
+    if (modal) {
+        modal.hide();
+    }
 }
 function handleRefreshRoom(event){
     event.preventDefault();    
@@ -101,15 +184,26 @@ function setupEventListeners() {
     if (nickForm) {
         nickForm.addEventListener("submit", handleNickFormSubmit);
     }
-    if (createForm) {
-        createForm.addEventListener("submit", handleCreateFormSubmit);
+    if (modalCreateForm) {
+        modalCreateForm.addEventListener("submit", handleModalCreateFormSubmit);
     }
     if (refreshRoom) {
-        refreshRoom.addEventListener("submit", handleRefreshRoom);
+        refreshRoom.addEventListener("click", handleRefreshRoom);
     }
     if (readyButton) {
         readyButton.addEventListener('click', function() {
             ready();
+        });
+    }
+    
+    // 방 만들기 모달이 열릴 때 이벤트
+    const createRoomModal = document.getElementById('modal_createRoom');
+    if (createRoomModal) {
+        createRoomModal.addEventListener('shown.bs.modal', function () {
+            // 모달이 완전히 보여진 후 입력란에 포커스
+            if (modalRoomName) {
+                modalRoomName.focus();
+            }
         });
     }
 }
@@ -341,7 +435,7 @@ socket.on('roomCreated', (roomInfo) => {
                 }
                 
                 userListHtml += 
-                `<div class="player-card ${user.readyStatus === 'ready' ? 'ready' : ''} ${user.manager ? 'manager' : ''}" id="${user.id}">
+                `<div class="player-card ${user.readyStatus || ''} ${user.manager ? 'manager' : ''}" id="${user.id}">
                     <div class="player-info">
                         <div class="player-avatar">
                             ${user.name.charAt(0).toUpperCase()}
@@ -350,7 +444,7 @@ socket.on('roomCreated', (roomInfo) => {
                             <h6>${user.name}</h6>
                             <div class="player-status">
                                 <span class="status-badge status-${user.readyStatus || 'waiting'}">
-                                    ${user.readyStatus === 'ready' ? '준비완료' : '대기중'}
+                                    ${getStatusText(user.readyStatus)}
                                 </span>
                                 ${user.manager ? '<span class="badge bg-warning">방장</span>' : ''}
                             </div>
@@ -442,7 +536,7 @@ socket.on('successJoinRoom', (roomInfo) =>{
                 }
                 
                 userListHtml += 
-                `<div class="player-card ${user.readyStatus === 'ready' ? 'ready' : ''} ${user.manager ? 'manager' : ''}" id="${user.id}">
+                `<div class="player-card ${user.readyStatus || ''} ${user.manager ? 'manager' : ''}" id="${user.id}">
                     <div class="player-info">
                         <div class="player-avatar">
                             ${user.name.charAt(0).toUpperCase()}
@@ -451,7 +545,7 @@ socket.on('successJoinRoom', (roomInfo) =>{
                             <h6>${user.name}</h6>
                             <div class="player-status">
                                 <span class="status-badge status-${user.readyStatus || 'waiting'}">
-                                    ${user.readyStatus === 'ready' ? '준비완료' : '대기중'}
+                                    ${getStatusText(user.readyStatus)}
                                 </span>
                                 ${user.manager ? '<span class="badge bg-warning">방장</span>' : ''}
                             </div>
@@ -530,7 +624,7 @@ socket.on('joinUser', (payload, secondArg)=>{
                 }
                 
                 userListHtml += 
-                `<div class="player-card ${user.readyStatus === 'ready' ? 'ready' : ''} ${user.manager ? 'manager' : ''}" id="${user.id}">
+                `<div class="player-card ${user.readyStatus || ''} ${user.manager ? 'manager' : ''}" id="${user.id}">
                     <div class="player-info">
                         <div class="player-avatar">
                             ${user.name.charAt(0).toUpperCase()}
@@ -539,7 +633,7 @@ socket.on('joinUser', (payload, secondArg)=>{
                             <h6>${user.name}</h6>
                             <div class="player-status">
                                 <span class="status-badge status-${user.readyStatus || 'waiting'}">
-                                    ${user.readyStatus === 'ready' ? '준비완료' : '대기중'}
+                                    ${getStatusText(user.readyStatus)}
                                 </span>
                                 ${user.manager ? '<span class="badge bg-warning">방장</span>' : ''}
                             </div>
@@ -727,6 +821,10 @@ socket.on('gameStart', ({ message, gameData }) => {
     console.log('게임 시작:', gameData);
     showNotification(message || '게임이 시작됩니다!', 'success');
     if (gameData) {
+        // 플레이어 리스트 업데이트 (상태 = playing)
+        if (gameData.players && Array.isArray(gameData.players)) {
+            updatePlayerList(gameData.players);
+        }
         showGameUI(gameData);
     }
 });
@@ -1214,6 +1312,10 @@ function updateTurnIndicator(currentTurn, players) {
     if (!Array.isArray(players)) return;
     
     players.forEach((player, idx) => {
+        // 플레이어 카드 찾기 (상단 플레이어 목록)
+        const playerCard = document.getElementById(player.id);
+        
+        // 중앙 카드 스택 찾기
         const stackContainer = document.getElementById(`stack-${player.id}`);
         if (!stackContainer) return;
         
@@ -1228,6 +1330,11 @@ function updateTurnIndicator(currentTurn, players) {
         if (stackCards) {
             stackCards.style.border = 'none';
             stackCards.style.boxShadow = 'none';
+        }
+        
+        // 플레이어 카드에서 active-turn 클래스 제거
+        if (playerCard) {
+            playerCard.classList.remove('active-turn');
         }
         
         // 현재 턴 플레이어에 표시 추가
@@ -1253,6 +1360,11 @@ function updateTurnIndicator(currentTurn, players) {
                 stackCards.style.border = '3px solid #10b981';
                 stackCards.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.5)';
                 stackCards.style.borderRadius = '0.5rem';
+            }
+            
+            // 플레이어 카드에 active-turn 클래스 추가 (펄스 애니메이션)
+            if (playerCard) {
+                playerCard.classList.add('active-turn');
             }
         }
     });

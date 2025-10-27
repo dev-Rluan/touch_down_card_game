@@ -38,11 +38,12 @@ const startGame = (roomId) => {
   // 카드 분배
   const dealtCards = dealCards(room.users, deck);
 
-  // 각 플레이어에게 카드 할당
+  // 각 플레이어에게 카드 할당 및 상태 변경
   room.users.forEach(user => {
     user.cardPack = dealtCards[user.id] || [];
     user.score = 0;
     user.isActive = true;
+    user.readyStatus = 'playing'; // 게임중 상태로 변경
   });
 
   // 남은 덱(기록 용도) 저장: 분배 후 각 플레이어 카드 수 총합을 제외한 남은 수
@@ -262,6 +263,11 @@ const checkGameEnd = (roomId) => {
     const winner = room.users.reduce((prev, current) => 
       (prev.cardPack.length > current.cardPack.length) ? prev : current
     );
+    
+    // 모든 플레이어 상태를 대기중으로 변경
+    room.users.forEach(user => {
+      user.readyStatus = 'waiting';
+    });
     
     console.log(`[Game] 게임 종료 - 승자: ${winner.name}, 카드 수: ${winner.cardPack.length}장, 점수: ${winner.score}`);
     
