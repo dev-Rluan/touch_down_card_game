@@ -1111,18 +1111,17 @@ function renderMyCards(cards) {
     myDeckCard.innerHTML = '';
     
     if (cards.length > 0) {
-        // 카드를 뒷면으로 표시 (카드를 내기 전까지는 뒷면)
         const deckCard = document.createElement('button');
         deckCard.type = 'button';
-        deckCard.className = 'deck-card back-card';
-        deckCard.style.cssText = `
-            background: linear-gradient(135deg, #10b981, #059669);
-            border: 3px solid #10b981;
-            color: white;
-        `;
+        deckCard.className = 'deck-card card-back style-pattern';
         deckCard.innerHTML = `
-            <div style="font-size:64px; margin-bottom:8px;">🃏</div>
-            <div style="font-size:14px; color:white; margin-top:8px;">클릭하여 플레이</div>
+            <div class="card-back-pattern"></div>
+            <div style="position:relative; z-index:1; color:#fbbf24; font-size:16px; font-weight:bold; text-shadow: 0 2px 6px rgba(0,0,0,0.8);">
+                ${cards.length}장
+            </div>
+            <div style="position:relative; z-index:1; color:#fde047; font-size:12px; margin-top:6px; font-weight:600; text-shadow: 0 1px 4px rgba(0,0,0,0.8);">
+                클릭하여 플레이
+            </div>
         `;
         deckCard.onclick = () => {
             playCard(0);

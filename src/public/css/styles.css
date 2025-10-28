@@ -1430,11 +1430,21 @@ body {
     font-size: 0.8rem;
 }
 
+/* 카드 뒷면일 때는 어두운 배경 */
+.my-deck-card-slot .deck-card.card-back {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border: 3px solid #475569;
+}
+
 @media (min-width: 768px) {
     .my-deck-card-slot .deck-card {
         width: 90px;
         height: 130px;
         font-size: 0.9rem;
+    }
+    
+    .my-deck-card-slot .deck-card.card-back {
+        border: 4px solid #475569;
     }
 }
 
@@ -1446,6 +1456,10 @@ body {
         border-radius: 0.75rem;
         font-size: 1rem;
     }
+    
+    .my-deck-card-slot .deck-card.card-back {
+        border: 5px solid #475569;
+    }
 }
 
 .my-deck-card-slot .deck-card:hover,
@@ -1455,10 +1469,21 @@ body {
     border-color: #059669;
 }
 
+.my-deck-card-slot .deck-card.card-back:hover,
+.my-deck-card-slot .deck-card.card-back:active {
+    border-color: #64748b;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+
 @media (min-width: 1024px) {
     .my-deck-card-slot .deck-card:hover {
         transform: translateY(-8px) scale(1.05);
         box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    }
+    
+    .my-deck-card-slot .deck-card.card-back:hover {
+        border-color: #64748b;
+        box-shadow: 0 12px 24px rgba(0,0,0,0.6);
     }
 }
 
@@ -1504,4 +1529,131 @@ body {
     transform: translateY(-5px) scale(1.05);
     box-shadow: var(--card-shadow-lg);
 }
+
+/* 카드 뒷면 스타일 */
+.card-back {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.card-back::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    bottom: 5px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem;
+}
+
+/* 옵션 1: 조커 카드 (클래식) */
+.card-back.style-joker::after {
+    content: '🃏';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 50px;
+    opacity: 0.9;
+}
+
+/* 옵션 2: 화투 카드 (현재) */
+.card-back.style-hwatu::after,
+.card-back::after {
+    content: '🎴';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 40px;
+    opacity: 0.8;
+}
+
+/* 옵션 3: 다이아몬드 (고급스러움) */
+.card-back.style-diamond::after {
+    content: '💎';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 45px;
+    opacity: 0.85;
+    animation: diamondShine 2s ease-in-out infinite;
+}
+
+@keyframes diamondShine {
+    0%, 100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+/* 옵션 4: 별 (화려함) */
+.card-back.style-star::after {
+    content: '⭐';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 45px;
+    opacity: 0.9;
+    animation: starTwinkle 1.5s ease-in-out infinite;
+}
+
+@keyframes starTwinkle {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+/* 옵션 5: 카드 문양 4개 */
+.card-back.style-suits::after {
+    content: '♠️ ♥️\A♦️ ♣️';
+    white-space: pre;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 22px;
+    opacity: 0.85;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* 옵션 6: 과일 (게임 테마) */
+.card-back.style-fruits::after {
+    content: '🍎🍊\A🍋🍇';
+    white-space: pre;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    opacity: 0.85;
+    text-align: center;
+    line-height: 1.3;
+}
+
+/* 옵션 7: 주사위 */
+.card-back.style-dice::after {
+    content: '🎲';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    opacity: 0.85;
+}
+
+/* 옵션 8: 패턴만 (이모지 없음) */
+.card-back.style-pattern::after {
+    content: '';
+}
+
+.card-back-pattern {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.15) 10px, rgba(255, 255, 255, 0.15) 20px),
+        repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.15) 10px, rgba(255, 255, 255, 0.15) 20px);
 }
