@@ -1046,28 +1046,27 @@ function updateMyDeckInPlayerCard(cards) {
     deckArea.innerHTML = '';
     
     if (cards.length > 0) {
-        const topCard = cards[0];
+        // 카드를 뒷면으로 표시 (카드를 내기 전까지는 뒷면)
         const deckCard = document.createElement('button');
         deckCard.type = 'button';
-        deckCard.className = 'deck-card my-deck-card';
+        deckCard.className = 'deck-card my-deck-card back-card';
         deckCard.style.cssText = `
             width: 70px;
             height: 100px;
-            background: white;
+            background: linear-gradient(135deg, #10b981, #059669);
             border: 3px solid #10b981;
             border-radius: 0.5rem;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             cursor: pointer;
             transition: all 0.2s;
         `;
-        deckCard.innerHTML = `
-            <div style="font-size:28px;">${getFruitEmoji(topCard.fruit)}</div>
-            <div style="font-size:18px; font-weight:bold; color:#333; margin-top:4px;">${topCard.count}</div>
-        `;
+        deckCard.innerHTML = '🃏';
         deckCard.onmouseover = () => {
             deckCard.style.transform = 'translateY(-5px) scale(1.05)';
             deckCard.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
@@ -1112,14 +1111,18 @@ function renderMyCards(cards) {
     myDeckCard.innerHTML = '';
     
     if (cards.length > 0) {
-        const topCard = cards[0];
+        // 카드를 뒷면으로 표시 (카드를 내기 전까지는 뒷면)
         const deckCard = document.createElement('button');
         deckCard.type = 'button';
-        deckCard.className = 'deck-card';
+        deckCard.className = 'deck-card back-card';
+        deckCard.style.cssText = `
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: 3px solid #10b981;
+            color: white;
+        `;
         deckCard.innerHTML = `
-            <div style="font-size:48px; margin-bottom:8px;">${getFruitEmoji(topCard.fruit)}</div>
-            <div style="font-size:28px; font-weight:bold; color:#333;">${topCard.count}</div>
-            <div style="font-size:12px; color:#666; margin-top:8px;">클릭하여 플레이</div>
+            <div style="font-size:64px; margin-bottom:8px;">🃏</div>
+            <div style="font-size:14px; color:white; margin-top:8px;">클릭하여 플레이</div>
         `;
         deckCard.onclick = () => {
             playCard(0);
