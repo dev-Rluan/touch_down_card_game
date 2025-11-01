@@ -1,24 +1,21 @@
-// /socket/socketEvents.js
+/**
+ * Socket.IO 초기화 및 이벤트 바인딩
+ */
+const userEvents = require('./userEvents');
 const roomEvents = require('./roomEvents');
 const gameEvents = require('./gameEvents');
-const userEvents = require('./userEvents');
+
 /**
- * Socket.io 초기화 및 이벤트 바인딩
+ * Socket.IO 서버 초기화
  * @param {Server} io - Socket.IO Server Instance
  */
 module.exports = function(io) {
-    io.on('connection', (socket) => {
-      console.log(`[Socket] Connected: ${socket.id}`);
-      
-      // 기능별 이벤트 등록
-      roomEvents(socket, io);
-      gameEvents(socket, io);
-      userEvents(socket, io);
-  
-      // disconnect(공통)
-      socket.on('disconnect', () => {
-        console.log(`[Socket] Disconnected: ${socket.id}`);
-        // 유저 연결 해제 로직 등
-      });
-    });
-  };
+  io.on('connection', (socket) => {
+    console.log(`[Socket] 새로운 연결: ${socket.id}`);
+    
+    // 기능별 이벤트 핸들러 등록
+    userEvents(socket, io);
+    roomEvents(socket, io);
+    gameEvents(socket, io);
+  });
+};
