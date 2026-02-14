@@ -79,6 +79,8 @@ docker run --name touch-down-redis -p 6379:6379 redis:7-alpine
 - [🐳 Docker 실행 가이드](./DOCKER.md) - Docker 실행 및 관리 방법
 - [🚀 Koyeb 배포 가이드](./docs/KOYEB_DEPLOYMENT.md) - 무료 클라우드 배포 (권장)
 - [🌐 클라이언트 설정](./docs/CLIENT_CONFIG.md) - 서버 URL 설정 및 연결 방법
+- [🧩 Redis & Socket 배포 가이드](./docs/redis_guide.md) - Redis 기반 상태 관리 설명
+- [🔌 Socket.IO 호스팅 가이드](./docs/socket_deployment.md) - 환경 변수, CORS, 호스팅 전략
 
 ### 개발 및 기여
 - [🛠️ 개발 가이드](./docs/개발가이드.md) - 개발 환경 설정 및 가이드
