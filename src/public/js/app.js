@@ -4,6 +4,7 @@ const socket = io(ClientConfig.serverUrl, ClientConfig.socketOptions);
 
 // DOM 요소들을 안전하게 가져오기
 let nickForm, nick, modalCreateForm, modalRoomName, modalMaxUsers, connectStatus, lobby, gameroom, rooms, roomname, headCount, headCountList, refreshRoom, userList, roomId, readyButton;
+let readyButtonDefaultHTML = '';
 
 // DOM 로딩 완료 후 요소들 초기화
 function initializeElements() {
@@ -23,6 +24,9 @@ function initializeElements() {
     userList = document.getElementById("userList");
     roomId = document.getElementById("roomId");
     readyButton = document.getElementById("readyButton");
+    if (readyButton && !readyButtonDefaultHTML) {
+        readyButtonDefaultHTML = readyButton.innerHTML;
+    }
     
     console.log('DOM 요소들 초기화:', {
         nickForm: !!nickForm,
@@ -176,6 +180,16 @@ function leaveRoom(){
   
 function ready(){
     socket.emit("ready", { roomId: roomId.value });
+}
+
+function setReadyButtonEnabled(enabled) {
+    if (!readyButton) return;
+    readyButton.disabled = !enabled;
+    readyButton.classList.toggle('btn-success', enabled);
+    readyButton.classList.toggle('btn-secondary', !enabled);
+    readyButton.innerHTML = enabled
+        ? readyButtonDefaultHTML || '<i class="icon ion-checkmark"></i> Ready'
+        : '<i class="icon ion-pause"></i> 게임 진행중';
 }
 // function end
 
@@ -378,6 +392,7 @@ socket.on('roomCreated', (roomInfo)=>{
             
         })
         userList.innerHTML=userListHtml;
+        setReadyButtonEnabled(true);
     
     // 플레이어 카드 애니메이션
     setTimeout(() => {
@@ -459,6 +474,7 @@ socket.on('roomCreated', (roomInfo) => {
         
         // CSS 재렌더링 강제 (Reflow 유도)
         void userList.offsetHeight;
+        setReadyButtonEnabled(true);
         
         console.log('roomCreated HTML 생성 완료:', userListHtml);
     } catch (error) {
@@ -565,6 +581,7 @@ socket.on('successJoinRoom', (roomInfo) =>{
         console.log('userList 요소:', userList);
         console.log('userList 클래스:', userList.className);
         console.log('userList computed style:', window.getComputedStyle(userList).display);
+        setReadyButtonEnabled(true);
     } catch (error) {
         console.error('successJoinRoom 처리 중 에러:', error);
         showNotification('방 입장 처리 중 오류가 발생했습니다.', 'error');
@@ -677,6 +694,7 @@ socket.on('leaveRoomResult', (result) => {
     lobby.style.display = 'block';
     gameroom.style.display = 'none';
     headCount.textContent = "0/0";
+    setReadyButtonEnabled(true);
 
 })
 
@@ -810,6 +828,7 @@ socket.on('gameCountdownCanceled', ({ reason }) => {
     }
     if (reason !== 'completed') {
         showNotification('게임 시작이 취소되었습니다. (조건 변경)', 'warning');
+        setReadyButtonEnabled(true);
     }
 });
 
@@ -827,10 +846,12 @@ socket.on('gameStart', ({ message, gameData }) => {
         }
         showGameUI(gameData);
     }
+    setReadyButtonEnabled(false);
 });
 
 // 서버가 내 핸드를 개별로 내려줌
 let mySocketId = null;
+let isMyTurn = false;
 socket.on('yourHand', ({ cards }) => {
     console.log('내 핸드 수신:', cards);
     if (Array.isArray(cards)) {
@@ -872,6 +893,7 @@ socket.on('gameState', (state) => {
 socket.on('gameEnd', (data) => {
     console.log('게임 종료:', data);
     showGameEnd(data);
+    setReadyButtonEnabled(true);
 });
 
 // 할리갈리 결과 이벤트
@@ -1313,63 +1335,72 @@ function updatePlayerCardCounts(players) {
 function updateTurnIndicator(currentTurn, players) {
     if (!Array.isArray(players)) return;
     
+    let myTurnNow = false;
     players.forEach((player, idx) => {
-        // 플레이어 카드 찾기 (상단 플레이어 목록)
         const playerCard = document.getElementById(player.id);
-        
-        // 중앙 카드 스택 찾기
         const stackContainer = document.getElementById(`stack-${player.id}`);
         if (!stackContainer) return;
         
-        // 기존 턴 표시 제거
-        const existingBadge = stackContainer.querySelector('.turn-badge');
-        if (existingBadge) {
-            existingBadge.remove();
+        let badge = stackContainer.querySelector('.turn-badge');
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'turn-badge';
+            badge.style.cssText = `
+                background: rgba(15, 23, 42, 0.7);
+                color: #fff;
+                padding: 4px 12px;
+                border-radius: 999px;
+                font-size: 12px;
+                font-weight: 600;
+                margin-top: 6px;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            `;
+            stackContainer.appendChild(badge);
         }
         
-        // 기존 활성 스타일 제거
         const stackCards = stackContainer.querySelector('.player-stack-cards');
         if (stackCards) {
             stackCards.style.border = 'none';
             stackCards.style.boxShadow = 'none';
         }
         
-        // 플레이어 카드에서 active-turn 클래스 제거
         if (playerCard) {
             playerCard.classList.remove('active-turn');
         }
         
-        // 현재 턴 플레이어에 표시 추가
         if (idx === currentTurn) {
-            const badge = document.createElement('div');
-            badge.className = 'turn-badge';
-            badge.style.cssText = `
-                background: #10b981;
-                color: white;
-                padding: 6px 12px;
-                border-radius: 0.5rem;
-                font-size: 13px;
-                font-weight: bold;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                animation: pulse 1s infinite;
-                margin-top: 8px;
-            `;
-            badge.textContent = '🎯 현재 턴';
-            stackContainer.appendChild(badge);
-            
-            // 카드 영역에 하이라이트
+            const isMine = player.id === mySocketId;
+            badge.textContent = isMine ? '내 턴' : '상대 턴';
+            badge.style.background = isMine ? '#0ea5e9' : '#f97316';
+            badge.style.animation = 'pulse 1s infinite';
             if (stackCards) {
-                stackCards.style.border = '3px solid #10b981';
-                stackCards.style.boxShadow = '0 0 20px rgba(16, 185, 129, 0.5)';
+                const color = isMine ? '#0ea5e9' : '#f97316';
+                stackCards.style.border = `3px solid ${color}`;
+                stackCards.style.boxShadow = `0 0 20px ${isMine ? 'rgba(14,165,233,0.35)' : 'rgba(249,115,22,0.35)'}`;
                 stackCards.style.borderRadius = '0.5rem';
             }
-            
-            // 플레이어 카드에 active-turn 클래스 추가 (펄스 애니메이션)
+
             if (playerCard) {
                 playerCard.classList.add('active-turn');
             }
+
+            if (isMine) {
+                myTurnNow = true;
+            }
+        } else {
+            if (player.id === mySocketId) {
+                badge.textContent = '상대 턴';
+                badge.style.background = 'rgba(15,23,42,0.7)';
+            } else {
+                badge.textContent = '';
+                badge.style.background = 'transparent';
+            }
+            badge.style.animation = 'none';
         }
     });
+    isMyTurn = myTurnNow;
 }
 
 /**
