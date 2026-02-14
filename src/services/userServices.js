@@ -1,41 +1,58 @@
 // /services/userService.js
-const connectedClients = {};
+const { ensureRedisConnection } = require('../config/redisClient');
+
+const USER_KEY_PREFIX = 'user:';
+
+function getUserKey(socketId) {
+  return `${USER_KEY_PREFIX}${socketId}`;
+}
+
+async function assertUserExists(redis, socketId) {
+  const exists = await redis.exists(getUserKey(socketId));
+  if (!exists) {
+    throw new Error('해당 유저가 존재하지 않습니다.');
+  }
+}
 
 // 유저 접속 처리
-function connectUser(socketId, defaultName) {
-  connectedClients[socketId] = {
+async function connectUser(socketId, defaultName) {
+  const redis = await ensureRedisConnection();
+  await redis.hSet(getUserKey(socketId), {
     name: defaultName,
     roomId: ''
-  };
+  });
 }
 
 // 유저 정보 제거
-function disconnectUser(socketId) {
-  delete connectedClients[socketId];
+async function disconnectUser(socketId) {
+  const redis = await ensureRedisConnection();
+  await redis.del(getUserKey(socketId));
 }
 
 // 닉네임 변경
-function updateUserName(socketId, newName) {
-  if (!connectedClients[socketId]) {
-    throw new Error("해당 유저가 존재하지 않습니다.");
-  }
-  connectedClients[socketId].name = newName;
+async function updateUserName(socketId, newName) {
+  const redis = await ensureRedisConnection();
+  await assertUserExists(redis, socketId);
+  await redis.hSet(getUserKey(socketId), 'name', newName);
 }
 
 // roomId 세팅
-function setUserRoom(socketId, roomId) {
-  if (!connectedClients[socketId]) return;
-  connectedClients[socketId].roomId = roomId;
+async function setUserRoom(socketId, roomId) {
+  const redis = await ensureRedisConnection();
+  if (!(await redis.exists(getUserKey(socketId)))) return;
+  await redis.hSet(getUserKey(socketId), 'roomId', roomId || '');
 }
 
 // 유저 이름 조회
-function getUserName(socketId) {
-  return connectedClients[socketId]?.name || null;
+async function getUserName(socketId) {
+  const redis = await ensureRedisConnection();
+  return (await redis.hGet(getUserKey(socketId), 'name')) || null;
 }
 
 // 유저 roomId 조회
-function getUserRoom(socketId) {
-  return connectedClients[socketId]?.roomId || '';
+async function getUserRoom(socketId) {
+  const redis = await ensureRedisConnection();
+  return (await redis.hGet(getUserKey(socketId), 'roomId')) || '';
 }
 
 module.exports = {
@@ -44,6 +61,5 @@ module.exports = {
   updateUserName,
   setUserRoom,
   getUserName,
-  getUserRoom,
-  // ...
+  getUserRoom
 };

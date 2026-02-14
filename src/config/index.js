@@ -10,7 +10,7 @@ switch (process.env.NODE_ENV){
     environmentConfig = require("./production");
     break;
   case "stg":
-    environmentConfig =requier("./staging");
+    environmentConfig = require("./staging");
     break;
   default:
     environmentConfig = {};

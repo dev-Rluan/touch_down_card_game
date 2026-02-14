@@ -1,4 +1,4 @@
-const { getRoomById, updateRoomStatus } = require('./roomService');
+const { getRoomById, saveRoomState } = require('./roomService');
 const { createDeck, shuffleCards, dealCards, checkHalliGalli, calculateCardSum } = require('../utils/CardUtils');
 
 /**
@@ -6,8 +6,47 @@ const { createDeck, shuffleCards, dealCards, checkHalliGalli, calculateCardSum }
  * @param {string} roomId - 방 ID
  * @returns {Object} 게임 시작 정보
  */
-const startGame = (roomId) => {
-  const room = getRoomById(roomId);
+function playerHasCards(player) {
+  return Array.isArray(player.cardPack) && player.cardPack.length > 0;
+}
+
+function markPlayerActiveState(player) {
+  player.isActive = playerHasCards(player);
+}
+
+function findNextPlayerIndex(room, startIndex) {
+  const { users } = room;
+  if (!users || users.length === 0) {
+    return 0;
+  }
+  for (let offset = 1; offset <= users.length; offset++) {
+    const idx = (startIndex + offset) % users.length;
+    const candidate = users[idx];
+    if (candidate && playerHasCards(candidate)) {
+      return idx;
+    }
+  }
+  return startIndex;
+}
+
+function normalizeCurrentTurn(room) {
+  if (!room.gameState) return;
+  const currentIndex = room.gameState.currentTurn ?? 0;
+  const currentPlayer = room.users[currentIndex];
+  if (currentPlayer && playerHasCards(currentPlayer)) {
+    return;
+  }
+  room.gameState.currentTurn = findNextPlayerIndex(room, currentIndex);
+}
+
+function advanceTurn(room) {
+  if (!room.gameState) return;
+  const currentIndex = room.gameState.currentTurn ?? 0;
+  room.gameState.currentTurn = findNextPlayerIndex(room, currentIndex);
+}
+
+const startGame = async (roomId) => {
+  const room = await getRoomById(roomId);
   if (!room) {
     throw new Error('방을 찾을 수 없습니다.');
   }
@@ -54,7 +93,8 @@ const startGame = (roomId) => {
   room.gameState.currentTurn = 0;
 
   console.log(`[Game] 게임 시작 - 방: ${room.name}, 플레이어: ${room.users.length}명`);
-  
+
+  await saveRoomState(room);
   return room;
 };
 
@@ -63,8 +103,8 @@ const startGame = (roomId) => {
  * @param {string} roomId - 방 ID
  * @returns {Object} 게임 상태
  */
-const getGameState = (roomId) => {
-  const room = getRoomById(roomId);
+const getGameState = async (roomId) => {
+  const room = await getRoomById(roomId);
   if (!room) {
     throw new Error('방을 찾을 수 없습니다.');
   }
@@ -72,6 +112,8 @@ const getGameState = (roomId) => {
   if (!room.gameState) {
     throw new Error('게임이 시작되지 않았습니다.');
   }
+
+  normalizeCurrentTurn(room);
 
   return {
     roomId: room.id,
@@ -100,12 +142,13 @@ const getGameState = (roomId) => {
  * @param {number} cardIndex - 내는 카드 인덱스
  * @returns {Object} 카드 내기 결과
  */
-const playCard = (roomId, playerId, cardIndex) => {
-  const room = getRoomById(roomId);
+const playCard = async (roomId, playerId, cardIndex) => {
+  const room = await getRoomById(roomId);
   if (!room || !room.gameState) {
     throw new Error('게임이 시작되지 않았습니다.');
   }
 
+  normalizeCurrentTurn(room);
   const player = room.users.find(user => user.id === playerId);
   if (!player) {
     throw new Error('플레이어를 찾을 수 없습니다.');
@@ -116,6 +159,12 @@ const playCard = (roomId, playerId, cardIndex) => {
   }
 
   if (cardIndex < 0 || cardIndex >= player.cardPack.length) {
+    if (!playerHasCards(player)) {
+      markPlayerActiveState(player);
+      advanceTurn(room);
+      await saveRoomState(room);
+      throw new Error('카드가 없어 탈락했습니다.');
+    }
     throw new Error('유효하지 않은 카드입니다.');
   }
 
@@ -136,10 +185,13 @@ const playCard = (roomId, playerId, cardIndex) => {
   const isHalliGalli = checkHalliGalli(topCards);
   
   // 턴 넘기기
-  room.gameState.currentTurn = (room.gameState.currentTurn + 1) % room.users.length;
+  markPlayerActiveState(player);
+  advanceTurn(room);
   room.gameState.lastActionTime = new Date().toISOString();
 
   console.log(`[Game] 카드 내기 - 플레이어: ${player.name}, 카드: ${playedCard.fruit} ${playedCard.count}개`);
+
+  await saveRoomState(room);
 
   return {
     playedCard,
@@ -156,8 +208,8 @@ const playCard = (roomId, playerId, cardIndex) => {
  * @param {string} playerId - 플레이어 ID
  * @returns {Object} 할리갈리 처리 결과
  */
-const handleHalliGalli = (roomId, playerId) => {
-  const room = getRoomById(roomId);
+const handleHalliGalli = async (roomId, playerId) => {
+  const room = await getRoomById(roomId);
   if (!room || !room.gameState) {
     throw new Error('게임이 시작되지 않았습니다.');
   }
@@ -202,7 +254,10 @@ const handleHalliGalli = (roomId, playerId) => {
     });
     
     console.log(`[Game] 할리갈리 성공! - 플레이어: ${player.name}, 획득: 중앙 ${centerCardsCount}장 + 버림 ${discardedCardsCount}장 = 총 ${totalCardsGained}점, 현재 덱: ${player.cardPack.length}장`);
-    
+
+    markPlayerActiveState(player);
+    await saveRoomState(room);
+
     return {
       success: true,
       playerName: player.name,
@@ -221,7 +276,11 @@ const handleHalliGalli = (roomId, playerId) => {
       room.gameState.discardedCards.push(discardedCard);
       
       console.log(`[Game] 할리갈리 실패 - 플레이어: ${player.name}, 카드 버림: ${discardedCard.fruit} ${discardedCard.count}개`);
-      
+
+      markPlayerActiveState(player);
+      normalizeCurrentTurn(room);
+      await saveRoomState(room);
+
       return {
         success: false,
         playerName: player.name,
@@ -232,6 +291,10 @@ const handleHalliGalli = (roomId, playerId) => {
     }
     
     // 카드가 없을 경우에도 실패 응답
+    markPlayerActiveState(player);
+    normalizeCurrentTurn(room);
+    await saveRoomState(room);
+
     return {
       success: false,
       playerName: player.name,
@@ -246,8 +309,8 @@ const handleHalliGalli = (roomId, playerId) => {
  * @param {string} roomId - 방 ID
  * @returns {Object} 게임 종료 정보
  */
-const checkGameEnd = (roomId) => {
-  const room = getRoomById(roomId);
+const checkGameEnd = async (roomId) => {
+  const room = await getRoomById(roomId);
   if (!room || !room.gameState) {
     return { isEnded: false };
   }
@@ -270,7 +333,9 @@ const checkGameEnd = (roomId) => {
     });
     
     console.log(`[Game] 게임 종료 - 승자: ${winner.name}, 카드 수: ${winner.cardPack.length}장, 점수: ${winner.score}`);
-    
+
+    await saveRoomState(room);
+
     return {
       isEnded: true,
       winner: {
@@ -295,8 +360,8 @@ const checkGameEnd = (roomId) => {
  * 게임 리셋
  * @param {string} roomId - 방 ID
  */
-const resetGame = (roomId) => {
-  const room = getRoomById(roomId);
+const resetGame = async (roomId) => {
+  const room = await getRoomById(roomId);
   if (!room) {
     throw new Error('방을 찾을 수 없습니다.');
   }
@@ -314,6 +379,7 @@ const resetGame = (roomId) => {
   });
 
   console.log(`[Game] 게임 리셋 - 방: ${room.name}`);
+  await saveRoomState(room);
 };
 
 module.exports = { 
