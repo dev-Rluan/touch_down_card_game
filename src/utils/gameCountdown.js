@@ -4,8 +4,6 @@
 
 const gameService = require('../services/gameService');
 const roomService = require('../services/roomService');
-const gameService = require('../services/gameService');
-const roomService = require('../services/roomService');
 
 // 방별 게임 시작 카운트다운 타이머 관리
 const gameStartTimers = new Map(); // roomId -> { intervalId, timeoutId, secondsLeft }
