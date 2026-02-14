@@ -1,0 +1,4 @@
+src/public/**
+src/public/assets/**
+src/server_backup.js
+src/models/**
