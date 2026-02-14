@@ -12,6 +12,13 @@ const { ensureRedisConnection } = require('./config/redisClient');
 app.set('views', __dirname + '/views');
 app.use('/public', express.static(__dirname + '/public'));
 
+// 클라이언트용 환경 변수 스크립트 제공
+app.get('/env.js', (req, res) => {
+  const socketUrl = process.env.CLIENT_SOCKET_SERVER_URL || process.env.SOCKET_SERVER_URL || '';
+  res.setHeader('Content-Type', 'application/javascript');
+  res.send(`window.__TOUCHDOWN_SOCKET_URL__ = ${JSON.stringify(socketUrl)};`);
+});
+
 // 루트 페이지를 처리합니다.
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/view/index.html');

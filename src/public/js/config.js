@@ -3,12 +3,17 @@
  * 환경에 따라 서버 URL을 자동으로 설정합니다.
  */
 
+const ENV_SOCKET_URL = typeof window !== 'undefined' ? window.__TOUCHDOWN_SOCKET_URL__ : '';
+
 const ClientConfig = {
   /**
    * 환경 감지 및 서버 URL 설정
    * @returns {string} 서버 URL
    */
   getServerUrl() {
+    if (ENV_SOCKET_URL) {
+      return ENV_SOCKET_URL;
+    }
     // 현재 호스트 확인
     const { hostname, protocol } = window.location;
     
@@ -76,4 +81,3 @@ if (ClientConfig.debug) {
   console.log('[Config] 서버 URL:', ClientConfig.serverUrl);
   console.log('[Config] Socket 옵션:', ClientConfig.socketOptions);
 }
-
