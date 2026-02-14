@@ -30,6 +30,7 @@
   "homepage": "https://github.com/dev-Rluan/touch_down_card_game#readme",
   "dependencies": {
     "express": "^4.18.2",
+    "cors": "^2.8.5",
     "redis": "^4.6.11",
     "socket.io": "^4.6.1",
     "uuid": "^9.0.0"

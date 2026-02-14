@@ -2,7 +2,15 @@
 const express = require('express');
 const app = express();
 const server = require('http').Server(app);
-const io = require('socket.io')(server);
+const io = require('socket.io')(server, {
+  cors: {
+    origin: process.env.SOCKET_ALLOW_ORIGINS ? process.env.SOCKET_ALLOW_ORIGINS.split(',') : '*',
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+const cors = require('cors');
 
 // Socket.IO 이벤트 핸들러 초기화
 const socketEvent = require('./socket/socketEvent');
@@ -10,6 +18,13 @@ const { ensureRedisConnection } = require('./config/redisClient');
 
 // 정적 파일을 제공하기 위해 public 폴더를 지정합니다.
 app.set('views', __dirname + '/views');
+const allowedOrigins = process.env.SOCKET_ALLOW_ORIGINS ? process.env.SOCKET_ALLOW_ORIGINS.split(',') : undefined;
+
+app.use(cors({
+  origin: allowedOrigins || true,
+  credentials: true
+}));
+
 app.use('/public', express.static(__dirname + '/public'));
 
 // 클라이언트용 환경 변수 스크립트 제공
