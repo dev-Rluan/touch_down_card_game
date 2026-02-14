@@ -4,17 +4,42 @@
 
 ## 🚀 빠른 시작
 
+### 사전 준비
+- Node.js **22.12.0 이상** (저장소 루트의 `.nvmrc` 사용 가능)
+- npm 10 이상
+
+```bash
+# 권장: nvm으로 프로젝트 버전 사용
+nvm install
+nvm use
+```
+
 ### 설치 및 실행
 ```bash
 # 저장소 클론
 git clone https://github.com/dev-Rluan/touch_down_card_game.git
 cd touch_down_card_game
 
+# 환경 변수 예시 복사 (필요 시 수정)
+cp .env.example .env
+
 # 의존성 설치
 npm install
 
 # 개발 서버 시작
 npm run dev
+```
+
+### Redis 준비
+- 로컬 Redis를 바로 실행하거나 Docker를 사용할 수 있습니다.
+- `REDIS_URL`을 그대로 사용하거나, `REDIS_HOST/REDIS_PORT/REDIS_DB/REDIS_USERNAME/REDIS_PASSWORD/REDIS_TLS` 등 세부 환경 변수를 조합해 연결 정보를 외부에서 주입할 수 있습니다.
+
+```bash
+# 로컬 설치된 redis-server 사용
+redis-server --port 6379
+
+# Docker 예시
+docker run --name touch-down-redis -p 6379:6379 redis:7-alpine
 ```
 
 ### 접속
@@ -97,6 +122,16 @@ npm run docs     # 문서 생성
 NODE_ENV=development
 PORT=3000
 LOG_LEVEL=debug
+
+# Redis 연결 (REDIS_URL 우선, 비워둘 경우 아래 필드 사용)
+REDIS_URL=
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_DB=0
+REDIS_USERNAME=
+REDIS_PASSWORD=
+REDIS_TLS=false
+REDIS_TLS_REJECT_UNAUTHORIZED=true
 ```
 
 ## 🧪 테스트
