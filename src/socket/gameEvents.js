@@ -5,6 +5,7 @@ const roomService = require('../services/roomService');
 const gameService = require('../services/gameService');
 const userService = require('../services/userServices');
 const { clearGameCountdown, startGameCountdown } = require('../utils/gameCountdown');
+const { limiters } = require('../utils/socketRateLimiter');
 
 /**
  * 게임 관련 이벤트 핸들러 등록
@@ -16,6 +17,10 @@ module.exports = function(socket, io) {
    * 준비 상태 변경 이벤트
    */
   socket.on('ready', async () => {
+    if (!limiters.ready.allow(socket.id)) {
+      socket.emit('readyError', '요청이 너무 빠릅니다. 잠시 후 다시 시도하세요.');
+      return;
+    }
     try {
       const currentRoom = await roomService.getRoomByUser(socket.id);
       if (!currentRoom) {
@@ -71,6 +76,10 @@ module.exports = function(socket, io) {
    * 카드 내기 이벤트
    */
   socket.on('playCard', async (cardIndex) => {
+    if (!limiters.playCard.allow(socket.id)) {
+      socket.emit('playCardError', '요청이 너무 빠릅니다. 잠시 후 다시 시도하세요.');
+      return;
+    }
     try {
       const currentRoom = await roomService.getRoomByUser(socket.id);
       if (!currentRoom) {
@@ -113,6 +122,10 @@ module.exports = function(socket, io) {
    * 할리갈리 이벤트
    */
   socket.on('halliGalli', async () => {
+    if (!limiters.halliGalli.allow(socket.id)) {
+      socket.emit('halliGalliError', '요청이 너무 빠릅니다. 잠시 후 다시 시도하세요.');
+      return;
+    }
     try {
       const currentRoom = await roomService.getRoomByUser(socket.id);
       if (!currentRoom) {

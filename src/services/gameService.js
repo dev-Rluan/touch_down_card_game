@@ -202,6 +202,9 @@ const playCard = async (roomId, playerId, cardIndex) => {
   };
 };
 
+// 벨 클릭 후 처리가 완료될 때까지 동시 요청을 막기 위한 잠금 세트
+const halliGalliLocks = new Set();
+
 /**
  * 할리갈리 처리
  * @param {string} roomId - 방 ID
@@ -214,45 +217,62 @@ const handleHalliGalli = async (roomId, playerId) => {
     throw new Error('게임이 시작되지 않았습니다.');
   }
 
+  // 게임 진행 중 상태 검증
+  if (room.gameState.phase !== 'playing') {
+    throw new Error('게임이 진행 중이 아닙니다.');
+  }
+
+  // 방 단위 중복 처리 방지: 이미 처리 중인 halliGalli 요청이 있으면 차단
+  if (halliGalliLocks.has(roomId)) {
+    throw new Error('이미 처리 중입니다. 잠시 후 다시 시도하세요.');
+  }
+
+  // 중앙에 카드가 없으면 의미 없는 벨 클릭
+  if (!room.gameState.centerCards || room.gameState.centerCards.length === 0) {
+    throw new Error('아직 카드가 없습니다.');
+  }
+
   const player = room.users.find(user => user.id === playerId);
   if (!player) {
     throw new Error('플레이어를 찾을 수 없습니다.');
   }
 
+  halliGalliLocks.add(roomId);
+  try {
   // 할리갈리 조건 확인 (각 플레이어의 맨 위 카드만 체크, 버림 카드 제외)
   const topCards = Object.values(room.gameState.playerStacks)
     .filter(stack => stack.length > 0)
     .map(stack => stack[stack.length - 1]); // 각 스택의 맨 위 카드
   const isHalliGalli = checkHalliGalli(topCards);
-  
+
   // 디버깅: 맨 위 카드 상태 로깅
   const cardSums = calculateCardSum(topCards);
   console.log(`[Game] 할리갈리 체크 - 플레이어: ${player.name}, 맨 위 카드 합계:`, cardSums);
-  
+
   if (isHalliGalli) {
     // 성공: 중앙 카드 + 버림 카드 모두 가져가기
     const centerCardsCount = room.gameState.centerCards.length;
     const discardedCardsCount = room.gameState.discardedCards.length;
     const totalCardsGained = centerCardsCount + discardedCardsCount;
-    
+
     // 획득한 모든 카드를 합치기
     const gainedCards = [...room.gameState.centerCards, ...room.gameState.discardedCards];
-    
+
     // 카드 섞기
     const shuffledGainedCards = shuffleCards(gainedCards);
-    
+
     // 플레이어의 덱 맨 아래에 추가 (배열 끝에 추가)
     player.cardPack.push(...shuffledGainedCards);
-    
+
     player.score += totalCardsGained;
     room.gameState.centerCards = [];
     room.gameState.discardedCards = [];
-    
+
     // 각 플레이어의 스택도 초기화
     Object.keys(room.gameState.playerStacks).forEach(pid => {
       room.gameState.playerStacks[pid] = [];
     });
-    
+
     console.log(`[Game] 할리갈리 성공! - 플레이어: ${player.name}, 획득: 중앙 ${centerCardsCount}장 + 버림 ${discardedCardsCount}장 = 총 ${totalCardsGained}점, 현재 덱: ${player.cardPack.length}장`);
 
     markPlayerActiveState(player);
@@ -274,7 +294,7 @@ const handleHalliGalli = async (roomId, playerId) => {
     if (player.cardPack.length > 0) {
       const discardedCard = player.cardPack.pop(); // 배열의 마지막 요소(맨 아래 카드) 제거
       room.gameState.discardedCards.push(discardedCard);
-      
+
       console.log(`[Game] 할리갈리 실패 - 플레이어: ${player.name}, 카드 버림: ${discardedCard.fruit} ${discardedCard.count}개`);
 
       markPlayerActiveState(player);
@@ -289,7 +309,7 @@ const handleHalliGalli = async (roomId, playerId) => {
         discardedCards: room.gameState.discardedCards
       };
     }
-    
+
     // 카드가 없을 경우에도 실패 응답
     markPlayerActiveState(player);
     normalizeCurrentTurn(room);
@@ -301,6 +321,9 @@ const handleHalliGalli = async (roomId, playerId) => {
       centerCards: room.gameState.centerCards,
       discardedCards: room.gameState.discardedCards
     };
+  }
+  } finally {
+    halliGalliLocks.delete(roomId);
   }
 };
 

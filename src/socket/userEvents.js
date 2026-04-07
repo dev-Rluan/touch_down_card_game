@@ -4,6 +4,7 @@
 const userService = require('../services/userServices');
 const roomService = require('../services/roomService');
 const { clearGameCountdown } = require('../utils/gameCountdown');
+const { limiters } = require('../utils/socketRateLimiter');
 
 /**
  * 사용자 관련 이벤트 핸들러 등록
@@ -35,6 +36,10 @@ module.exports = function(socket, io) {
    * 닉네임 변경 이벤트
    */
   socket.on('change name', async (newName) => {
+    if (!limiters.changeName.allow(socket.id)) {
+      socket.emit('name change error', '요청이 너무 빠릅니다. 잠시 후 다시 시도하세요.');
+      return;
+    }
     try {
       if (!newName || !newName.trim()) {
         socket.emit('name change error', '닉네임을 입력해주세요.');
@@ -77,6 +82,8 @@ module.exports = function(socket, io) {
    * 연결 해제 이벤트
    */
   socket.on('disconnect', async () => {
+    const { cleanupSocket } = require('../utils/socketRateLimiter');
+    cleanupSocket(socket.id);
     try {
       console.log(`[Socket] 클라이언트 연결 해제: ${socket.id}`);
 
