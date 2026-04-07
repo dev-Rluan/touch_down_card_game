@@ -44,9 +44,11 @@
                 <i class="icon ion-android-gamepad me-2"></i>
                 Touch Down Card Game
             </a>
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-success me-2" id="connectStatus">연결 중...</span>
                 <span class="text-light" id="nick">User</span>
+                <!-- 로그인 상태 영역 (JS에서 동적으로 채움) -->
+                <div id="authArea" class="d-flex align-items-center gap-2"></div>
             </div>
         </div>
     </nav>
@@ -239,6 +241,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/env.js"></script>
     <script src="/public/js/config.js"></script>
+    <script src="/public/js/auth.js"></script>
     <script src="/public/js/app.js"></script>
 </body>
 
