@@ -61,6 +61,9 @@ app.use(passport.session());
 const authRouter = require('./routes/auth');
 app.use('/auth', authRouter);
 
+const apiRouter = require('./routes/api');
+app.use('/api', apiRouter);
+
 // ── 정적 파일 및 클라이언트 설정 ──────────────────────────────────────────────
 app.use('/public', express.static(__dirname + '/public'));
 

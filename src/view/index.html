@@ -72,6 +72,52 @@
                         </div>
                     </div>
 
+                    <!-- 리텐션 탭 (랭킹 · 업적 · 미션) -->
+                    <div class="card game-card mb-4" id="retentionCard">
+                        <div class="card-body p-2">
+                            <ul class="nav nav-tabs nav-fill" id="retentionTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="tab-ranking" data-bs-toggle="tab"
+                                        data-bs-target="#panel-ranking" type="button">🏆 랭킹</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-achievements" data-bs-toggle="tab"
+                                        data-bs-target="#panel-achievements" type="button">🎖️ 업적</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-missions" data-bs-toggle="tab"
+                                        data-bs-target="#panel-missions" type="button">📋 오늘의 미션</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content pt-3 px-1" id="retentionContent">
+                                <!-- 랭킹 패널 -->
+                                <div class="tab-pane fade show active" id="panel-ranking" role="tabpanel">
+                                    <div class="d-flex gap-2 mb-2">
+                                        <select class="form-select form-select-sm w-auto" id="rankPeriod">
+                                            <option value="alltime">전체</option>
+                                            <option value="weekly">이번 주</option>
+                                            <option value="monthly">이번 달</option>
+                                        </select>
+                                        <select class="form-select form-select-sm w-auto" id="rankType">
+                                            <option value="score">점수</option>
+                                            <option value="wins">승리수</option>
+                                        </select>
+                                    </div>
+                                    <div id="rankingList" class="small">로딩 중...</div>
+                                    <div id="myRankBadge" class="mt-2 text-center small text-muted"></div>
+                                </div>
+                                <!-- 업적 패널 -->
+                                <div class="tab-pane fade" id="panel-achievements" role="tabpanel">
+                                    <div id="achievementList" class="small">로그인 후 확인 가능합니다.</div>
+                                </div>
+                                <!-- 미션 패널 -->
+                                <div class="tab-pane fade" id="panel-missions" role="tabpanel">
+                                    <div id="missionList" class="small">로딩 중...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 방 관리 카드 -->
                     <div class="card game-card">
                         <div class="card-body">
@@ -242,6 +288,7 @@
     <script src="/env.js"></script>
     <script src="/public/js/config.js"></script>
     <script src="/public/js/auth.js"></script>
+    <script src="/public/js/retention.js"></script>
     <script src="/public/js/app.js"></script>
 </body>
 
