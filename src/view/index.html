@@ -5,6 +5,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <title>Touch Down Card Game</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/public/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="할리갈리">
+    <link rel="apple-touch-icon" href="/public/icons/icon.svg">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
     <link rel="stylesheet" href="/public/css/styles.css">
@@ -44,9 +53,11 @@
                 <i class="icon ion-android-gamepad me-2"></i>
                 Touch Down Card Game
             </a>
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-success me-2" id="connectStatus">연결 중...</span>
                 <span class="text-light" id="nick">User</span>
+                <!-- 로그인 상태 영역 (JS에서 동적으로 채움) -->
+                <div id="authArea" class="d-flex align-items-center gap-2"></div>
             </div>
         </div>
     </nav>
@@ -69,6 +80,63 @@
                             </form>
                         </div>
                     </div>
+
+                    <!-- 리텐션 탭 (랭킹 · 업적 · 미션) -->
+                    <div class="card game-card mb-4" id="retentionCard">
+                        <div class="card-body p-2">
+                            <ul class="nav nav-tabs nav-fill" id="retentionTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="tab-ranking" data-bs-toggle="tab"
+                                        data-bs-target="#panel-ranking" type="button">🏆 랭킹</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-achievements" data-bs-toggle="tab"
+                                        data-bs-target="#panel-achievements" type="button">🎖️ 업적</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-missions" data-bs-toggle="tab"
+                                        data-bs-target="#panel-missions" type="button">📋 오늘의 미션</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="tab-cosmetics" data-bs-toggle="tab"
+                                        data-bs-target="#panel-cosmetics" type="button">🎨 꾸미기</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content pt-3 px-1" id="retentionContent">
+                                <!-- 랭킹 패널 -->
+                                <div class="tab-pane fade show active" id="panel-ranking" role="tabpanel">
+                                    <div class="d-flex gap-2 mb-2">
+                                        <select class="form-select form-select-sm w-auto" id="rankPeriod">
+                                            <option value="alltime">전체</option>
+                                            <option value="weekly">이번 주</option>
+                                            <option value="monthly">이번 달</option>
+                                        </select>
+                                        <select class="form-select form-select-sm w-auto" id="rankType">
+                                            <option value="score">점수</option>
+                                            <option value="wins">승리수</option>
+                                        </select>
+                                    </div>
+                                    <div id="rankingList" class="small">로딩 중...</div>
+                                    <div id="myRankBadge" class="mt-2 text-center small text-muted"></div>
+                                </div>
+                                <!-- 업적 패널 -->
+                                <div class="tab-pane fade" id="panel-achievements" role="tabpanel">
+                                    <div id="achievementList" class="small">로그인 후 확인 가능합니다.</div>
+                                </div>
+                                <!-- 미션 패널 -->
+                                <div class="tab-pane fade" id="panel-missions" role="tabpanel">
+                                    <div id="missionList" class="small">로딩 중...</div>
+                                </div>
+                                <!-- 코스메틱 패널 -->
+                                <div class="tab-pane fade" id="panel-cosmetics" role="tabpanel">
+                                    <div class="cosmetics-panel text-center py-3 text-muted small">로딩 중...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 광고 배너 (ADSENSE_PUBLISHER_ID 설정 시 표시) -->
+                    <div id="adLobbyBanner" class="ad-banner-container" style="display:none"></div>
 
                     <!-- 방 관리 카드 -->
                     <div class="card game-card">
@@ -142,7 +210,7 @@
                                     
                                     <!-- 할리갈리 벨 버튼 -->
                                     <div class="halli-galli-bell-container">
-                                        <button type="button" class="halli-galli-bell" id="halliGalliBell" onclick="halliGalli()">
+                                        <button type="button" class="halli-galli-bell" id="halliGalliBell">
                                             <div class="bell-icon">🔔</div>
                                             <div class="bell-text">TOUCH!</div>
                                         </button>
@@ -227,6 +295,8 @@
                                 <!-- 점수 리스트가 여기에 표시됩니다 -->
                             </div>
                         </div>
+                        <!-- 게임 종료 광고 (ADSENSE_PUBLISHER_ID 설정 시 표시) -->
+                        <div id="adGameEnd" class="ad-game-end" style="display:none"></div>
                         <div class="mt-4">
                             <button type="button" class="btn btn-primary btn-lg" onclick="closeGameEndModal()">확인</button>
                         </div>
@@ -239,7 +309,21 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/env.js"></script>
     <script src="/public/js/config.js"></script>
+    <script src="/public/js/auth.js"></script>
+    <script src="/public/js/retention.js"></script>
+    <script src="/public/js/touch.js"></script>
+    <script src="/public/js/cosmetics.js"></script>
+    <script src="/public/js/shop.js"></script>
     <script src="/public/js/app.js"></script>
+
+    <!-- Service Worker 등록 -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/public/sw.js', { scope: '/' })
+          .then(() => console.log('[PWA] Service Worker 등록 완료'))
+          .catch((err) => console.warn('[PWA] Service Worker 등록 실패:', err));
+      }
+    </script>
 </body>
 
 </html>

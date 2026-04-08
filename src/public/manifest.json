@@ -1,0 +1,21 @@
+{
+  "name": "Touch Down Card Game",
+  "short_name": "할리갈리",
+  "description": "온라인 멀티플레이어 할리갈리 카드 게임",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#667eea",
+  "theme_color": "#6366f1",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/public/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["games", "entertainment"]
+}

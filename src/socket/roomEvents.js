@@ -4,6 +4,7 @@
 const roomService = require('../services/roomService');
 const userService = require('../services/userServices');
 const { clearGameCountdown } = require('../utils/gameCountdown');
+const { limiters } = require('../utils/socketRateLimiter');
 
 /**
  * 방 관리 관련 이벤트 핸들러 등록
@@ -15,6 +16,10 @@ module.exports = function(socket, io) {
    * 방 생성 이벤트
    */
   socket.on('createRoom', async (roomName, maxCnt) => {
+    if (!limiters.roomAction.allow(socket.id)) {
+      socket.emit('createRoomError', '요청이 너무 빠릅니다. 잠시 후 다시 시도하세요.');
+      return;
+    }
     try {
       console.log(`[Room] 방 생성 요청 - 이름: ${roomName}, 최대인원: ${maxCnt}`);
 
@@ -50,6 +55,10 @@ module.exports = function(socket, io) {
    * 방 입장 이벤트
    */
   socket.on('joinRoom', async (roomId) => {
+    if (!limiters.roomAction.allow(socket.id)) {
+      socket.emit('faildJoinRoom', '요청이 너무 빠릅니다. 잠시 후 다시 시도하세요.');
+      return;
+    }
     try {
       console.log(`[Room] 방 입장 요청 - 방 ID: ${roomId}`);
 

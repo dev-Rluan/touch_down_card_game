@@ -27,7 +27,13 @@ function initializeElements() {
     if (readyButton && !readyButtonDefaultHTML) {
         readyButtonDefaultHTML = readyButton.innerHTML;
     }
-    
+
+    // 벨 버튼 터치 최적화 (300ms 딜레이 제거 + 햅틱)
+    const bellBtn = document.getElementById('halliGalliBell');
+    if (bellBtn && window.TDTouch) {
+        TDTouch.addBellFastClick(bellBtn, halliGalli);
+    }
+
     console.log('DOM 요소들 초기화:', {
         nickForm: !!nickForm,
         nick: !!nick,
@@ -365,7 +371,8 @@ socket.on('roomList', (roomInfos) => {
 // 방 생성 성공
 socket.on('roomCreated', (roomInfo)=>{
     lobby.style.display = 'none';
-    gameroom.style.display = 'block'
+    gameroom.style.display = 'block';
+    document.body.classList.add('in-game');
     roomId.value = roomInfo.id;
     
         console.log(roomInfo);
@@ -430,7 +437,8 @@ socket.on('roomCreated', (roomInfo) => {
         // 화면 전환
         lobby.style.display = 'none';
         gameroom.style.display = 'block';
-        
+        document.body.classList.add('in-game');
+
         // CSS 재렌더링 강제 (Reflow 유도)
         void gameroom.offsetHeight;
         
@@ -531,7 +539,8 @@ socket.on('successJoinRoom', (roomInfo) =>{
         // 화면 전환
         lobby.style.display = 'none';
         gameroom.style.display = 'block';
-        
+        document.body.classList.add('in-game');
+
         // CSS 재렌더링 강제 (Reflow 유도)
         void gameroom.offsetHeight;
         
@@ -693,6 +702,7 @@ socket.on('leaveRoomResult', (result) => {
     userList.innerHTML = "";
     lobby.style.display = 'block';
     gameroom.style.display = 'none';
+    document.body.classList.remove('in-game');
     headCount.textContent = "0/0";
     setReadyButtonEnabled(true);
 
@@ -1097,9 +1107,7 @@ function updateMyDeckInPlayerCard(cards) {
             deckCard.style.transform = 'translateY(0) scale(1)';
             deckCard.style.boxShadow = '0 4px 6px rgba(0,0,0,0.2)';
         };
-        deckCard.onclick = () => {
-            playCard(0);
-        };
+        TDTouch.addFastClick(deckCard, () => playCard(0));
         deckArea.appendChild(deckCard);
     } else {
         // 카드가 없을 때
@@ -1145,9 +1153,7 @@ function renderMyCards(cards) {
                 클릭하여 플레이
             </div>
         `;
-        deckCard.onclick = () => {
-            playCard(0);
-        };
+        TDTouch.addFastClick(deckCard, () => playCard(0));
         myDeckCard.appendChild(deckCard);
     } else {
         // 카드가 없을 때
@@ -1582,7 +1588,8 @@ function showHalliGalliButton() {
         btn.id = 'halliGalliBtn';
         btn.className = 'btn btn-warning btn-lg w-100 mb-3';
         btn.innerHTML = '<i class="icon ion-ios-bell me-2"></i>할리갈리!';
-        btn.onclick = halliGalli;
+        if (window.TDTouch) TDTouch.addFastClick(btn, halliGalli);
+        else btn.onclick = halliGalli;
         gameArea.appendChild(btn);
     }
     document.getElementById('halliGalliBtn').style.display = 'block';
@@ -1659,7 +1666,12 @@ function showGameEnd(data) {
     // 모달 표시
     const gameEndModal = new bootstrap.Modal(document.getElementById('gameEndModal'));
     gameEndModal.show();
-    
+
+    // 게임 종료 광고 표시
+    if (window.TDAds && TDAds.enabled) {
+        TDAds.renderAd('adGameEnd', window.__ADSENSE_GAME_END_SLOT__ || '', 'rectangle');
+    }
+
     // 승리 시 효과음/애니메이션 (선택사항)
     if (isWinner) {
         playVictoryEffect();
