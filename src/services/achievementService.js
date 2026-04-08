@@ -10,6 +10,7 @@
  */
 
 const { ensureRedisConnection } = require('../config/redisClient');
+const cosmeticsService = require('./cosmeticsService');
 
 // ── 업적 정의 ─────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,8 @@ async function updateAndCheck(accountId, statsDelta) {
     if (current >= ach.threshold) {
       await redis.sAdd(uKey, ach.id);
       newlyUnlocked.push(ach);
+      // 업적에 연결된 코스메틱 자동 지급 (fire-and-forget)
+      cosmeticsService.unlockByAchievement(accountId, ach.id).catch(() => {});
     }
   }
 

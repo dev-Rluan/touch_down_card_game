@@ -81,3 +81,67 @@ if (ClientConfig.debug) {
   console.log('[Config] 서버 URL:', ClientConfig.serverUrl);
   console.log('[Config] Socket 옵션:', ClientConfig.socketOptions);
 }
+
+// ── Google AdSense 초기화 ──────────────────────────────────────────────────────
+
+const TDAds = (function () {
+  'use strict';
+
+  const publisherId = (typeof window !== 'undefined' && window.__ADSENSE_PUBLISHER_ID__) || '';
+  let _initialized = false;
+
+  /**
+   * AdSense 스크립트 동적 삽입 (publisher ID 설정 시)
+   */
+  function init() {
+    if (!publisherId || _initialized) return;
+    _initialized = true;
+
+    const script = document.createElement('script');
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(publisherId)}`;
+    document.head.appendChild(script);
+  }
+
+  /**
+   * 특정 컨테이너에 AdSense 광고 유닛 렌더링
+   * @param {string} containerId - 컨테이너 엘리먼트 ID
+   * @param {string} adSlot     - AdSense 광고 슬롯 ID (env에서 설정 가능)
+   * @param {'auto'|'rectangle'} format
+   */
+  function renderAd(containerId, adSlot, format) {
+    if (!publisherId) return;
+
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.style.display = 'block';
+    container.innerHTML = `
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="${publisherId}"
+           data-ad-slot="${adSlot || 'auto'}"
+           data-ad-format="${format || 'auto'}"
+           data-full-width-responsive="true"></ins>`;
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {
+      // AdSense 스크립트 미로드 상태에서의 오류 무시
+    }
+  }
+
+  return {
+    publisherId,
+    init,
+    renderAd,
+    get enabled() { return !!publisherId; },
+  };
+})();
+
+// 로비 배너 광고 (페이지 로드 시)
+document.addEventListener('DOMContentLoaded', () => {
+  TDAds.init();
+  // 로비 배너
+  TDAds.renderAd('adLobbyBanner', window.__ADSENSE_LOBBY_SLOT__ || '', 'horizontal');
+});

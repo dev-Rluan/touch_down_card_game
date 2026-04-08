@@ -13,6 +13,7 @@ window.TDAuth = (function () {
   'use strict';
 
   let _currentUser = null; // { id, provider, displayName, email, avatar, ... } | null
+  let _cosmetics = null;  // { owned, equipped: { card, bell }, catalog } | null
 
   // ── DOM 참조 ────────────────────────────────────────────────────────────────
 
@@ -66,6 +67,17 @@ window.TDAuth = (function () {
       if (meData.loggedIn && meData.user) {
         _currentUser = meData.user;
         renderLoggedIn(_currentUser);
+        // 코스메틱 로드 (로그인 사용자만)
+        fetch('/api/cosmetics')
+          .then(r => r.json())
+          .then(data => {
+            _cosmetics = data;
+            // 벨 스킨 즉시 적용
+            applyBellSkin(data.equipped && data.equipped.bell);
+            // 코스메틱 패널 렌더링 (열려 있을 경우)
+            if (window.TDCosmetics) TDCosmetics.render(data);
+          })
+          .catch(() => {});
         // 로그인 성공 알림 쿼리 파라미터 처리
         const params = new URLSearchParams(location.search);
         if (params.get('auth_success')) {
@@ -85,6 +97,18 @@ window.TDAuth = (function () {
     } catch (err) {
       console.warn('[Auth] 인증 상태 확인 실패 (게스트로 진행):', err.message);
       _currentUser = null;
+    }
+  }
+
+  // ── 코스메틱 적용 ────────────────────────────────────────────────────────────
+
+  function applyBellSkin(skinId) {
+    const bellContainer = document.querySelector('.halli-galli-bell-container');
+    if (!bellContainer) return;
+    // 기존 벨 스킨 클래스 제거
+    bellContainer.classList.remove('bell-skin-silver', 'bell-skin-ruby');
+    if (skinId && skinId !== 'bell-gold') {
+      bellContainer.classList.add(skinId.replace('bell-', 'bell-skin-'));
     }
   }
 
@@ -136,6 +160,19 @@ window.TDAuth = (function () {
     },
 
     init,
+    applyBellSkin,
+
+    /** 현재 코스메틱 데이터 (미로그인 시 null) */
+    get cosmetics() {
+      return _cosmetics;
+    },
+
+    /** 장착된 카드 스킨 CSS 클래스 반환 */
+    get equippedCardSkinClass() {
+      return _cosmetics && _cosmetics.equipped && _cosmetics.equipped.card !== 'card-default'
+        ? _cosmetics.equipped.card.replace('card-', 'card-skin-')
+        : '';
+    },
   };
 })();
 

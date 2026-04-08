@@ -64,14 +64,27 @@ app.use('/auth', authRouter);
 const apiRouter = require('./routes/api');
 app.use('/api', apiRouter);
 
+const shopRouter = require('./routes/shop');
+app.use('/api/shop', shopRouter);
+
 // ── 정적 파일 및 클라이언트 설정 ──────────────────────────────────────────────
 app.use('/public', express.static(__dirname + '/public'));
 
 // 클라이언트용 환경 변수 스크립트 제공
 app.get('/env.js', (req, res) => {
   const socketUrl = process.env.CLIENT_SOCKET_SERVER_URL || process.env.SOCKET_SERVER_URL || '';
+  const adsenseId = process.env.ADSENSE_PUBLISHER_ID || '';
+  const adsenseLobbySlot = process.env.ADSENSE_LOBBY_SLOT || '';
+  const adsenseGameEndSlot = process.env.ADSENSE_GAME_END_SLOT || '';
+  const tossClientKey = process.env.TOSS_CLIENT_KEY || '';
   res.setHeader('Content-Type', 'application/javascript');
-  res.send(`window.__TOUCHDOWN_SOCKET_URL__ = ${JSON.stringify(socketUrl)};`);
+  res.send([
+    `window.__TOUCHDOWN_SOCKET_URL__ = ${JSON.stringify(socketUrl)};`,
+    `window.__ADSENSE_PUBLISHER_ID__ = ${JSON.stringify(adsenseId)};`,
+    `window.__ADSENSE_LOBBY_SLOT__ = ${JSON.stringify(adsenseLobbySlot)};`,
+    `window.__ADSENSE_GAME_END_SLOT__ = ${JSON.stringify(adsenseGameEndSlot)};`,
+    `window.__TOSS_CLIENT_KEY__ = ${JSON.stringify(tossClientKey)};`,
+  ].join('\n'));
 });
 
 // 루트 페이지를 처리합니다.
