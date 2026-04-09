@@ -49,6 +49,20 @@ body {
   color: white !important;
 }
 
+.navbar-avatar {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbbf24, #f97316);
+  color: #1e293b;
+  font-size: 0.75rem;
+  font-weight: 800;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .navbar .badge {
   font-size: 0.75rem;
   padding: 0.375rem 0.75rem;
@@ -1917,4 +1931,399 @@ body.in-game #gameroom {
     text-align: center;
     margin: 1rem 0;
     min-height: 90px;
+}
+
+/* =====================================================
+   로딩 화면
+   ===================================================== */
+
+.loading-screen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+
+.loading-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.loading-content {
+    text-align: center;
+    color: white;
+    padding: 2rem;
+}
+
+.loading-bell {
+    font-size: 5rem;
+    display: block;
+    margin-bottom: 1rem;
+    animation: bellSwing 1.2s ease-in-out infinite;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+}
+
+.loading-title {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.loading-subtitle {
+    font-size: 1rem;
+    opacity: 0.7;
+    margin-bottom: 0;
+}
+
+.loading-dots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 2rem auto;
+}
+
+.loading-dots span {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.8);
+    animation: loadingDot 1.2s ease-in-out infinite;
+}
+
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes loadingDot {
+    0%, 80%, 100% { transform: scale(0.5); opacity: 0.3; }
+    40%           { transform: scale(1);   opacity: 1; }
+}
+
+.loading-status {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0;
+}
+
+/* =====================================================
+   게임 시작 카운트다운 오버레이
+   ===================================================== */
+
+.countdown-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 10, 40, 0.75);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 8000;
+}
+
+.countdown-content {
+    text-align: center;
+    color: white;
+}
+
+.countdown-label {
+    font-size: 1rem;
+    opacity: 0.7;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
+}
+
+.countdown-number {
+    font-size: 9rem;
+    font-weight: 900;
+    line-height: 1;
+    color: #fbbf24;
+    text-shadow:
+        0 0 40px rgba(251, 191, 36, 0.6),
+        0 4px 24px rgba(0, 0, 0, 0.5);
+    animation: countdownPop 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.countdown-number.go {
+    color: #34d399;
+    text-shadow:
+        0 0 40px rgba(52, 211, 153, 0.6),
+        0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+.countdown-sub {
+    font-size: 1rem;
+    opacity: 0.75;
+    margin-top: 1rem;
+}
+
+@keyframes countdownPop {
+    0%   { transform: scale(2);   opacity: 0; }
+    40%  { transform: scale(0.9); opacity: 1; }
+    100% { transform: scale(1);   opacity: 1; }
+}
+
+/* =====================================================
+   로그인 배너 (로비)
+   ===================================================== */
+
+.login-banner {
+    border: 1px solid rgba(99, 102, 241, 0.25) !important;
+    background: linear-gradient(135deg,
+        rgba(255,255,255,0.98) 0%,
+        rgba(238,242,255,0.98) 100%) !important;
+}
+
+.login-banner-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.login-banner-text {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.login-banner-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+
+.login-banner-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* =====================================================
+   방 헤더 / 대기 상태 바
+   ===================================================== */
+
+.room-header {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 0.75rem;
+    padding: 0.875rem 1rem;
+}
+
+.room-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.625rem;
+}
+
+.room-header-info {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.room-title {
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.room-count-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+}
+
+.waiting-status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.waiting-status-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.waiting-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #fbbf24;
+    animation: waitingPulse 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+.waiting-dot.all-ready {
+    background: #34d399;
+    animation: none;
+}
+
+.waiting-status-text {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.ready-count-badge {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.ready-progress-bar {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.ready-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #34d399, #059669);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+}
+
+@keyframes waitingPulse {
+    0%, 100% { transform: scale(1);   opacity: 1; }
+    50%       { transform: scale(1.4); opacity: 0.6; }
+}
+
+/* =====================================================
+   플레이어 카드 (대기실) 개선
+   ===================================================== */
+
+.player-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.625rem;
+}
+
+.player-card {
+    background: rgba(255, 255, 255, 0.92);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.player-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: #94a3b8;
+    border-radius: 2px 0 0 2px;
+    transition: background 0.25s ease;
+}
+
+.player-card.ready::before   { background: #10b981; }
+.player-card.playing::before { background: #6366f1; }
+.player-card.manager::before { background: #f59e0b; }
+
+.player-card.ready {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(236, 253, 245, 0.95);
+}
+
+.player-info {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.player-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #764ba2);
+    color: white;
+    font-weight: 700;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.player-details h6 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+
+.player-status {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+
+.status-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.status-waiting { background: #f1f5f9; color: #64748b; }
+.status-ready   { background: #d1fae5; color: #065f46; }
+.status-playing { background: #ede9fe; color: #4c1d95; }
+
+/* =====================================================
+   연결 상태 배지
+   ===================================================== */
+
+#connectStatus {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.6rem;
+    transition: all 0.3s ease;
+}
+
+/* =====================================================
+   모바일 최적화
+   ===================================================== */
+
+/* iOS safe-area (노치/홈바) */
+body {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* in-game 시 overscroll 잠금 */
+body.in-game {
+    overscroll-behavior: none;
+}
+
+/* 작은 화면 (≤400px) 대응 */
+@media (max-width: 400px) {
+    .loading-title { font-size: 1.6rem; }
+    .loading-bell  { font-size: 3.5rem; }
+    .countdown-number { font-size: 6rem; }
+    .player-grid { grid-template-columns: 1fr 1fr; }
+    .login-banner-inner { flex-direction: column; align-items: flex-start; }
+    .room-header { padding: 0.625rem 0.75rem; }
+    .room-title { font-size: 1rem; }
 }

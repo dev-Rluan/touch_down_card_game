@@ -2,6 +2,31 @@
 // 수동으로 변경하려면: ClientConfig.setServerUrl('http://your-server:3000');
 const socket = io(ClientConfig.serverUrl, ClientConfig.socketOptions);
 
+// ──────────────────────────────────────────
+// 로딩 화면 제어
+// ──────────────────────────────────────────
+function hideLoadingScreen() {
+    const el = document.getElementById('loadingScreen');
+    if (!el) return;
+    el.classList.add('hidden');
+    // 트랜지션 후 DOM에서 제거해 레이어 비용 없앰
+    el.addEventListener('transitionend', () => el.remove(), { once: true });
+}
+
+function setLoadingStatus(text) {
+    const el = document.getElementById('loadingStatus');
+    if (el) el.textContent = text;
+}
+
+// Socket.IO 네이티브 connect / connect_error 이벤트 활용
+socket.on('connect', () => {
+    setLoadingStatus('서버 연결 완료, 초기화 중...');
+});
+
+socket.on('connect_error', () => {
+    setLoadingStatus('연결 실패 – 재시도 중...');
+});
+
 // DOM 요소들을 안전하게 가져오기
 let nickForm, nick, modalCreateForm, modalRoomName, modalMaxUsers, connectStatus, lobby, gameroom, rooms, roomname, headCount, headCountList, refreshRoom, userList, roomId, readyButton;
 let readyButtonDefaultHTML = '';
@@ -197,6 +222,33 @@ function setReadyButtonEnabled(enabled) {
         ? readyButtonDefaultHTML || '<i class="icon ion-checkmark"></i> Ready'
         : '<i class="icon ion-pause"></i> 게임 진행중';
 }
+
+/**
+ * 대기실 상태 바 (준비 진행바 + 카운트 뱃지) 업데이트
+ * @param {Array} users - 플레이어 목록
+ * @param {number} maxCnt - 방 최대 인원
+ */
+function updateWaitingBar(users, maxCnt) {
+    if (!Array.isArray(users)) return;
+    const readyCount = users.filter(u => u && u.readyStatus === 'ready').length;
+    const totalCount = users.length;
+    const pct = totalCount > 0 ? Math.round((readyCount / totalCount) * 100) : 0;
+    const allReady = totalCount > 0 && readyCount === totalCount;
+
+    const fill  = document.getElementById('readyProgressFill');
+    const badge = document.getElementById('readyCountBadge');
+    const dot   = document.getElementById('waitingDot');
+    const text  = document.getElementById('waitingStatusText');
+    const hc    = document.getElementById('headCount');
+
+    if (fill)  fill.style.width = pct + '%';
+    if (badge) badge.textContent = `${readyCount} / ${totalCount} 준비`;
+    if (dot)   dot.classList.toggle('all-ready', allReady);
+    if (text)  text.textContent = allReady
+        ? '모든 플레이어 준비완료!'
+        : `${readyCount}명 준비 완료 (${totalCount - readyCount}명 대기)`;
+    if (hc && maxCnt) hc.textContent = `${totalCount} / ${maxCnt}`;
+}
 // function end
 
 // 이벤트 리스너 등록
@@ -239,15 +291,18 @@ if (document.readyState === 'loading') {
 // default 이름
 
 socket.on('connecting', (msg)=>{
-    // const li = document.createElement('li');
-    // li.innerText = msg;
-    // document.getElementById('nick').appendChild(li);
+    // 서버 연결 완료 → 로딩 화면 숨기기
+    hideLoadingScreen();
+    if (connectStatus) {
+        connectStatus.textContent = '연결됨';
+        connectStatus.className = 'badge bg-success me-2';
+    }
+
     user.push({nickname : msg.nickname});
     nick.textContent = msg.nickname;
 
     rooms.innerHTML = "";
-    let lis = "";    
-    debugger;
+    let lis = "";
     const roomList = msg.roomList;
     if(isEmptyArr(roomList)){
         rooms.innerHTML = `
@@ -479,17 +534,18 @@ socket.on('roomCreated', (roomInfo) => {
             });
         }
         userList.innerHTML = userListHtml;
-        
+        updateWaitingBar(users, roomInfo.maxUserCnt);
+
         // CSS 재렌더링 강제 (Reflow 유도)
         void userList.offsetHeight;
         setReadyButtonEnabled(true);
-        
+
         console.log('roomCreated HTML 생성 완료:', userListHtml);
     } catch (error) {
         console.error('roomCreated 처리 중 에러:', error);
         showNotification('방 생성 처리 중 오류가 발생했습니다.', 'error');
     }
-    
+
     // 플레이어 카드 애니메이션
     setTimeout(() => {
         const playerCards = userList.querySelectorAll('.player-card');
@@ -586,10 +642,8 @@ socket.on('successJoinRoom', (roomInfo) =>{
         // CSS 재렌더링 강제 (Reflow 유도)
         void userList.offsetHeight;
         
+        updateWaitingBar(users, roomInfo.maxUserCnt);
         console.log('successJoinRoom HTML 생성 완료:', userListHtml);
-        console.log('userList 요소:', userList);
-        console.log('userList 클래스:', userList.className);
-        console.log('userList computed style:', window.getComputedStyle(userList).display);
         setReadyButtonEnabled(true);
     } catch (error) {
         console.error('successJoinRoom 처리 중 에러:', error);
@@ -738,8 +792,9 @@ socket.on('leaveUser', (payload)=>{
         
         console.log('user : ' + user.id);
     });
-    userList.innerHTML=userListHtml;
-    
+    userList.innerHTML = userListHtml;
+    updateWaitingBar(users, maxUserCnt);
+
     // 플레이어 카드 애니메이션
     setTimeout(() => {
         const playerCards = userList.querySelectorAll('.player-card');
@@ -798,7 +853,24 @@ socket.on('updateReadyStatus', function(users) {
             </div>`;
         });
         userList.innerHTML = userListHtml;
-        
+
+        // 준비 진행바 업데이트
+        const readyCount = users.filter(u => u.readyStatus === 'ready').length;
+        const totalCount = users.length;
+        const pct = totalCount > 0 ? Math.round((readyCount / totalCount) * 100) : 0;
+
+        const fill = document.getElementById('readyProgressFill');
+        const badge = document.getElementById('readyCountBadge');
+        const dot   = document.getElementById('waitingDot');
+        const text  = document.getElementById('waitingStatusText');
+
+        if (fill)  fill.style.width = pct + '%';
+        if (badge) badge.textContent = `${readyCount} / ${totalCount} 준비`;
+        if (dot)   dot.classList.toggle('all-ready', readyCount === totalCount && totalCount > 0);
+        if (text)  text.textContent = readyCount === totalCount && totalCount > 0
+            ? '모든 플레이어 준비완료!'
+            : `${readyCount}명 준비 완료 (${totalCount - readyCount}명 대기)`;
+
         console.log('updateReadyStatus 완료');
     } catch (error) {
         console.error('updateReadyStatus 에러:', error);
@@ -807,35 +879,46 @@ socket.on('updateReadyStatus', function(users) {
 
 
 
-// 게임 시작 카운트다운 UI
-let countdownElement;
-function ensureCountdownElement() {
-    if (!countdownElement) {
-        countdownElement = document.createElement('div');
-        countdownElement.id = 'gameCountdown';
-        countdownElement.className = 'alert alert-info text-center position-fixed';
-        countdownElement.style.cssText = 'top: 80px; right: 20px; left: 20px; z-index: 9999;';
-        document.body.appendChild(countdownElement);
+// ──────────────────────────────────────────
+// 게임 시작 카운트다운 오버레이
+// ──────────────────────────────────────────
+const countdownOverlay = document.getElementById('countdownOverlay');
+const countdownNumber  = document.getElementById('countdownNumber');
+const countdownSub     = document.getElementById('countdownSub');
+
+function showCountdown(n, sub) {
+    if (!countdownOverlay) return;
+    countdownOverlay.style.display = 'flex';
+    if (countdownNumber) {
+        countdownNumber.textContent = n;
+        countdownNumber.className = 'countdown-number' + (n === 'GO!' ? ' go' : '');
+        // 팝 애니메이션 재실행
+        countdownNumber.style.animation = 'none';
+        countdownNumber.offsetHeight; // reflow
+        countdownNumber.style.animation = '';
     }
-    return countdownElement;
+    if (countdownSub && sub) countdownSub.textContent = sub;
+}
+
+function hideCountdown() {
+    if (countdownOverlay) countdownOverlay.style.display = 'none';
 }
 
 socket.on('gameCountdownStart', ({ total }) => {
-    const el = ensureCountdownElement();
-    el.style.display = 'block';
-    el.className = 'alert alert-info text-center position-fixed';
-    el.textContent = `게임이 ${total}초 후 시작됩니다...`;
+    showCountdown(total, '모든 플레이어가 준비되었습니다!');
+    // 대기 상태 바 업데이트
+    const dot  = document.getElementById('waitingDot');
+    const text = document.getElementById('waitingStatusText');
+    if (dot)  { dot.classList.add('all-ready'); }
+    if (text) { text.textContent = '게임 시작 중...'; }
 });
 
 socket.on('gameCountdown', ({ secondsLeft }) => {
-    const el = ensureCountdownElement();
-    el.textContent = `게임이 ${secondsLeft}초 후 시작됩니다...`;
+    showCountdown(secondsLeft, '게임이 곧 시작됩니다!');
 });
 
 socket.on('gameCountdownCanceled', ({ reason }) => {
-    if (countdownElement) {
-        countdownElement.style.display = 'none';
-    }
+    hideCountdown();
     if (reason !== 'completed') {
         showNotification('게임 시작이 취소되었습니다. (조건 변경)', 'warning');
         setReadyButtonEnabled(true);
@@ -844,13 +927,11 @@ socket.on('gameCountdownCanceled', ({ reason }) => {
 
 // 서버의 실제 시작 이벤트 수신
 socket.on('gameStart', ({ message, gameData }) => {
-    if (countdownElement) {
-        countdownElement.style.display = 'none';
-    }
+    showCountdown('GO!', '');
+    setTimeout(hideCountdown, 900);
     console.log('게임 시작:', gameData);
     showNotification(message || '게임이 시작됩니다!', 'success');
     if (gameData) {
-        // 플레이어 리스트 업데이트 (상태 = playing)
         if (gameData.players && Array.isArray(gameData.players)) {
             updatePlayerList(gameData.players);
         }
