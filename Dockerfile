@@ -13,7 +13,7 @@ LABEL version="1.0.0"
 COPY package*.json ./
 
 # 프로덕션 의존성만 설치
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # 애플리케이션 소스 코드 복사
 COPY src/ ./src/
