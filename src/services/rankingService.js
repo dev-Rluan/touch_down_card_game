@@ -40,23 +40,24 @@ function metaKey(accountId) {
  * Sorted Set 상위 N명 + 각 메타 정보 조합
  */
 async function fetchLeaderboard(redis, setKey, limit) {
-  // ZREVRANGEBYSCORE: 높은 점수 순서
   const entries = await redis.zRangeWithScores(setKey, 0, limit - 1, { REV: true });
+  if (!entries.length) return [];
 
-  const result = await Promise.all(
-    entries.map(async ({ value: accountId, score }, index) => {
-      const meta = await redis.hGetAll(metaKey(accountId));
-      return {
-        rank: index + 1,
-        accountId,
-        displayName: meta.displayName || `User_${accountId}`,
-        avatar: meta.avatar || '',
-        score: Math.round(score),
-      };
-    })
-  );
+  // pipeline으로 메타 정보를 한 번의 왕복으로 일괄 조회 (N+1 → 2 쿼리)
+  const pipeline = redis.multi();
+  entries.forEach(({ value: accountId }) => pipeline.hGetAll(metaKey(accountId)));
+  const metaList = await pipeline.exec();
 
-  return result;
+  return entries.map(({ value: accountId, score }, index) => {
+    const meta = metaList[index] || {};
+    return {
+      rank: index + 1,
+      accountId,
+      displayName: meta.displayName || `User_${accountId}`,
+      avatar: meta.avatar || '',
+      score: Math.round(score),
+    };
+  });
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────

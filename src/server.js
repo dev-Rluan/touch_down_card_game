@@ -1,5 +1,6 @@
 // 필요한 모듈들을 가져옵니다.
 const express = require('express');
+const compression = require('compression');
 const app = express();
 const server = require('http').Server(app);
 const io = require('socket.io')(server, {
@@ -28,6 +29,9 @@ app.use(cors({
   origin: allowedOrigins || true,
   credentials: true
 }));
+
+// gzip 압축 (모든 응답에 적용, 1KB 이상만)
+app.use(compression({ threshold: 1024 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -68,7 +72,12 @@ const shopRouter = require('./routes/shop');
 app.use('/api/shop', shopRouter);
 
 // ── 정적 파일 및 클라이언트 설정 ──────────────────────────────────────────────
-app.use('/public', express.static(__dirname + '/public'));
+// 정적 파일: 7일 브라우저 캐싱 (JS/CSS 변경 시 파일명에 버전 포함 권장)
+app.use('/public', express.static(__dirname + '/public', {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true,
+}));
 
 // 클라이언트용 환경 변수 스크립트 제공
 app.get('/env.js', (req, res) => {
@@ -78,6 +87,8 @@ app.get('/env.js', (req, res) => {
   const adsenseGameEndSlot = process.env.ADSENSE_GAME_END_SLOT || '';
   const tossClientKey = process.env.TOSS_CLIENT_KEY || '';
   res.setHeader('Content-Type', 'application/javascript');
+  // 환경변수는 서버 재시작 없이 바뀌지 않으므로 1시간 캐싱
+  res.setHeader('Cache-Control', 'public, max-age=3600');
   res.send([
     `window.__TOUCHDOWN_SOCKET_URL__ = ${JSON.stringify(socketUrl)};`,
     `window.__ADSENSE_PUBLISHER_ID__ = ${JSON.stringify(adsenseId)};`,

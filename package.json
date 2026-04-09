@@ -29,6 +29,7 @@
   },
   "homepage": "https://github.com/dev-Rluan/touch_down_card_game#readme",
   "dependencies": {
+    "compression": "^1.8.1",
     "connect-redis": "^9.0.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",

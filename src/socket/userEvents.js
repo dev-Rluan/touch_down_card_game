@@ -18,6 +18,9 @@ module.exports = function(socket, io) {
     ? sessionUser.displayName
     : `User_${socket.id.substring(0, 8)}`;
 
+  // 로비에 있는 클라이언트만 방 목록 업데이트를 받도록 로비 룸에 참가
+  socket.join('lobby');
+
   (async () => {
     try {
       await userService.connectUser(socket.id, defaultName);
@@ -115,7 +118,7 @@ module.exports = function(socket, io) {
         }
 
         const rooms = await roomService.getWaitingRooms();
-        io.emit('roomList', rooms);
+        io.to('lobby').emit('roomList', rooms);
       }
 
       await userService.disconnectUser(socket.id);

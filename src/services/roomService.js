@@ -188,12 +188,14 @@ async function leaveRoom(socketId, roomId) {
 async function getWaitingRooms() {
   const redis = await ensureRedisConnection();
   const ids = await redis.sMembers(WAITING_ROOMS_SET);
-  if (!ids || ids.length === 0) {
-    return [];
-  }
+  if (!ids || ids.length === 0) return [];
 
-  const rooms = await Promise.all(ids.map((id) => fetchRoom(id)));
-  return rooms.filter(Boolean);
+  // mGet으로 N+1 쿼리 → 2회 쿼리로 최적화 (1회: sMembers, 1회: mGet)
+  const keys = ids.map(getRoomKey);
+  const rawList = await redis.mGet(keys);
+  return rawList
+    .map(raw => (raw ? JSON.parse(raw) : null))
+    .filter(Boolean);
 }
 
 async function getRoomById(roomId) {
