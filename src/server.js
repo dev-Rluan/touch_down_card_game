@@ -98,10 +98,32 @@ app.get('/env.js', (req, res) => {
   ].join('\n'));
 });
 
-// 루트 페이지를 처리합니다.
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/view/index.html');
-});
+// ── 프론트엔드 서빙 ─────────────────────────────────────────────────────────
+// 프로덕션: React 빌드 결과물(client/dist → src/public/dist) 서빙
+// 개발: Vite dev server(port 5173)가 담당 — 이 블록은 dist 폴더가 있을 때만 활성화
+const fs = require('fs');
+const path = require('path');
+const clientDist = path.join(__dirname, 'public/dist');
+
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist, { maxAge: '1d', etag: true }));
+  // SPA fallback — API/auth/socket 이외의 경로는 index.html 응답
+  app.get('*', (req, res, next) => {
+    if (
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/auth') ||
+      req.path.startsWith('/socket.io') ||
+      req.path.startsWith('/public') ||
+      req.path === '/env.js'
+    ) return next();
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+} else {
+  // fallback: 기존 index.html (Vite 빌드 없을 때)
+  app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'view/index.html'));
+  });
+}
 
 // ── Socket.IO 세션 공유 ───────────────────────────────────────────────────────
 // HTTP 세션을 Socket.IO 핸드셰이크에서도 읽을 수 있도록 미들웨어를 공유합니다.
