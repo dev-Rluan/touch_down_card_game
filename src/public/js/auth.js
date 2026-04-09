@@ -21,10 +21,43 @@ window.TDAuth = (function () {
 
   // ── 렌더링 ──────────────────────────────────────────────────────────────────
 
+  // ── 로그인 배너 ──────────────────────────────────────────────────────────────
+
+  function renderLoginBanner(providers) {
+    const banner = document.getElementById('loginBanner');
+    if (!banner) return;
+
+    if (providers.length === 0) {
+      banner.style.display = 'none';
+      return;
+    }
+
+    const btnContainer = document.getElementById('loginBannerButtons');
+    if (btnContainer) {
+      btnContainer.innerHTML = providers.map((p) => {
+        const label = p === 'google'
+          ? '<i class="icon ion-social-google me-1"></i>Google'
+          : '<i class="icon ion-social-buffer me-1"></i>Kakao';
+        const cls = p === 'google' ? 'btn-outline-dark' : 'btn-warning';
+        return `<a href="/auth/${p}" class="btn btn-sm ${cls}">${label}</a>`;
+      }).join('');
+    }
+    banner.style.display = 'block';
+  }
+
+  function hideLoginBanner() {
+    const banner = document.getElementById('loginBanner');
+    if (banner) banner.style.display = 'none';
+  }
+
+  // ── 렌더링 ──────────────────────────────────────────────────────────────────
+
   function renderLoggedIn(user) {
+    hideLoginBanner();
+
     const avatarHtml = user.avatar
       ? `<img src="${escapeHtml(user.avatar)}" class="rounded-circle" width="28" height="28" style="object-fit:cover" alt="avatar">`
-      : `<i class="icon ion-person-stalker text-light" style="font-size:1.2rem"></i>`;
+      : `<span class="navbar-avatar">${escapeHtml(user.displayName.charAt(0).toUpperCase())}</span>`;
 
     authArea.innerHTML = `
       <span class="text-light small d-none d-md-inline">${escapeHtml(user.displayName)}</span>
@@ -34,6 +67,8 @@ window.TDAuth = (function () {
   }
 
   function renderLoggedOut(providers) {
+    renderLoginBanner(providers);
+
     const buttons = providers.map((p) => {
       const label = p === 'google' ? '<i class="icon ion-social-google"></i> Google' : '<i class="icon ion-social-buffer"></i> Kakao';
       const cls = p === 'google' ? 'btn-light' : 'btn-warning';
