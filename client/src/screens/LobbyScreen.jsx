@@ -3,14 +3,13 @@ import { useGame } from '../context/GameContext.jsx';
 import Navbar from '../components/Navbar.jsx';
 import RoomList from '../components/RoomList.jsx';
 import AdBanner from '../components/AdBanner.jsx';
-import useAuth from '../hooks/useAuth.js';
 import useRetention from '../hooks/useRetention.js';
 import useCosmetics from '../hooks/useCosmetics.js';
 import useShop from '../hooks/useShop.js';
 
 // ── 게임방 탭 ────────────────────────────────────────────────────────────────
 
-function RoomsPanel({ account, providers, emit }) {
+function RoomsPanel({ emit }) {
   const [roomName, setRoomName] = useState('');
   const [maxUsers, setMaxUsers] = useState(4);
   const modalRef = useRef(null);
@@ -27,27 +26,6 @@ function RoomsPanel({ account, providers, emit }) {
 
   return (
     <div className="lobby-panel">
-      {/* 로그인 배너 */}
-      {!account && providers.length > 0 && (
-        <div className="login-banner mb-3">
-          <div className="login-banner-inner">
-            <strong>로그인하면 랭킹·업적·꾸미기를 이용할 수 있어요!</strong>
-            <div className="login-banner-buttons mt-2">
-              {providers.includes('google') && (
-                <a href="/auth/google" className="btn btn-sm btn-outline-dark me-2">
-                  <i className="icon ion-social-google me-1" />Google로 로그인
-                </a>
-              )}
-              {providers.includes('kakao') && (
-                <a href="/auth/kakao" className="btn btn-sm btn-warning">
-                  <i className="icon ion-social-buffer me-1" />Kakao로 로그인
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       <AdBanner slot={window.__ADSENSE_LOBBY_SLOT__} className="mb-3" />
 
       {/* 방 목록 카드 */}
@@ -375,8 +353,8 @@ const TABS = [
 // ── 메인 로비 화면 ────────────────────────────────────────────────────────────
 
 export default function LobbyScreen() {
-  const { emit } = useGame();
-  const { account, providers } = useAuth();
+  const { emit, state } = useGame();
+  const { account } = useAuth();
   const [activeTab, setActiveTab] = useState('rooms');
 
   return (
@@ -400,7 +378,7 @@ export default function LobbyScreen() {
 
       {/* 탭 콘텐츠 */}
       <div className="lobby-tab-content">
-        {activeTab === 'rooms'        && <RoomsPanel account={account} providers={providers} emit={emit} />}
+        {activeTab === 'rooms'        && <RoomsPanel emit={emit} />}
         {activeTab === 'ranking'      && <LeaderboardPanel />}
         {activeTab === 'achievements' && <AchievementsPanel />}
         {activeTab === 'missions'     && <MissionsPanel />}
