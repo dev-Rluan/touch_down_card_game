@@ -293,6 +293,7 @@ if (document.readyState === 'loading') {
 socket.on('connecting', (msg)=>{
     // 서버 연결 완료 → 로딩 화면 숨기기
     hideLoadingScreen();
+    mySocketId = socket.id;
     if (connectStatus) {
         connectStatus.textContent = '연결됨';
         connectStatus.className = 'badge bg-success me-2';
@@ -423,55 +424,6 @@ socket.on('roomList', (roomInfos) => {
         });
     }, 50);
 })
-// 방 생성 성공
-socket.on('roomCreated', (roomInfo)=>{
-    lobby.style.display = 'none';
-    gameroom.style.display = 'block';
-    document.body.classList.add('in-game');
-    roomId.value = roomInfo.id;
-    
-        console.log(roomInfo);
-        console.log(roomInfo.name)
-        roomname.innerText=roomInfo.name;
-        maxUserCnt = roomInfo.maxUserCnt;
-        const users = roomInfo.users;
-        
-        headCount.textContent = users.length + " / " + maxUserCnt;
-        // headCount.innerHtml = 
-        
-        console.log( "dd:" + users.length);
-        console.log("ff:" + users);
-        let userListHtml = '';
-        users.forEach(user => {
-            
-            userListHtml  += 
-            `<div id="${user.id}">
-                <div class="row">
-                    <div class="col"><span>user : ${user.name}</span></div>
-                    <div class="col"><span>status : ${user.readyStatus}</span></div>
-                </div>
-            </div>`;
-            
-        })
-        userList.innerHTML=userListHtml;
-        setReadyButtonEnabled(true);
-    
-    // 플레이어 카드 애니메이션
-    setTimeout(() => {
-        const playerCards = userList.querySelectorAll('.player-card');
-        playerCards.forEach((card, index) => {
-            card.style.opacity = '0';
-            card.style.transform = 'scale(0.8)';
-            setTimeout(() => {
-                card.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-                card.style.opacity = '1';
-                card.style.transform = 'scale(1)';
-            }, index * 150);
-        });
-    }, 50);
-})
-
-
 // 방 생성 성공
 socket.on('roomCreated', (roomInfo) => {
     console.log('방 생성 성공:', roomInfo);
@@ -952,12 +904,6 @@ socket.on('yourHand', ({ cards }) => {
     }
 });
 
-// 소켓 ID 저장
-socket.on('connecting', (msg) => {
-    mySocketId = socket.id;
-    // 기존 connecting 로직은 그대로 유지
-});
-
 // 카드를 낸 후 업데이트
 socket.on('cardPlayed', (data) => {
     console.log('카드 플레이 결과:', data);
@@ -965,8 +911,6 @@ socket.on('cardPlayed', (data) => {
     if (data.result && data.result.playedCard) {
         addCenterCard(data.playerId, data.playerName, data.result.playedCard);
     }
-    // 게임 상태를 다시 요청해서 업데이트
-    socket.emit('getGameState');
 });
 
 // 게임 상태 수신
@@ -1693,8 +1637,6 @@ function showHalliGalliResult(data) {
         halliGalliBtn.style.display = 'none';
     }
     
-    // 게임 상태 업데이트
-    socket.emit('getGameState');
 }
 
 /**

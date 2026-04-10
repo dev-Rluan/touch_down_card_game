@@ -6,13 +6,16 @@
  * - /auth, /api, /socket.io: 항상 네트워크 (실시간 데이터)
  */
 
-const CACHE_NAME = 'tdcg-v1';
+const CACHE_NAME = 'tdcg-v2';
 const STATIC_ASSETS = [
   '/',
   '/public/css/styles.css',
   '/public/js/config.js',
   '/public/js/auth.js',
   '/public/js/retention.js',
+  '/public/js/touch.js',
+  '/public/js/cosmetics.js',
+  '/public/js/shop.js',
   '/public/js/app.js',
   '/public/manifest.json',
   '/public/icons/icon.svg',

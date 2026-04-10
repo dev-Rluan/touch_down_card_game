@@ -161,3 +161,7 @@ dist
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/node,visualstudiocode
+
+# React 클라이언트 빌드 산출물
+client/node_modules/
+src/public/dist/

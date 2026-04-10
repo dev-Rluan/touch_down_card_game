@@ -24,11 +24,12 @@ module.exports = function(socket, io) {
       console.log(`[Room] 방 생성 요청 - 이름: ${roomName}, 최대인원: ${maxCnt}`);
 
       const room = await roomService.createRoom(socket.id, roomName, maxCnt);
+      socket.leave('lobby');  // 방 생성 → 로비 룸 탈퇴
       socket.join(room.id);
       socket.emit('roomCreated', room);
 
       const rooms = await roomService.getWaitingRooms();
-      io.emit('roomList', rooms);
+      io.to('lobby').emit('roomList', rooms);
 
       console.log(`[Room] 방 생성 완료 - ID: ${room.id}, 이름: ${room.name}`);
     } catch (error) {
@@ -63,6 +64,7 @@ module.exports = function(socket, io) {
       console.log(`[Room] 방 입장 요청 - 방 ID: ${roomId}`);
 
       const room = await roomService.joinRoom(socket.id, roomId);
+      socket.leave('lobby');  // 방 입장 → 로비 룸 탈퇴
       socket.join(roomId);
       clearGameCountdown(io, roomId, 'user-joined');
       socket.emit('successJoinRoom', room);
@@ -72,7 +74,7 @@ module.exports = function(socket, io) {
       });
 
       const rooms = await roomService.getWaitingRooms();
-      io.emit('roomList', rooms);
+      io.to('lobby').emit('roomList', rooms);
 
       const userName = await userService.getUserName(socket.id);
       console.log(`[Room] 방 입장 완료 - 방: ${room.name}, 사용자: ${userName}`);
@@ -91,6 +93,7 @@ module.exports = function(socket, io) {
 
       const result = await roomService.leaveRoom(socket.id, roomId);
       socket.leave(roomId);
+      socket.join('lobby');  // 방 퇴장 → 로비 룸 재입장
       clearGameCountdown(io, roomId, 'user-left');
       socket.emit('leaveRoomResult', {
         status: 200,
@@ -105,7 +108,7 @@ module.exports = function(socket, io) {
       }
 
       const rooms = await roomService.getWaitingRooms();
-      io.emit('roomList', rooms);
+      io.to('lobby').emit('roomList', rooms);
 
       console.log(`[Room] 방 나가기 완료 - 방 ID: ${roomId}, 방 삭제: ${result.roomRemoved}`);
     } catch (error) {
