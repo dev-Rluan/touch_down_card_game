@@ -2634,3 +2634,115 @@ input, select, textarea {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* ── 로비 탭 레이아웃 ────────────────────────────────────────────── */
+
+.lobby-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* 탭 바 — Navbar 바로 아래 고정 */
+.lobby-tab-bar {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.5rem 1rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;          /* Firefox */
+  position: sticky;
+  top: 56px;                      /* Navbar 높이 */
+  z-index: 100;
+}
+
+.lobby-tab-bar::-webkit-scrollbar { display: none; }
+
+.lobby-tab-bar .nav {
+  flex-wrap: nowrap;
+  gap: 0.4rem;
+}
+
+.lobby-tab-btn {
+  color: rgba(255, 255, 255, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 0.6rem !important;
+  padding: 0.4rem 0.9rem !important;
+  font-size: 0.85rem !important;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  background: transparent !important;
+}
+
+.lobby-tab-btn:hover {
+  color: white !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.lobby-tab-btn.active {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+/* 탭 콘텐츠 영역 */
+.lobby-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 각 탭 패널 공통 padding */
+.lobby-panel {
+  padding: 1rem;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+/* 꾸미기 카드 */
+.cosmetic-card {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  transition: border-color 0.2s;
+}
+
+.cosmetic-card.equipped {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: var(--primary-color);
+}
+
+.cosmetic-card.locked { opacity: 0.6; }
+
+.cosmetic-card-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.cosmetic-card-preview.bell-preview {
+  background: linear-gradient(145deg, #fbbf24, #f59e0b);
+}
+
+.cosmetic-card-name {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.75);
+  text-align: center;
+}
+
+.cosmetic-card-action {
+  width: 100%;
+}
