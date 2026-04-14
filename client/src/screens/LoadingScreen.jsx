@@ -6,6 +6,7 @@ export default function LoadingScreen() {
   const { state, dispatch } = useGame();
   const { providers, loading: authLoading } = useAuth();
   const [guestPending, setGuestPending] = useState(false);
+  const authError = new URLSearchParams(window.location.search).get('auth_error');
 
   // 비회원 버튼 클릭 후 소켓 연결 완료되면 자동 진입
   useEffect(() => {
@@ -34,6 +35,15 @@ export default function LoadingScreen() {
           <h1 className="intro-title">Touch Down</h1>
           <p className="intro-subtitle">온라인 할리갈리 멀티플레이어</p>
         </div>
+
+        {/* OAuth 오류 알림 */}
+        {authError && (
+          <div className="alert alert-warning py-2 px-3 mb-3 small text-center" role="alert">
+            {authError === 'unavailable'
+              ? '로그인 서비스가 현재 준비 중입니다. 비회원으로 접속해 주세요.'
+              : '로그인에 실패했습니다. 다시 시도해 주세요.'}
+          </div>
+        )}
 
         {/* 버튼 영역 */}
         <div className="intro-actions">

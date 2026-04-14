@@ -8,8 +8,8 @@ export default function useAuth() {
   useEffect(() => {
     if (_cache) return;
     Promise.all([
-      fetch('/auth/me').then(r => r.json()),
-      fetch('/auth/providers').then(r => r.json()),
+      fetch('/auth/me').then(r => r.ok ? r.json() : { loggedIn: false }),
+      fetch('/auth/providers').then(r => r.ok ? r.json() : { providers: [] }),
     ]).then(([meData, provData]) => {
       _cache = {
         account: meData.loggedIn && meData.user ? meData.user : null,
