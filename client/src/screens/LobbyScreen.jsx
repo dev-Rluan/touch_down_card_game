@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext.jsx';
 import Navbar from '../components/Navbar.jsx';
 import RoomList from '../components/RoomList.jsx';
 import AdBanner from '../components/AdBanner.jsx';
+import useAuth from '../hooks/useAuth.js';
 import useRetention from '../hooks/useRetention.js';
 import useCosmetics from '../hooks/useCosmetics.js';
 import useShop from '../hooks/useShop.js';
