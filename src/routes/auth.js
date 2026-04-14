@@ -27,9 +27,8 @@ function requireStrategy(strategyName) {
       passport._strategy(strategyName);
       next();
     } catch {
-      res.status(503).json({
-        error: `${strategyName} 로그인이 현재 비활성화 상태입니다. 관리자에게 문의하세요.`,
-      });
+      // JSON 대신 SPA로 리다이렉트 — 브라우저가 JSON 텍스트 화면으로 이탈하지 않도록
+      res.redirect('/?auth_error=unavailable');
     }
   };
 }

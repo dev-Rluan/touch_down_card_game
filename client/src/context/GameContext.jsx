@@ -5,6 +5,8 @@ const GameContext = createContext(null);
 
 const initialState = {
   screen: 'loading',       // 'loading' | 'lobby' | 'waiting' | 'game' | 'result'
+  socketConnected: false,  // 소켓 connecting 이벤트 수신 여부
+  pendingLobby: null,      // { nickname, roomList, account, socketId } — 인트로 화면 대기 중
   nickname: '',
   mySocketId: null,
   roomId: null,
@@ -30,14 +32,54 @@ const initialState = {
 function reducer(state, action) {
   switch (action.type) {
 
+    case 'SOCKET_READY':
+      // 소켓 연결 완료 — 로그인 사용자면 바로 로비로, 게스트면 인트로 대기
+      if (action.account) {
+        return {
+          ...state,
+          screen: 'lobby',
+          socketConnected: true,
+          nickname: action.nickname,
+          mySocketId: action.socketId,
+          roomList: action.roomList || [],
+          account: action.account,
+          pendingLobby: null,
+        };
+      }
+      return {
+        ...state,
+        socketConnected: true,
+        pendingLobby: {
+          nickname: action.nickname,
+          roomList: action.roomList || [],
+          socketId: action.socketId,
+        },
+      };
+
+    case 'ENTER_LOBBY': {
+      const p = state.pendingLobby || {};
+      return {
+        ...state,
+        screen: 'lobby',
+        nickname: p.nickname || state.nickname,
+        mySocketId: p.socketId || state.mySocketId,
+        roomList: p.roomList || state.roomList,
+        account: null,
+        pendingLobby: null,
+      };
+    }
+
+    // 하위 호환 (직접 로비 진입)
     case 'CONNECTED':
       return {
         ...state,
         screen: 'lobby',
+        socketConnected: true,
         nickname: action.nickname,
         mySocketId: action.socketId,
         roomList: action.roomList || [],
         account: action.account,
+        pendingLobby: null,
       };
 
     case 'CONNECT_ERROR':
@@ -210,7 +252,7 @@ export function GameProvider({ children }) {
 
     socket.on('connecting', ({ nickname, roomList, account }) => {
       dispatch({
-        type: 'CONNECTED',
+        type: 'SOCKET_READY',
         nickname,
         socketId: socket.id,
         roomList: roomList || [],
