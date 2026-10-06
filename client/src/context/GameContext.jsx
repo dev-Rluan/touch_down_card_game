@@ -172,8 +172,18 @@ function reducer(state, action) {
       const card = action.result.playedCard;
       const prevStack = state.playerStacks[action.playerId] || { cards: [], name: action.playerName || '' };
       const newCards = [...prevStack.cards, card].slice(-3); // 최대 3장 표시
+      const nextTurn = action.result.nextTurn;
+      const players = state.gameStatePlayers.map(p =>
+        p.id === action.playerId && action.result.playerCardCount !== undefined
+          ? { ...p, cardCount: action.result.playerCardCount }
+          : p
+      );
+      const hasNextTurn = typeof nextTurn === 'number';
       return {
         ...state,
+        gameStatePlayers: players,
+        currentTurn: hasNextTurn ? nextTurn : state.currentTurn,
+        isMyTurn: hasNextTurn ? players[nextTurn]?.id === state.mySocketId : state.isMyTurn,
         playerStacks: {
           ...state.playerStacks,
           [action.playerId]: { ...prevStack, cards: newCards },
@@ -220,6 +230,10 @@ function reducer(state, action) {
         screen: 'result',
         gameResult: { winner: action.winner, finalScores: action.finalScores },
         countdown: null,
+        isMyTurn: false,
+        hand: [],
+        // 서버가 종료 시 모든 유저를 waiting 으로 되돌리므로 동기화
+        users: state.users.map(u => ({ ...u, readyStatus: 'waiting' })),
       };
 
     case 'SHOW_NOTIFICATION':
@@ -342,6 +356,26 @@ export function GameProvider({ children }) {
 
     socket.on('gameEnd', (data) => {
       dispatch({ type: 'GAME_END', ...data });
+    });
+
+    // 서버 에러 이벤트 → 사용자 알림
+    const errorEvents = [
+      'createRoomError', 'roomListError', 'faildJoinRoom', 'readyError',
+      'playCardError', 'halliGalliError', 'gameStateError', 'name change error',
+    ];
+    errorEvents.forEach(evt => {
+      socket.on(evt, (message) => {
+        dispatch({
+          type: 'SHOW_NOTIFICATION',
+          message: typeof message === 'string' ? message : '요청을 처리하지 못했습니다.',
+          notifType: 'warning',
+        });
+      });
+    });
+
+    socket.on('disconnect', (reason) => {
+      if (reason === 'io client disconnect') return;
+      dispatch({ type: 'SHOW_NOTIFICATION', message: '서버와 연결이 끊어졌습니다. 재연결 중...', notifType: 'warning' });
     });
 
     // 업적/미션 알림

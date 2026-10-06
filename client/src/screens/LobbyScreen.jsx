@@ -354,7 +354,7 @@ const TABS = [
 // ── 메인 로비 화면 ────────────────────────────────────────────────────────────
 
 export default function LobbyScreen() {
-  const { emit, state } = useGame();
+  const { emit } = useGame();
   const { account } = useAuth();
   const [activeTab, setActiveTab] = useState('rooms');
 
