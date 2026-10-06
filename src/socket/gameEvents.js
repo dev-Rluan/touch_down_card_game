@@ -6,6 +6,9 @@ const gameService = require('../services/gameService');
 const userService = require('../services/userServices');
 const { clearGameCountdown, startGameCountdown } = require('../utils/gameCountdown');
 const { limiters } = require('../utils/socketRateLimiter');
+const { withRoomLock } = require('../utils/roomLock');
+const { toPublicUser } = require('../utils/roomSerializer');
+const { emitHand, emitGameState, finishGameIfEnded } = require('./gameSync');
 const rankingService = require('../services/rankingService');
 const achievementService = require('../services/achievementService');
 const dailyMissionService = require('../services/dailyMissionService');
@@ -25,31 +28,44 @@ module.exports = function(socket, io) {
       return;
     }
     try {
-      const currentRoom = await roomService.getRoomByUser(socket.id);
-      if (!currentRoom) {
+      const roomId = await userService.getUserRoom(socket.id);
+      if (!roomId) {
         socket.emit('readyError', '참여 중인 방이 없습니다.');
         return;
       }
 
-      const user = currentRoom.users.find(u => u.id === socket.id);
-      if (!user) {
-        socket.emit('readyError', '사용자를 찾을 수 없습니다.');
-        return;
-      }
+      await withRoomLock(roomId, async () => {
+        const currentRoom = await roomService.getRoomById(roomId);
+        if (!currentRoom) {
+          socket.emit('readyError', '참여 중인 방이 없습니다.');
+          return;
+        }
+        if (currentRoom.status === 'playing') {
+          socket.emit('readyError', '게임이 이미 진행 중입니다.');
+          return;
+        }
 
-      user.readyStatus = user.readyStatus === 'ready' ? 'waiting' : 'ready';
-      await roomService.saveRoomState(currentRoom);
-      io.to(currentRoom.id).emit('updateReadyStatus', currentRoom.users);
+        const user = currentRoom.users.find(u => u.id === socket.id);
+        if (!user) {
+          socket.emit('readyError', '사용자를 찾을 수 없습니다.');
+          return;
+        }
 
-      const allReady = currentRoom.users.every(u => u.readyStatus === 'ready');
-      if (allReady && currentRoom.users.length >= 2) {
-        io.to(currentRoom.id).emit('allReady', currentRoom.users);
-        await startGameCountdown(io, currentRoom.id);
-      } else {
-        clearGameCountdown(io, currentRoom.id, 'not-all-ready');
-      }
+        user.readyStatus = user.readyStatus === 'ready' ? 'waiting' : 'ready';
+        await roomService.saveRoomState(currentRoom);
+        const publicUsers = currentRoom.users.map(toPublicUser);
+        io.to(currentRoom.id).emit('updateReadyStatus', publicUsers);
 
-      console.log(`[Game] 준비 상태 변경 - 사용자: ${user.name}, 상태: ${user.readyStatus}`);
+        const allReady = currentRoom.users.every(u => u.readyStatus === 'ready');
+        if (allReady && currentRoom.users.length >= 2) {
+          io.to(currentRoom.id).emit('allReady', publicUsers);
+          await startGameCountdown(io, currentRoom.id);
+        } else {
+          clearGameCountdown(io, currentRoom.id, 'not-all-ready');
+        }
+
+        console.log(`[Game] 준비 상태 변경 - 사용자: ${user.name}, 상태: ${user.readyStatus}`);
+      });
     } catch (error) {
       console.error('[ready Error]', error);
       socket.emit('readyError', error.message);
@@ -69,6 +85,8 @@ module.exports = function(socket, io) {
 
       const gameState = await gameService.getGameState(currentRoom.id);
       socket.emit('gameState', gameState);
+      const me = currentRoom.users.find(u => u.id === socket.id);
+      if (me) emitHand(io, me);
     } catch (error) {
       console.error('[getGameState Error]', error);
       socket.emit('gameStateError', error.message);
@@ -84,41 +102,45 @@ module.exports = function(socket, io) {
       return;
     }
     try {
-      const currentRoom = await roomService.getRoomByUser(socket.id);
-      if (!currentRoom) {
+      const roomId = await userService.getUserRoom(socket.id);
+      if (!roomId) {
         socket.emit('playCardError', '참여 중인 방이 없습니다.');
         return;
       }
 
-      const result = await gameService.playCard(currentRoom.id, socket.id, cardIndex);
-      const playerName = await userService.getUserName(socket.id);
-      io.to(currentRoom.id).emit('cardPlayed', {
-        playerId: socket.id,
-        playerName,
-        result
-      });
+      const index = Number.isInteger(cardIndex) ? cardIndex : 0;
 
-      const latestRoom = await roomService.getRoomById(currentRoom.id);
-      if (latestRoom && Array.isArray(latestRoom.users)) {
-        latestRoom.users.forEach(u => {
-          try {
-            io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
-          } catch (e) {
-            console.error('[yourHand update Error]', e);
+      await withRoomLock(roomId, async () => {
+        const result = await gameService.playCard(roomId, socket.id, index);
+        const { room } = result;
+        const player = room.users.find(u => u.id === socket.id);
+        const playerName = player?.name || '';
+
+        // 중앙 카드 전체 배열·할리갈리 정답 여부는 보내지 않는다 (페이로드 절감 + 부정행위 방지)
+        io.to(roomId).emit('cardPlayed', {
+          playerId: socket.id,
+          playerName,
+          result: {
+            playedCard: result.playedCard,
+            nextTurn: result.nextTurn,
+            playerCardCount: result.playerCardCount,
+            centerCardCount: room.gameState.centerCards.length
           }
         });
-      }
 
-      const gameEndResult = await gameService.checkGameEnd(currentRoom.id);
-      if (gameEndResult.isEnded) {
-        io.to(currentRoom.id).emit('gameEnd', gameEndResult);
-        // 리텐션 훅: 게임 종료 시 랭킹/업적/미션 비동기 갱신
-        setImmediate(() => handleGameEndRetention(io, latestRoom, gameEndResult));
-      }
+        // 손패가 바뀐 사람은 카드를 낸 플레이어뿐이다
+        emitHand(io, player);
 
-      console.log(`[Game] 카드 내기 - 플레이어: ${playerName}, 카드 인덱스: ${cardIndex}`);
+        const gameEndResult = await finishGameIfEnded(io, room);
+        if (gameEndResult) {
+          // 리텐션 훅: 게임 종료 시 랭킹/업적/미션 비동기 갱신
+          setImmediate(() => handleGameEndRetention(io, room, gameEndResult));
+        }
+
+        console.log(`[Game] 카드 내기 - 플레이어: ${playerName}, 카드 인덱스: ${index}`);
+      });
     } catch (error) {
-      console.error('[playCard Error]', error);
+      console.error('[playCard Error]', error.message);
       socket.emit('playCardError', error.message);
     }
   });
@@ -132,43 +154,50 @@ module.exports = function(socket, io) {
       return;
     }
     try {
-      const currentRoom = await roomService.getRoomByUser(socket.id);
-      if (!currentRoom) {
+      const roomId = await userService.getUserRoom(socket.id);
+      if (!roomId) {
         socket.emit('halliGalliError', '참여 중인 방이 없습니다.');
         return;
       }
 
-      const result = await gameService.handleHalliGalli(currentRoom.id, socket.id);
-      const playerName = await userService.getUserName(socket.id);
-      io.to(currentRoom.id).emit('halliGalliResult', {
-        playerId: socket.id,
-        playerName,
-        success: result.success,
-        scoreGained: result.scoreGained || 0,
-        centerCardsGained: result.centerCardsGained || 0,
-        discardedCardsGained: result.discardedCardsGained || 0,
-        newScore: result.newScore || 0,
-        discardedCard: result.discardedCard,
-        centerCards: result.centerCards,
-        discardedCards: result.discardedCards
-      });
+      await withRoomLock(roomId, async () => {
+        const result = await gameService.handleHalliGalli(roomId, socket.id);
+        const { room } = result;
+        const player = room.users.find(u => u.id === socket.id);
+        const playerName = player?.name || result.playerName;
 
-      setTimeout(async () => {
-        try {
-          const gameState = await gameService.getGameState(currentRoom.id);
-          io.to(currentRoom.id).emit('gameState', gameState);
-        } catch (err) {
-          console.error('[gameState emit Error]', err);
+        io.to(roomId).emit('halliGalliResult', {
+          playerId: socket.id,
+          playerName,
+          success: result.success,
+          scoreGained: result.scoreGained || 0,
+          centerCardsGained: result.centerCardsGained || 0,
+          discardedCardsGained: result.discardedCardsGained || 0,
+          newScore: result.newScore || 0,
+          playerCardCount: result.playerCardCount,
+          discardedCard: result.discardedCard,
+          discardedCards: result.discardedCards
+        });
+
+        // 벨을 친 플레이어의 손패가 늘거나(성공) 줄었으므로(실패) 갱신
+        emitHand(io, player);
+
+        // 실패로 마지막 카드를 잃어 게임이 끝날 수 있다
+        const gameEndResult = await finishGameIfEnded(io, room);
+        if (gameEndResult) {
+          setImmediate(() => handleGameEndRetention(io, room, gameEndResult));
+        } else {
+          emitGameState(io, room);
         }
-      }, 100);
 
-      // 벨 성공 시 bellRings 업적/미션 갱신 (비동기)
-      if (result.success) {
-        setImmediate(() => recordBellSuccess(io, socket.id));
-      }
-      console.log(`[Game] 할리갈리 - 플레이어: ${playerName}, 성공: ${result.success}`);
+        // 벨 성공 시 bellRings 업적/미션 갱신 (비동기)
+        if (result.success) {
+          setImmediate(() => recordBellSuccess(io, socket.id));
+        }
+        console.log(`[Game] 할리갈리 - 플레이어: ${playerName}, 성공: ${result.success}`);
+      });
     } catch (error) {
-      console.error('[halliGalli Error]', error);
+      console.error('[halliGalli Error]', error.message);
       socket.emit('halliGalliError', error.message);
     }
   });

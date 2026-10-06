@@ -4,7 +4,13 @@
 const userService = require('../services/userServices');
 const roomService = require('../services/roomService');
 const { clearGameCountdown } = require('../utils/gameCountdown');
-const { limiters } = require('../utils/socketRateLimiter');
+const { limiters, cleanupSocket } = require('../utils/socketRateLimiter');
+const { withRoomLock } = require('../utils/roomLock');
+const { toPublicUser } = require('../utils/roomSerializer');
+const { scheduleLobbyBroadcast } = require('./lobbyBroadcast');
+const { syncAfterPlayerLeft } = require('./gameSync');
+
+const MAX_NICKNAME_LENGTH = 20;
 
 /**
  * 사용자 관련 이벤트 핸들러 등록
@@ -24,7 +30,7 @@ module.exports = function(socket, io) {
   (async () => {
     try {
       await userService.connectUser(socket.id, defaultName);
-      const waitingRooms = await roomService.getWaitingRooms();
+      const waitingRooms = await roomService.getWaitingRoomSummaries();
       socket.emit('connecting', {
         nickname: defaultName,
         roomList: waitingRooms,
@@ -59,14 +65,19 @@ module.exports = function(socket, io) {
       return;
     }
     try {
-      if (!newName || !newName.trim()) {
+      const name = typeof newName === 'string' ? newName.trim() : '';
+      if (!name) {
         socket.emit('name change error', '닉네임을 입력해주세요.');
         return;
       }
+      if (name.length > MAX_NICKNAME_LENGTH) {
+        socket.emit('name change error', `닉네임은 ${MAX_NICKNAME_LENGTH}자 이하로 입력해주세요.`);
+        return;
+      }
 
-      await userService.updateUserName(socket.id, newName.trim());
-      socket.emit('name change successful', newName.trim());
-      console.log(`[User] ${socket.id} 닉네임 변경: ${newName.trim()}`);
+      await userService.updateUserName(socket.id, name);
+      socket.emit('name change successful', name);
+      console.log(`[User] ${socket.id} 닉네임 변경: ${name}`);
     } catch (error) {
       console.error('[change name Error]', error);
       socket.emit('name change error', error.message);
@@ -100,25 +111,27 @@ module.exports = function(socket, io) {
    * 연결 해제 이벤트
    */
   socket.on('disconnect', async () => {
-    const { cleanupSocket } = require('../utils/socketRateLimiter');
     cleanupSocket(socket.id);
     try {
       console.log(`[Socket] 클라이언트 연결 해제: ${socket.id}`);
 
-      const currentRoom = await roomService.getRoomByUser(socket.id);
-      if (currentRoom) {
-        const result = await roomService.leaveRoom(socket.id, currentRoom.id);
-        clearGameCountdown(io, currentRoom.id, 'user-disconnected');
+      const roomId = await userService.getUserRoom(socket.id);
+      if (roomId) {
+        const result = await withRoomLock(roomId, async () => {
+          const leaveResult = await roomService.leaveRoom(socket.id, roomId);
+          // 게임 도중 이탈 시 남은 플레이어의 턴/종료 상태 갱신
+          await syncAfterPlayerLeft(io, leaveResult);
+          return leaveResult;
+        });
+        clearGameCountdown(io, roomId, 'user-disconnected');
 
         if (!result.roomRemoved) {
-          socket.to(currentRoom.id).emit('leaveUser', {
-            users: result.updatedUsers,
-            newManager: result.newManager
+          socket.to(roomId).emit('leaveUser', {
+            users: result.updatedUsers.map(toPublicUser),
+            newManager: result.newManager ? toPublicUser(result.newManager) : null
           });
         }
-
-        const rooms = await roomService.getWaitingRooms();
-        io.to('lobby').emit('roomList', rooms);
+        scheduleLobbyBroadcast(io);
       }
 
       await userService.disconnectUser(socket.id);

@@ -106,7 +106,22 @@ const path = require('path');
 const clientDist = path.join(__dirname, 'public/dist');
 
 if (fs.existsSync(clientDist)) {
-  app.use(express.static(clientDist, { maxAge: '1d', etag: true }));
+  // Vite 빌드 산출물(/assets/*)은 파일명에 해시가 붙으므로 장기 캐시(immutable),
+  // index.html은 배포 직후 새 해시 파일을 참조하도록 매번 재검증(no-cache)한다.
+  // (index.html까지 1일 캐시하면 배포 후 사라진 옛 번들을 요청해 화면이 깨진다)
+  app.use(express.static(clientDist, {
+    etag: true,
+    index: 'index.html',
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    },
+  }));
   // SPA fallback — API/auth/socket 이외의 경로는 index.html 응답
   app.get('*', (req, res, next) => {
     if (
@@ -116,6 +131,7 @@ if (fs.existsSync(clientDist)) {
       req.path.startsWith('/public') ||
       req.path === '/env.js'
     ) return next();
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 } else {

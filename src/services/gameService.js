@@ -113,14 +113,24 @@ const getGameState = async (roomId) => {
     throw new Error('게임이 시작되지 않았습니다.');
   }
 
+  return buildGameState(room);
+};
+
+/**
+ * 이미 조회한 room 객체로 공개 게임 상태를 만든다 (추가 Redis 조회 없음)
+ * @param {Object} room
+ * @returns {Object} 게임 상태
+ */
+function buildGameState(room) {
   normalizeCurrentTurn(room);
 
+  // centerCards 전체 배열은 계속 커지고 클라이언트는 장수만 필요하므로 개수만 전송
   return {
     roomId: room.id,
     status: room.status,
     phase: room.gameState.phase,
     currentTurn: room.gameState.currentTurn,
-    centerCards: room.gameState.centerCards,
+    centerCardCount: room.gameState.centerCards.length,
     discardedCards: room.gameState.discardedCards || [],
     remainingDeck: room.gameState.remainingDeck,
     players: room.users.map(user => ({
@@ -133,7 +143,7 @@ const getGameState = async (roomId) => {
     gameStartTime: room.gameState.gameStartTime,
     lastActionTime: room.gameState.lastActionTime
   };
-};
+}
 
 /**
  * 카드 내기
@@ -146,6 +156,10 @@ const playCard = async (roomId, playerId, cardIndex) => {
   const room = await getRoomById(roomId);
   if (!room || !room.gameState) {
     throw new Error('게임이 시작되지 않았습니다.');
+  }
+
+  if (room.gameState.phase !== 'playing') {
+    throw new Error('게임이 진행 중이 아닙니다.');
   }
 
   normalizeCurrentTurn(room);
@@ -198,12 +212,11 @@ const playCard = async (roomId, playerId, cardIndex) => {
     centerCards: room.gameState.centerCards,
     isHalliGalli,
     nextTurn: room.gameState.currentTurn,
-    playerCardCount: player.cardPack.length
+    playerCardCount: player.cardPack.length,
+    // 호출 측에서 재조회 없이 후속 처리(손패 전송, 종료 판정)를 하기 위한 최신 room
+    room
   };
 };
-
-// 벨 클릭 후 처리가 완료될 때까지 동시 요청을 막기 위한 잠금 세트
-const halliGalliLocks = new Set();
 
 /**
  * 할리갈리 처리
@@ -222,11 +235,6 @@ const handleHalliGalli = async (roomId, playerId) => {
     throw new Error('게임이 진행 중이 아닙니다.');
   }
 
-  // 방 단위 중복 처리 방지: 이미 처리 중인 halliGalli 요청이 있으면 차단
-  if (halliGalliLocks.has(roomId)) {
-    throw new Error('이미 처리 중입니다. 잠시 후 다시 시도하세요.');
-  }
-
   // 중앙에 카드가 없으면 의미 없는 벨 클릭
   if (!room.gameState.centerCards || room.gameState.centerCards.length === 0) {
     throw new Error('아직 카드가 없습니다.');
@@ -237,8 +245,8 @@ const handleHalliGalli = async (roomId, playerId) => {
     throw new Error('플레이어를 찾을 수 없습니다.');
   }
 
-  halliGalliLocks.add(roomId);
-  try {
+  // 동시 벨 요청은 소켓 핸들러의 withRoomLock으로 직렬화된다.
+  // (먼저 처리된 성공 이후의 요청은 위의 '아직 카드가 없습니다' 검증에 걸린다)
   // 할리갈리 조건 확인 (각 플레이어의 맨 위 카드만 체크, 버림 카드 제외)
   const topCards = Object.values(room.gameState.playerStacks)
     .filter(stack => stack.length > 0)
@@ -287,7 +295,8 @@ const handleHalliGalli = async (roomId, playerId) => {
       newScore: player.score,
       playerCardCount: player.cardPack.length,
       centerCards: [],
-      discardedCards: []
+      discardedCards: [],
+      room
     };
   } else {
     // 실패: 덱 맨 아래 카드 1장 버리기 (버림 카드 덱으로)
@@ -305,8 +314,10 @@ const handleHalliGalli = async (roomId, playerId) => {
         success: false,
         playerName: player.name,
         discardedCard,
+        playerCardCount: player.cardPack.length,
         centerCards: room.gameState.centerCards,
-        discardedCards: room.gameState.discardedCards
+        discardedCards: room.gameState.discardedCards,
+        room
       };
     }
 
@@ -318,23 +329,27 @@ const handleHalliGalli = async (roomId, playerId) => {
     return {
       success: false,
       playerName: player.name,
+      playerCardCount: 0,
       centerCards: room.gameState.centerCards,
-      discardedCards: room.gameState.discardedCards
+      discardedCards: room.gameState.discardedCards,
+      room
     };
-  }
-  } finally {
-    halliGalliLocks.delete(roomId);
   }
 };
 
 /**
  * 게임 종료 확인
  * @param {string} roomId - 방 ID
+ * @param {Object} [loadedRoom] - 이미 조회한 room (전달 시 Redis 재조회 생략)
  * @returns {Object} 게임 종료 정보
  */
-const checkGameEnd = async (roomId) => {
-  const room = await getRoomById(roomId);
-  if (!room || !room.gameState) {
+const checkGameEnd = async (roomId, loadedRoom) => {
+  const room = loadedRoom || await getRoomById(roomId);
+  if (!room || !room.gameState || room.gameState.phase !== 'playing') {
+    return { isEnded: false };
+  }
+
+  if (room.users.length === 0) {
     return { isEnded: false };
   }
 
@@ -408,6 +423,7 @@ const resetGame = async (roomId) => {
 module.exports = { 
   startGame, 
   getGameState, 
+  buildGameState,
   playCard, 
   handleHalliGalli, 
   checkGameEnd, 

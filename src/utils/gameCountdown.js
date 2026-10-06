@@ -4,6 +4,9 @@
 
 const gameService = require('../services/gameService');
 const roomService = require('../services/roomService');
+const { withRoomLock } = require('./roomLock');
+const { toPublicUser } = require('./roomSerializer');
+const { scheduleLobbyBroadcast } = require('../socket/lobbyBroadcast');
 
 // 방별 게임 시작 카운트다운 타이머 관리
 const gameStartTimers = new Map(); // roomId -> { intervalId, timeoutId, secondsLeft }
@@ -58,7 +61,10 @@ async function startGameCountdown(io, roomId) {
   }, 1000);
 
   const timeoutId = setTimeout(() => {
-    (async () => {
+    withRoomLock(roomId, async () => {
+      // 이미 취소된 카운트다운이면 무시 (취소와 타이머 만료가 겹친 경우)
+      if (gameStartTimers.get(roomId)?.timeoutId !== timeoutId) return;
+
       const latestRoom = await roomService.getRoomById(roomId);
       if (!canStartGame(latestRoom)) {
         clearGameCountdown(io, roomId, 'condition-changed');
@@ -67,49 +73,35 @@ async function startGameCountdown(io, roomId) {
 
       clearGameCountdown(io, roomId, 'completed');
       try {
-        const gameStartData = await gameService.startGame(roomId);
+        const room = await gameService.startGame(roomId);
         const publicData = {
-          roomId: gameStartData.id,
-          status: gameStartData.status,
-          players: gameStartData.users.map(u => ({
-            id: u.id,
-            name: u.name,
+          roomId: room.id,
+          status: room.status,
+          players: room.users.map(u => ({
+            ...toPublicUser(u),
             cardCount: Array.isArray(u.cardPack) ? u.cardPack.length : 0,
-            readyStatus: u.readyStatus,
-            manager: u.manager
           })),
-          currentTurn: gameStartData.gameState?.currentTurn ?? 0,
-          centerCards: gameStartData.gameState?.centerCards?.length ?? 0
+          currentTurn: room.gameState?.currentTurn ?? 0,
+          centerCards: room.gameState?.centerCards?.length ?? 0
         };
         io.to(roomId).emit('gameStart', {
           message: '게임이 시작됩니다!',
           gameData: publicData
         });
 
-        const latestRoomSnapshot = await roomService.getRoomById(roomId);
-        if (latestRoomSnapshot && Array.isArray(latestRoomSnapshot.users)) {
-          latestRoomSnapshot.users.forEach(u => {
-            try {
-              io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
-            } catch (e) {
-              console.error('[yourHand emit Error]', e);
-            }
-          });
-        }
+        // startGame이 반환한 room으로 바로 손패/상태 전송 (재조회·지연 없음)
+        room.users.forEach(u => {
+          io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
+        });
+        io.to(roomId).emit('gameState', gameService.buildGameState(room));
 
-        setTimeout(async () => {
-          try {
-            const gameState = await gameService.getGameState(roomId);
-            io.to(roomId).emit('gameState', gameState);
-          } catch (err) {
-            console.error('[gameState emit after start Error]', err);
-          }
-        }, 100);
+        // 게임 중인 방은 로비 목록에서 빠진다
+        scheduleLobbyBroadcast(io);
       } catch (error) {
         console.error('[Game Start Error]', error);
         io.to(roomId).emit('gameStartError', error.message);
       }
-    })().catch((err) => {
+    }).catch((err) => {
       console.error('[gameCountdown Timeout Error]', err);
       clearGameCountdown(io, roomId, 'error');
     });

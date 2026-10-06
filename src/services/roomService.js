@@ -2,6 +2,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { ensureRedisConnection } = require('../config/redisClient');
 const userService = require('./userServices');
+const { toRoomSummary } = require('../utils/roomSerializer');
 
 const ROOM_DATA_PREFIX = 'room:data:';
 const WAITING_ROOMS_SET = 'rooms:waiting';
@@ -18,22 +19,47 @@ async function fetchRoom(roomId) {
   return raw ? JSON.parse(raw) : null;
 }
 
+// 여러 명령을 MULTI로 묶어 1회 왕복으로 처리 (순차 await 대비 RTT 감소 + 원자성)
 async function persistRoom(room) {
   const redis = await ensureRedisConnection();
-  await redis.set(getRoomKey(room.id), JSON.stringify(room));
-  await redis.hSet(ROOM_NAME_HASH, room.name, room.id);
+  const tx = redis.multi()
+    .set(getRoomKey(room.id), JSON.stringify(room))
+    .hSet(ROOM_NAME_HASH, room.name, room.id);
   if (room.status === 'waiting') {
-    await redis.sAdd(WAITING_ROOMS_SET, room.id);
+    tx.sAdd(WAITING_ROOMS_SET, room.id);
   } else {
-    await redis.sRem(WAITING_ROOMS_SET, room.id);
+    tx.sRem(WAITING_ROOMS_SET, room.id);
   }
+  await tx.exec();
 }
 
 async function removeRoom(room) {
   const redis = await ensureRedisConnection();
-  await redis.del(getRoomKey(room.id));
-  await redis.sRem(WAITING_ROOMS_SET, room.id);
-  await redis.hDel(ROOM_NAME_HASH, room.name);
+  await redis.multi()
+    .del(getRoomKey(room.id))
+    .sRem(WAITING_ROOMS_SET, room.id)
+    .hDel(ROOM_NAME_HASH, room.name)
+    .exec();
+}
+
+/**
+ * 게임 진행 중 플레이어가 빠질 때 턴/스택 정보를 보정한다.
+ * (users 배열에서 제거하기 전에 호출)
+ * @returns {boolean} 게임 진행 중이었는지 여부
+ */
+function detachPlayerFromGame(room, userIndex, socketId) {
+  const gs = room.gameState;
+  if (room.status !== 'playing' || !gs || gs.phase !== 'playing') return false;
+
+  // 나간 플레이어의 맨 위 카드는 더 이상 할리갈리 판정에 포함하지 않는다.
+  // (이미 낸 카드는 centerCards에 남아 벨 성공 시 획득 가능)
+  if (gs.playerStacks) delete gs.playerStacks[socketId];
+
+  const turn = gs.currentTurn ?? 0;
+  if (userIndex < turn) {
+    gs.currentTurn = turn - 1;
+  }
+  return true;
 }
 
 async function ensureRoomNameUnique(roomName) {
@@ -158,6 +184,7 @@ async function leaveRoom(socketId, roomId) {
   }
 
   const wasManager = room.users[userIndex].manager;
+  const wasPlaying = detachPlayerFromGame(room, userIndex, socketId);
   room.users.splice(userIndex, 1);
   await userService.setUserRoom(socketId, '');
 
@@ -166,8 +193,14 @@ async function leaveRoom(socketId, roomId) {
     return {
       updatedUsers: [],
       roomRemoved: true,
-      newManager: null
+      newManager: null,
+      wasPlaying,
+      room: null
     };
+  }
+
+  if (wasPlaying && room.gameState.currentTurn >= room.users.length) {
+    room.gameState.currentTurn = 0;
   }
 
   let newManager = null;
@@ -181,7 +214,9 @@ async function leaveRoom(socketId, roomId) {
   return {
     updatedUsers: room.users,
     roomRemoved: false,
-    newManager
+    newManager,
+    wasPlaying,
+    room
   };
 }
 
@@ -196,6 +231,11 @@ async function getWaitingRooms() {
   return rawList
     .map(raw => (raw ? JSON.parse(raw) : null))
     .filter(Boolean);
+}
+
+async function getWaitingRoomSummaries() {
+  const rooms = await getWaitingRooms();
+  return rooms.map(toRoomSummary);
 }
 
 async function getRoomById(roomId) {
@@ -224,6 +264,7 @@ module.exports = {
   joinRoom,
   leaveRoom,
   getWaitingRooms,
+  getWaitingRoomSummaries,
   getRoomById,
   getRoomByUser,
   updateRoomStatus,
