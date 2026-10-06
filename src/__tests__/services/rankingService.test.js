@@ -30,6 +30,15 @@ const mockRedis = {
     return zsetOf(key).get(member) ?? null;
   }),
   expire: jest.fn(async () => true),
+  // MULTI 파이프라인: hGetAll 호출을 모았다가 exec 시 결과 배열로 반환
+  multi: jest.fn(() => {
+    const keys = [];
+    const pipeline = {
+      hGetAll: (key) => { keys.push(key); return pipeline; },
+      exec: async () => keys.map((key) => store[key] ?? {}),
+    };
+    return pipeline;
+  }),
 };
 
 jest.mock('../../config/redisClient', () => ({

@@ -5,7 +5,7 @@ jest.mock('../../services/roomService', () => ({
 }));
 
 const { getRoomById, saveRoomState } = require('../../services/roomService');
-const { startGame, playCard, handleHalliGalli, checkGameEnd, resetGame } = require('../../services/gameService');
+const { startGame, playCard, handleHalliGalli, checkGameEnd, resetGame, buildGameState } = require('../../services/gameService');
 
 // ── 헬퍼 ──────────────────────────────────────────────────────────────────
 const makeCard = (fruit, count) => ({ fruit, count });
@@ -132,6 +132,31 @@ describe('playCard', () => {
   });
 });
 
+describe('playCard - 종료된 게임', () => {
+  test('게임이 끝난(finished) 방에서는 카드를 낼 수 없다', async () => {
+    const room = makePlayingRoom();
+    room.gameState.phase = 'finished';
+    getRoomById.mockResolvedValue(room);
+
+    await expect(playCard('room-1', 'p1', 0)).rejects.toThrow('게임이 진행 중이 아닙니다');
+    expect(saveRoomState).not.toHaveBeenCalled();
+  });
+});
+
+describe('buildGameState', () => {
+  test('중앙 카드 배열 대신 장수만 포함하고 손패는 노출하지 않는다', () => {
+    const room = makePlayingRoom();
+    room.gameState.centerCards = [makeCard('banana', 1), makeCard('lemon', 2)];
+
+    const gs = buildGameState(room);
+
+    expect(gs.centerCardCount).toBe(2);
+    expect(gs).not.toHaveProperty('centerCards');
+    expect(gs.players[0]).toEqual(expect.objectContaining({ id: 'p1', cardCount: 2 }));
+    expect(gs.players[0]).not.toHaveProperty('cardPack');
+  });
+});
+
 describe('handleHalliGalli', () => {
   test('조건 충족 시 성공하고 중앙 카드를 획득한다', async () => {
     const room = makePlayingRoom();
@@ -209,6 +234,27 @@ describe('checkGameEnd', () => {
     expect(result.winner).toBeDefined();
     expect(result.winner.id).toBe('p1');
     expect(result.finalScores).toHaveLength(2);
+  });
+
+  test('이미 조회한 room을 넘기면 Redis를 다시 조회하지 않는다', async () => {
+    const room = makePlayingRoom();
+    room.users[1].cardPack = [];
+
+    const result = await checkGameEnd('room-1', room);
+
+    expect(getRoomById).not.toHaveBeenCalled();
+    expect(result.isEnded).toBe(true);
+  });
+
+  test('이미 종료된 게임은 다시 종료 처리하지 않는다', async () => {
+    const room = makePlayingRoom();
+    room.gameState.phase = 'finished';
+    room.users[1].cardPack = [];
+
+    const result = await checkGameEnd('room-1', room);
+
+    expect(result.isEnded).toBe(false);
+    expect(saveRoomState).not.toHaveBeenCalled();
   });
 
   test('방이 없으면 isEnded: false를 반환한다', async () => {
