@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { useGame } from './context/GameContext.jsx';
 import LoadingScreen from './screens/LoadingScreen.jsx';
 import LobbyScreen from './screens/LobbyScreen.jsx';
 import WaitingScreen from './screens/WaitingScreen.jsx';
 import GameScreen from './screens/GameScreen.jsx';
 import ResultScreen from './screens/ResultScreen.jsx';
-import Notification from './components/Notification.jsx';
+import NotificationStack from './components/Notification.jsx';
+import ConnectionBanner from './components/ConnectionBanner.jsx';
 
 const SCREENS = {
   loading: LoadingScreen,
@@ -19,23 +20,18 @@ export default function App() {
   const { state, dispatch } = useGame();
   const Screen = SCREENS[state.screen] || LoadingScreen;
 
-  // 알림 자동 제거
-  useEffect(() => {
-    if (!state.notification) return;
-    const timer = setTimeout(() => dispatch({ type: 'CLEAR_NOTIFICATION' }), 3000);
-    return () => clearTimeout(timer);
-  }, [state.notification, dispatch]);
+  const closeNotification = useCallback(
+    (id) => dispatch({ type: 'CLEAR_NOTIFICATION', id }),
+    [dispatch]
+  );
 
   return (
     <div className="game-body">
-      <Screen />
-      {state.notification && (
-        <Notification
-          message={state.notification.message}
-          type={state.notification.type}
-          onClose={() => dispatch({ type: 'CLEAR_NOTIFICATION' })}
-        />
+      {state.screen !== 'loading' && (
+        <ConnectionBanner lost={state.connectionLost} failed={state.connectError} />
       )}
+      <Screen />
+      <NotificationStack items={state.notifications} onClose={closeNotification} />
     </div>
   );
 }

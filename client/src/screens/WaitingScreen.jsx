@@ -23,6 +23,7 @@ export default function WaitingScreen() {
 
   const myUser = users.find(u => u.id === mySocketId);
   const isReady = myUser?.readyStatus === 'ready';
+  const counting = typeof countdown === 'number';
 
   return (
     <>
@@ -36,7 +37,7 @@ export default function WaitingScreen() {
               <h4 className="mb-0 text-white fw-bold">{roomName}</h4>
               <span className="badge bg-primary">{totalCount} / {maxUserCnt}</span>
             </div>
-            <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
+            <button className="btn btn-sm btn-outline-light" onClick={handleLeave} disabled={!state.socketConnected || state.connectionLost}>
               <i className="icon ion-log-out me-1" />나가기
             </button>
           </div>
@@ -96,9 +97,11 @@ export default function WaitingScreen() {
         </div>
 
         <p className="text-center text-white-50 small mt-3">
-          {totalCount >= 2
-            ? '모든 플레이어가 준비하면 게임이 시작됩니다.'
-            : '최소 2명이 필요합니다.'}
+          {counting
+            ? '곧 게임이 시작됩니다. 준비 취소 시 시작이 취소됩니다.'
+            : totalCount >= 2
+              ? '모든 플레이어가 준비하면 게임이 시작됩니다.'
+              : '다른 플레이어를 기다리는 중입니다. (최소 2명)'}
         </p>
       </div>
 

@@ -2897,3 +2897,153 @@ input, select, textarea {
   text-align: center;
   min-height: 1.5rem;
 }
+
+/* ── UI 개선 (턴 배너 / 알림 스택 / 연결 배너) ───────────────────── */
+
+/* 턴 안내 배너 */
+.turn-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0.5rem 1rem;
+  background: rgba(0, 0, 0, 0.35);
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background-color 0.3s ease;
+}
+.turn-banner.mine {
+  background: linear-gradient(90deg, #0284c7, #0ea5e9);
+  color: #fff;
+}
+.turn-banner-sub {
+  font-size: 0.72rem;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+/* 플레이어 스택 보조 정보 */
+.player-stack.is-me { background: rgba(14, 165, 233, 0.1); }
+.player-stack.is-out { opacity: 0.45; }
+.player-stack-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.me-tag {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 0.3rem;
+  background: #0ea5e9;
+  font-size: 10px;
+  vertical-align: middle;
+}
+.player-stack-score {
+  background: rgba(251, 191, 36, 0.9);
+  color: #1f2937;
+  padding: 2px 6px;
+  border-radius: 0.4rem;
+  font-size: 11px;
+  font-weight: bold;
+}
+.stack-card-fruit { font-size: 36px; line-height: 1; }
+.stack-card-count { font-size: 24px; font-weight: bold; color: #333; }
+.stack-card:nth-last-child(2) { transform: translate(-6px, 2px) rotate(-4deg); }
+.stack-card:nth-last-child(3) { transform: translate(-12px, 4px) rotate(-8deg); }
+.stack-card.top-card { animation: card-drop 0.25s ease-out; }
+@keyframes card-drop {
+  from { transform: translateY(-16px) scale(1.08); opacity: 0.4; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* 내 덱: 차례가 아닐 때 비활성 표시 */
+.deck-card-count {
+  position: relative;
+  z-index: 1;
+  color: #fbbf24;
+  font-size: 16px;
+  font-weight: bold;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.deck-card-hint {
+  position: relative;
+  z-index: 1;
+  color: #fde047;
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 600;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+.deck-card.can-play {
+  animation: deck-glow 1.4s ease-in-out infinite;
+}
+@keyframes deck-glow {
+  0%, 100% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(14, 165, 233, 0.6); }
+  50%      { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 8px rgba(14, 165, 233, 0); }
+}
+.deck-card.waiting-turn,
+.deck-card:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.5) brightness(0.8);
+}
+.deck-card.waiting-turn:hover,
+.deck-card:disabled:hover {
+  transform: none;
+}
+.deck-card.waiting-turn .deck-card-hint { color: rgba(255, 255, 255, 0.6); }
+
+/* 알림 스택 (우상단, 모바일은 상단 가운데) */
+.toast-stack {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.toast-notification {
+  margin: 0;
+  pointer-events: auto;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  animation: toast-in 0.2s ease-out;
+}
+@keyframes toast-in {
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@media (max-width: 576px) {
+  .toast-stack { left: 16px; right: 16px; width: auto; }
+}
+
+/* 연결 끊김 배너 */
+.connection-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 1rem;
+  background: #f59e0b;
+  color: #1f2937;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.connection-banner.failed {
+  background: #dc2626;
+  color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-card.can-play,
+  .stack-card.top-card,
+  .my-turn-badge,
+  .toast-notification { animation: none; }
+}

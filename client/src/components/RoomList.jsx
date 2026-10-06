@@ -28,28 +28,32 @@ export default function RoomList() {
 
   return (
     <div className="list-group list-group-flush">
-      {roomList.map(room => (
+      {roomList.map(room => {
+        const count = room.userCount ?? room.users?.length ?? 0;
+        const isFull = count >= room.maxUserCnt;
+        return (
         <div key={room.id} className="list-group-item">
           <div className="d-flex justify-content-between align-items-center">
             <div className="d-flex align-items-center">
               <div className="me-3">
-                <span className="badge bg-primary">{room.users.length}/{room.maxUserCnt}</span>
+                <span className={`badge ${isFull ? 'bg-secondary' : 'bg-primary'}`}>{count}/{room.maxUserCnt}</span>
               </div>
               <div>
                 <h6 className="mb-1">{room.name}</h6>
-                <small className="text-muted">{room.users.length}명 참여 중</small>
+                <small className="text-muted">{isFull ? '인원이 가득 찼습니다' : `${count}명 참여 중`}</small>
               </div>
             </div>
             <button
               className="btn btn-primary btn-sm"
               onClick={() => handleJoin(room.id)}
-              disabled={room.users.length >= room.maxUserCnt}
+              disabled={isFull}
             >
-              <i className="icon ion-log-in me-1" />입장
+              <i className="icon ion-log-in me-1" />{isFull ? '만원' : '입장'}
             </button>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

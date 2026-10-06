@@ -2,10 +2,14 @@ import React, { useEffect } from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import AdBanner from '../components/AdBanner.jsx';
 
+// 화면을 떠나면 남은 타이머와 조각을 정리할 수 있도록 cleanup 함수를 반환
 function createConfetti() {
   const colors = ['#ff0', '#f0f', '#0ff', '#0f0', '#f00'];
+  const timers = [];
+  const pieces = [];
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return () => {};
   for (let i = 0; i < 50; i++) {
-    setTimeout(() => {
+    timers.push(setTimeout(() => {
       const el = document.createElement('div');
       el.style.cssText = `
         position: fixed; width: 10px; height: 10px;
@@ -15,9 +19,14 @@ function createConfetti() {
         animation: confetti 3s linear forwards;
       `;
       document.body.appendChild(el);
-      setTimeout(() => el.remove(), 3000);
-    }, i * 30);
+      pieces.push(el);
+      timers.push(setTimeout(() => el.remove(), 3000));
+    }, i * 30));
   }
+  return () => {
+    timers.forEach(clearTimeout);
+    pieces.forEach(el => el.remove());
+  };
 }
 
 export default function ResultScreen() {
@@ -30,17 +39,12 @@ export default function ResultScreen() {
 
   useEffect(() => {
     document.body.classList.remove('in-game');
-    if (isWinner) createConfetti();
+    if (isWinner) return createConfetti();
   }, [isWinner]);
 
   function handlePlayAgain() {
-    // 같은 방에서 재시작: 대기 화면으로 돌아가기
-    dispatch({ type: 'ROOM_JOINED', room: {
-      id: state.roomId,
-      name: state.roomName,
-      users: state.users,
-      maxUserCnt: state.maxUserCnt,
-    }});
+    // 같은 방에서 재시작: 대기 화면으로 돌아가기 (서버가 보낸 최신 준비 상태 사용)
+    dispatch({ type: 'BACK_TO_WAITING' });
   }
 
   function handleLobby() {

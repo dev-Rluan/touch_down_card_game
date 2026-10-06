@@ -15,5 +15,14 @@ export default defineConfig({
   build: {
     outDir: '../src/public/dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // 자주 바뀌지 않는 라이브러리를 별도 청크로 분리 → 앱 코드만 바뀐 배포에서도 브라우저 캐시 재사용
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          socket: ['socket.io-client'],
+        },
+      },
+    },
   }
 });
