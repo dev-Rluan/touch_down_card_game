@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import useAuth from '../hooks/useAuth.js';
+import ThemePicker from '../components/ThemePicker.jsx';
 
 export default function LoadingScreen() {
   const { state, dispatch } = useGame();
@@ -27,6 +28,7 @@ export default function LoadingScreen() {
     <div className="intro-screen">
       {/* 배경 오버레이 */}
       <div className="intro-overlay" />
+      <ThemePicker className="intro-theme-picker" />
 
       <div className="intro-content">
         {/* 로고 */}

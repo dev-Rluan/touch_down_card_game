@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import useAuth from '../hooks/useAuth.js';
+import ThemePicker from './ThemePicker.jsx';
 
 export default function Navbar() {
   const { state, emit } = useGame();
@@ -26,6 +27,7 @@ export default function Navbar() {
         </span>
 
         <div className="d-flex align-items-center gap-2 ms-auto">
+          <ThemePicker />
           {/* 닉네임 */}
           {editingNick ? (
             <form className="d-flex gap-1" onSubmit={handleNickSubmit}>
