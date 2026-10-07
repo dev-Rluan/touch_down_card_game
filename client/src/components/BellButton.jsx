@@ -59,10 +59,9 @@ export default function BellButton({ skinClass = '' }) {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onClick={trigger}
-        aria-label="할리갈리 벨"
+        aria-label="벨 누르기"
       >
-        <i className="icon ion-ios-bell" />
-        <span className="bell-label">할리갈리!</span>
+        <i className="icon ion-ios-bell bell-glyph" aria-hidden="true" />
       </button>
     </div>
   );

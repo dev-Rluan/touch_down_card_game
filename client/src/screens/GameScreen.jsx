@@ -127,15 +127,34 @@ export default function GameScreen() {
 
   return (
     <div className="game-board d-flex flex-column" style={{ minHeight: '100vh' }}>
-      {/* 턴 안내 */}
-      <div className={`turn-banner ${isMyTurn ? 'mine' : ''}`} aria-live="polite">
-        {isMyTurn
-          ? '내 차례! 카드를 내세요'
-          : turnPlayer
-            ? `${turnPlayer.name}님의 차례`
-            : '게임 준비 중...'}
-        <span className="turn-banner-sub">중앙 {centerCardCount}장 · 버림 {discardedCards.length}장</span>
-      </div>
+      {/* 턴 안내 — 벨 결과가 있으면 잠시 결과를 대신 표시 (화면 요소를 가리지 않도록 배너 안에서 처리) */}
+      {halliGalliResult ? (
+        <div
+          key={halliGalliResult.receivedAt}
+          className={`turn-banner bell-result ${halliGalliResult.success ? 'success' : 'failure'}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span>
+            {halliGalliResult.success ? '🎉 ' : '❌ '}
+            {halliGalliResult.playerId === mySocketId ? '내' : `${halliGalliResult.playerName}님`} 벨 {halliGalliResult.success ? '성공!' : '실패!'}
+          </span>
+          <span className="turn-banner-sub">
+            {halliGalliResult.success
+              ? `카드 ${halliGalliResult.scoreGained}장 획득`
+              : halliGalliResult.discardedCard ? '카드 1장을 버렸습니다' : '버릴 카드가 없습니다'}
+          </span>
+        </div>
+      ) : (
+        <div className={`turn-banner ${isMyTurn ? 'mine' : ''}`} aria-live="polite">
+          {isMyTurn
+            ? '내 차례! 카드를 내세요'
+            : turnPlayer
+              ? `${turnPlayer.name}님의 차례`
+              : '게임 준비 중...'}
+          <span className="turn-banner-sub">중앙 {centerCardCount}장 · 버림 {discardedCards.length}장</span>
+        </div>
+      )}
 
       {/* 상단 플레이어 스택 영역 */}
       <div className="player-stacks-area flex-grow-1">
@@ -182,7 +201,7 @@ export default function GameScreen() {
         <div className="d-flex justify-content-center align-items-end gap-4 flex-wrap">
           {/* 내 덱 */}
           <div className="text-center">
-            <div className="small text-white-50 mb-1">내 덱</div>
+            <div className="my-deck-label">내 덱</div>
             <MyDeckCard count={hand.length} canPlay={canPlay} onPlay={handlePlayCard} />
           </div>
 
@@ -190,29 +209,6 @@ export default function GameScreen() {
           <BellButton skinClass={bellSkinClass} />
         </div>
       </div>
-
-      {/* 할리갈리 결과 알림 */}
-      {halliGalliResult && (
-        <div
-          key={halliGalliResult.receivedAt}
-          className={`halli-galli-notification ${halliGalliResult.success ? 'success show' : 'failure show'}`}
-          role="status"
-        >
-          <div className="notification-icon">{halliGalliResult.success ? '🎉' : '❌'}</div>
-          <div className="notification-text">
-            <strong>
-              {halliGalliResult.playerName}님이 할리갈리 {halliGalliResult.success ? '성공!' : '실패!'}
-            </strong>
-            {halliGalliResult.success ? (
-              <div className="notification-score">+{halliGalliResult.scoreGained}장 획득!</div>
-            ) : (
-              <div className="notification-score">
-                {halliGalliResult.discardedCard ? '카드 1장을 버렸습니다' : '버릴 카드가 없습니다'}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       <CountdownOverlay value={countdown} sub={countdownSub} />
     </div>
