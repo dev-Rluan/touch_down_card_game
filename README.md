@@ -1,10 +1,15 @@
-# 🎮 Touch Down Card Game
+# touch_down_card_game
 
-온라인 할리갈리 멀티플레이어 게임
+방을 만들고 함께 카드를 뒤집으며 벨 입력과 게임 상태를 실시간으로 공유하는 온라인 카드게임입니다.
+
+방 생성·입장 → 참가자 준비 → 카드 뒤집기와 벨 입력 → 결과 확인 흐름으로 구성합니다. 서버는 Express·Socket.IO와 Redis를 사용하며 React 개발 화면과 기존 정적 화면을 함께 보관합니다.
+
+[게임 규칙](game_logic.md) · [API 이벤트](API_통신_규격_문서.md) · [Docker 실행](DOCKER.md) · [클라이언트 설정](docs/CLIENT_CONFIG.md)
 
 ## 🚀 빠른 시작
 
 ### 사전 준비
+
 - Node.js **22.12.0 이상** (저장소 루트의 `.nvmrc` 사용 가능)
 - npm 10 이상
 
@@ -15,6 +20,7 @@ nvm use
 ```
 
 ### 설치 및 실행
+
 ```bash
 # 저장소 클론
 git clone https://github.com/dev-Rluan/touch_down_card_game.git
@@ -23,14 +29,16 @@ cd touch_down_card_game
 # 환경 변수 예시 복사 (필요 시 수정)
 cp .env.example .env
 
-# 의존성 설치
+# 서버·클라이언트 의존성 설치
 npm install
+npm --prefix client install
 
 # 개발 서버 시작
 npm run dev
 ```
 
 ### Redis 준비
+
 - 로컬 Redis를 바로 실행하거나 Docker를 사용할 수 있습니다.
 - `REDIS_URL`을 그대로 사용하거나, `REDIS_HOST/REDIS_PORT/REDIS_DB/REDIS_USERNAME/REDIS_PASSWORD/REDIS_TLS` 등 세부 환경 변수를 조합해 연결 정보를 외부에서 주입할 수 있습니다.
 
@@ -43,46 +51,54 @@ docker run --name touch-down-redis -p 6379:6379 redis:7-alpine
 ```
 
 ### 접속
-- **서버**: http://localhost:3000
+
+- **React 개발 화면**: http://localhost:5173
+- **서버 / 기존 화면**: http://localhost:3000
 - **개발자 도구**: F12로 Socket.IO 연결 확인
 
 ## 🎯 주요 기능
 
 ### 게임 기능
+
 - **실시간 멀티플레이어**: 최대 8명까지 동시 플레이
-- **할리갈리 게임**: 같은 과일의 개수가 정확히 5개일 때 벨을 쳐서 카드 획득
+- **게임 규칙**: 같은 과일의 개수가 정확히 5개일 때 벨을 쳐서 카드 획득
 - **방 관리**: 방 생성, 입장, 나가기, 최대 인원 설정
 - **턴 기반 게임**: 순서대로 카드를 뒤집으며 진행
 - **실시간 동기화**: Socket.IO 기반의 즉각적인 게임 상태 업데이트
 - **카드 뒷면 시스템**: 8가지 스타일의 카드 뒷면 디자인 (패턴, 조커, 화투, 다이아몬드, 별, 카드문양, 과일, 주사위)
 
 ### UI/UX 기능
+
 - **반응형 디자인**: 모바일, 태블릿, 데스크톱 모두 지원
 - **부드러운 애니메이션**: CSS transform 기반의 고성능 애니메이션
 - **접근성**: 고대비 색상, 터치 친화적 UI
-- **시각적 피드백**: 턴 표시, 카운트다운, 할리갈리 효과
+- **시각적 피드백**: 턴 표시, 카운트다운, 벨 입력 효과
 
 ### 기술 스택
+
 - **백엔드**: Node.js + Express + Socket.IO
-- **프론트엔드**: HTML5 + CSS3 + JavaScript + Bootstrap
+- **프론트엔드**: React + Vite (`client/`), 기존 HTML/CSS/JavaScript + Bootstrap 화면 (`src/view/`)
 - **통신**: WebSocket 기반 실시간 통신
 - **디자인**: CSS3 Animations, Flexbox, Grid
 
 ## 📚 문서
 
 ### 게임 및 API
+
 - [🎮 게임 로직](./game_logic.md) - 게임 규칙 및 로직 상세 설명
 - [📖 API 통신 규격](./API_통신_규격_문서.md) - Socket.IO 이벤트 명세
 - [📋 소프트웨어 스펙](./소프트웨어_스펙_문서.md) - 전체 시스템 스펙
 
 ### 실행 및 배포
+
 - [🐳 Docker 실행 가이드](./DOCKER.md) - Docker 실행 및 관리 방법
-- [🚀 Koyeb 배포 가이드](./docs/KOYEB_DEPLOYMENT.md) - 무료 클라우드 배포 (권장)
+- [🚀 Koyeb 배포 가이드](./docs/KOYEB_DEPLOYMENT.md) - 클라우드 배포 안내
 - [🌐 클라이언트 설정](./docs/CLIENT_CONFIG.md) - 서버 URL 설정 및 연결 방법
 - [🧩 Redis & Socket 배포 가이드](./docs/redis_guide.md) - Redis 기반 상태 관리 설명
 - [🔌 Socket.IO 호스팅 가이드](./docs/socket_deployment.md) - 환경 변수, CORS, 호스팅 전략
 
 ### 개발 및 기여
+
 - [🛠️ 개발 가이드](./docs/개발가이드.md) - 개발 환경 설정 및 가이드
 - [🤝 기여 가이드](./docs/CONTRIBUTING.md) - 기여 방법
 - [📝 코딩 스타일](./docs/CODING_STYLE.md) - 코드 스타일 가이드
@@ -91,6 +107,7 @@ docker run --name touch-down-redis -p 6379:6379 redis:7-alpine
 ## 🏗️ 프로젝트 구조
 
 ```
+client/                   # React + Vite 개발 화면
 src/
 ├── server.js              # 메인 서버 파일
 ├── services/              # 비즈니스 로직
@@ -109,8 +126,9 @@ src/
 ## 🛠️ 개발
 
 ### 스크립트 명령어
+
 ```bash
-npm run dev      # 개발 서버 시작 (nodemon)
+npm run dev      # 서버와 React 개발 화면 동시 실행
 npm start        # 프로덕션 서버 시작
 npm test         # 테스트 실행
 npm run lint     # 코드 린팅
@@ -119,6 +137,7 @@ npm run docs     # 문서 생성
 ```
 
 ### 환경 설정
+
 ```bash
 # .env 파일 생성
 NODE_ENV=development
@@ -139,6 +158,7 @@ REDIS_TLS_REJECT_UNAUTHORIZED=true
 ## 🧪 테스트
 
 ### 테스트 실행
+
 ```bash
 # 모든 테스트 실행
 npm test
@@ -151,11 +171,12 @@ npm test -- --coverage
 ```
 
 ### 테스트 구조
+
 ```
-src/tests/
-├── unit/              # 단위 테스트
-├── integration/       # 통합 테스트
-└── e2e/              # E2E 테스트
+src/__tests__/
+├── models/             # 모델 테스트
+├── services/           # 서비스 테스트
+└── utils/              # 유틸리티 테스트
 ```
 
 ## 🚀 배포
@@ -163,6 +184,7 @@ src/tests/
 ### Docker 배포
 
 #### 방법 1: Docker Compose 사용 (권장)
+
 ```bash
 # Docker Compose로 실행
 docker-compose up -d
@@ -178,6 +200,7 @@ docker-compose restart
 ```
 
 #### 방법 2: Docker 직접 사용
+
 ```bash
 # Docker 이미지 빌드
 docker build -t touch-down-game:latest .
@@ -208,6 +231,7 @@ docker rm -f touch-down-game-server
 ```
 
 #### Docker 이미지 관리
+
 ```bash
 # 이미지 목록 확인
 docker images
@@ -220,6 +244,7 @@ docker image prune -a
 ```
 
 #### 환경 변수 설정
+
 ```bash
 # 환경 변수와 함께 실행
 docker run -d \
@@ -232,6 +257,7 @@ docker run -d \
 ```
 
 #### 헬스체크 확인
+
 ```bash
 # 컨테이너 상태 확인
 docker ps
@@ -242,7 +268,8 @@ docker inspect --format='{{json .State.Health}}' touch-down-game-server
 
 ### 클라우드 배포
 
-#### Koyeb 배포 (권장 - 무료)
+#### Koyeb 배포
+
 ```bash
 # 1. GitHub에 코드 푸시 (완료!)
 # 2. Koyeb에서 저장소 연결
@@ -252,9 +279,10 @@ docker inspect --format='{{json .State.Health}}' touch-down-game-server
 # 상세 가이드: docs/KOYEB_DEPLOYMENT.md
 ```
 
-**무료로 전 세계 어디서나 친구들과 게임 가능!** 🌍
+호스팅 환경의 요금·제공 범위는 해당 서비스에서 확인하세요.
 
 #### 기타 플랫폼
+
 - **Koyeb**: [배포 가이드](./docs/KOYEB_DEPLOYMENT.md) ⭐ 권장
 - **AWS EC2**: [배포 가이드](./docs/DEPLOYMENT.md#aws-ec2-배포)
 - **Heroku**: [배포 가이드](./docs/DEPLOYMENT.md#heroku-배포)
@@ -270,7 +298,9 @@ docker inspect --format='{{json .State.Health}}' touch-down-game-server
 
 자세한 내용은 [기여 가이드](./docs/CONTRIBUTING.md)를 참고하세요.
 
-## 📊 성능
+## 📊 기존 성능 기록
+
+아래는 기존 문서에 기재된 수치입니다. 측정 환경과 재현 자료가 함께 정리되지 않았으므로 현재 버전의 검증 결과로 소개하지 않습니다.
 
 - **동시 연결**: 최대 1000명
 - **방당 최대 인원**: 8명
@@ -287,6 +317,7 @@ docker inspect --format='{{json .State.Health}}' touch-down-game-server
 ## 📈 모니터링
 
 ### 로그 확인
+
 ```bash
 # 실시간 로그
 tail -f logs/combined.log
@@ -296,6 +327,7 @@ tail -f logs/error.log
 ```
 
 ### 헬스체크
+
 ```bash
 # 서버 상태 확인
 curl http://localhost:3000/health
@@ -306,16 +338,19 @@ curl http://localhost:3000/health
 ### 자주 발생하는 문제들
 
 #### 연결 문제
+
 - 포트 3000이 사용 중인지 확인
 - 방화벽 설정 확인
 - Socket.IO 연결 상태 확인
 
 #### 방 관리 문제
+
 - 방 이름 중복 확인
 - 최대 인원수 설정 확인
 - 사용자 상태 확인
 
 #### 메모리 누수
+
 - 연결 해제 시 정리 로직 확인
 - 불필요한 이벤트 리스너 제거
 - 가비지 컬렉션 모니터링
