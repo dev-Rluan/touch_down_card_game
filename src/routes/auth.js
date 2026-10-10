@@ -18,18 +18,18 @@ const { updateDisplayName } = require('../services/oauthUserService');
 
 // ── 헬퍼 ─────────────────────────────────────────────────────────────────────
 
-/**
- * 전략이 등록됐는지 확인하고, 미등록 시 503 반환
- */
+/** 전략 등록 여부 */
+function isStrategyRegistered(strategyName) {
+  try { return !!passport._strategy(strategyName); } catch { return false; }
+}
+
+/** 미등록 전략이면 SPA로 리다이렉트 */
 function requireStrategy(strategyName) {
   return (req, res, next) => {
-    try {
-      passport._strategy(strategyName);
-      next();
-    } catch {
-      // JSON 대신 SPA로 리다이렉트 — 브라우저가 JSON 텍스트 화면으로 이탈하지 않도록
-      res.redirect('/?auth_error=unavailable');
-    }
+    // _strategy()는 미등록 전략에 대해 throw 하지 않고 undefined 를 반환한다
+    if (isStrategyRegistered(strategyName)) return next();
+    // 에러 페이지 대신 SPA로 돌려보내 안내 메시지를 보여준다
+    res.redirect('/?auth_error=unavailable');
   };
 }
 
@@ -127,8 +127,8 @@ router.get('/logout', (req, res, next) => {
  */
 router.get('/providers', (req, res) => {
   const providers = [];
-  try { passport._strategy('google'); providers.push('google'); } catch {}
-  try { passport._strategy('kakao'); providers.push('kakao'); } catch {}
+  if (isStrategyRegistered('google')) providers.push('google');
+  if (isStrategyRegistered('kakao')) providers.push('kakao');
   res.json({ providers });
 });
 
