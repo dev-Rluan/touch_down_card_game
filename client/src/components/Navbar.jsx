@@ -47,7 +47,7 @@ export default function Navbar() {
               title="닉네임 변경"
             >
               <i className="icon ion-person" />
-              <span className="d-none d-sm-inline">{state.nickname}</span>
+              <span className="text-truncate" style={{ maxWidth: 110 }}>{state.nickname}</span>
             </button>
           )}
 

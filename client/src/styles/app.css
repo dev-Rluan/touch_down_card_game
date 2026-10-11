@@ -2897,3 +2897,104 @@ input, select, textarea {
   text-align: center;
   min-height: 1.5rem;
 }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   테마: 카드 테이블 (단색 딥그린 + 호박색 포인트)
+   위의 레거시 그라디언트 스타일을 덮어쓴다. 벨/스킨 상품 그라디언트는 유지.
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  --bg: #0f2a22;
+  --bg-raised: #17382d;
+  --ink: #f3efe3;
+  --ink-dim: rgba(243, 239, 227, 0.68);
+  --accent: #f0b429;
+  --accent-strong: #d99a0b;
+  --accent-ink: #2a1d00;
+  --card-back: #7a1f2b;
+  --line: rgba(243, 239, 227, 0.14);
+}
+
+body,
+.game-body,
+.game-board,
+.loading-screen,
+.game-end-modal {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+}
+
+.intro-overlay { background: none; }
+
+.navbar {
+  background: var(--bg-raised) !important;
+  backdrop-filter: none;
+  box-shadow: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.lobby-tab-bar { background: var(--bg-raised); backdrop-filter: none; border-bottom: 1px solid var(--line); }
+.lobby-tab-bar .nav-link.active,
+.lobby-tab-btn.active { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+
+/* 버튼 */
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  box-shadow: none;
+}
+.btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn-success { background: #1f9d6b; border-color: #1f9d6b; color: #fff; box-shadow: none; }
+.bg-primary, .badge.bg-primary { background-color: var(--accent) !important; color: var(--accent-ink) !important; }
+
+/* 아바타 */
+.navbar-avatar,
+.player-avatar { background: var(--accent); color: var(--accent-ink); }
+
+/* 플레이어 카드 (대기실) */
+.player-card.ready,
+.player-card.active,
+.player-card.active-turn { background: #e6f4ec; }
+.player-card.playing { background: #fbf3dc; border-color: var(--accent); }
+
+/* 카드 뒷면 / 덱 */
+.deck-card.style-pattern,
+.card-back,
+.my-deck-card-slot .deck-card.card-back { background: var(--card-back); box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
+
+/* 버림 카드 더미: 절대위치 해제 → 영역 안에서 중앙 정렬 */
+.discard-pile-container {
+  position: static;
+  transform: none;
+  margin: 0 auto;
+}
+.discard-pile { background: var(--bg-raised); border-color: var(--accent); }
+.discard-area .text-muted { color: var(--ink-dim) !important; }
+
+/* 게임 보드 */
+.player-stacks-area { display: flex; flex-direction: column; justify-content: center; gap: 1.5rem; }
+.player-section { background: var(--bg-raised); backdrop-filter: none; border-top: 1px solid var(--line); }
+.player-section .small { margin-bottom: 0.5rem !important; }
+
+/* 알림 / 결과 */
+.halli-galli-notification.success { background: #1f9d6b; }
+.halli-galli-notification.failure { background: #c8412f; }
+.score-item.winner { background: #fbf3dc; }
+.ready-progress-fill { background: var(--accent); }
+.login-banner { background: var(--bg-raised); }
+.cosmetic-preview,
+.cosmetic-card-preview { background: var(--card-back); }
+.text-gradient { background: none; -webkit-text-fill-color: currentColor; color: var(--accent); }
+
+/* 테마 보정: 남은 인디고/레이아웃 정리 */
+.nav-pills .nav-link.active,
+.lobby-tab-bar .nav-link.active,
+.lobby-tab-btn.active { background: var(--accent) !important; color: var(--accent-ink) !important; }
+.player-stack-count { background: rgba(243, 239, 227, 0.14) !important; color: var(--ink) !important; }
+.player-grid { justify-content: center; }
+.my-deck-card:disabled { opacity: 0.65 !important; }
