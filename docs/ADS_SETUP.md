@@ -13,6 +13,18 @@
       게임 소개/규칙/FAQ 페이지를 두는 것을 권장합니다.
 - [ ] 만 18세 이상 구글 계정, 수취용 은행 정보(세금 정보 포함)
 
+### 서브도메인(예: `game.example.dev`)으로 운영하는 경우
+- AdSense 사이트 목록에는 **루트 도메인(`example.dev`)만 추가**합니다. 본인 도메인의 서브도메인은 따로 추가하지 않고
+  루트 사이트에 포함됩니다. (공식 안내: [사이트 관리 변경](https://support.google.com/adsense/answer/12170421))
+- **`ads.txt` 는 루트 도메인(`example.dev/ads.txt`)에 있어야 합니다.** 이 앱이 제공하는 `/ads.txt` 는 게임 서브도메인에만
+  적용되므로, 루트 도메인에도 같은 한 줄을 올려야 합니다:
+  `google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0`
+  (서브도메인에서 다른 게시자 ID/판매자를 쓸 때만 루트에 `subdomain=game.example.dev` 선언이 필요합니다.
+  [ads.txt FAQ](https://support.google.com/adsense/answer/9785052))
+- **심사는 루트 도메인 기준**으로 진행되므로, 루트 도메인에 아무것도 없거나 개발용 임시 페이지뿐이면 반려될 수 있습니다.
+  루트에 간단한 소개 페이지(서비스 소개, 개인정보처리방침, 연락처)를 두세요.
+- 같은 루트 아래 다른 서브도메인에 테스트/미완성 페이지가 있으면 사이트 전체 평가에 영향을 줄 수 있습니다(추정).
+
 ## 2. 신청 → 승인
 1. https://adsense.google.com 에서 가입하고 **사이트(도메인)를 추가**합니다.
 2. 소유권 확인: 이 프로젝트는 `ADSENSE_PUBLISHER_ID` 를 설정하면 `/ads.txt` 를 자동 제공합니다
