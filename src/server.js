@@ -135,7 +135,18 @@ const path = require('path');
 const clientDist = path.join(__dirname, 'public/dist');
 
 if (fs.existsSync(clientDist)) {
-  app.use(express.static(clientDist, { maxAge: '1d', etag: true }));
+  // 해시가 붙은 빌드 산출물(/assets/*)은 내용이 바뀌면 파일명도 바뀌므로 1년 immutable 캐시,
+  // index.html 은 배포 직후 새 해시 파일을 바로 참조하도록 항상 재검증한다.
+  app.use(express.static(clientDist, {
+    etag: true,
+    setHeaders(res, filePath) {
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    },
+  }));
   // SPA fallback — API/auth/socket 이외의 경로는 index.html 응답
   app.get('*', (req, res, next) => {
     if (
@@ -145,6 +156,7 @@ if (fs.existsSync(clientDist)) {
       req.path.startsWith('/public') ||
       req.path === '/env.js'
     ) return next();
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(clientDist, 'index.html'));
   });
 } else {

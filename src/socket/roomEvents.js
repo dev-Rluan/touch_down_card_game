@@ -5,6 +5,7 @@ const roomService = require('../services/roomService');
 const userService = require('../services/userServices');
 const { clearGameCountdown } = require('../utils/gameCountdown');
 const { limiters } = require('../utils/socketRateLimiter');
+const { withRoomLock } = require('../utils/roomLock');
 
 /**
  * 방 관리 관련 이벤트 핸들러 등록
@@ -63,21 +64,23 @@ module.exports = function(socket, io) {
     try {
       console.log(`[Room] 방 입장 요청 - 방 ID: ${roomId}`);
 
-      const room = await roomService.joinRoom(socket.id, roomId);
-      socket.leave('lobby');  // 방 입장 → 로비 룸 탈퇴
-      socket.join(roomId);
-      clearGameCountdown(io, roomId, 'user-joined');
-      socket.emit('successJoinRoom', room);
-      socket.to(roomId).emit('joinUser', {
-        users: room.users,
-        maxUserCnt: room.maxUserCnt
+      await withRoomLock(roomId, async () => {
+        const room = await roomService.joinRoom(socket.id, roomId);
+        socket.leave('lobby');  // 방 입장 → 로비 룸 탈퇴
+        socket.join(roomId);
+        clearGameCountdown(io, roomId, 'user-joined');
+        socket.emit('successJoinRoom', room);
+        socket.to(roomId).emit('joinUser', {
+          users: room.users,
+          maxUserCnt: room.maxUserCnt
+        });
+
+        const rooms = await roomService.getWaitingRooms();
+        io.to('lobby').emit('roomList', rooms);
+
+        const userName = await userService.getUserName(socket.id);
+        console.log(`[Room] 방 입장 완료 - 방: ${room.name}, 사용자: ${userName}`);
       });
-
-      const rooms = await roomService.getWaitingRooms();
-      io.to('lobby').emit('roomList', rooms);
-
-      const userName = await userService.getUserName(socket.id);
-      console.log(`[Room] 방 입장 완료 - 방: ${room.name}, 사용자: ${userName}`);
     } catch (error) {
       console.error('[joinRoom Error]', error);
       socket.emit('faildJoinRoom', error.message);
@@ -91,26 +94,28 @@ module.exports = function(socket, io) {
     try {
       console.log(`[Room] 방 나가기 요청 - 방 ID: ${roomId}`);
 
-      const result = await roomService.leaveRoom(socket.id, roomId);
-      socket.leave(roomId);
-      socket.join('lobby');  // 방 퇴장 → 로비 룸 재입장
-      clearGameCountdown(io, roomId, 'user-left');
-      socket.emit('leaveRoomResult', {
-        status: 200,
-        message: 'successLeaveRoom'
-      });
-
-      if (!result.roomRemoved) {
-        socket.to(roomId).emit('leaveUser', {
-          users: result.updatedUsers,
-          newManager: result.newManager
+      await withRoomLock(roomId, async () => {
+        const result = await roomService.leaveRoom(socket.id, roomId);
+        socket.leave(roomId);
+        socket.join('lobby');  // 방 퇴장 → 로비 룸 재입장
+        clearGameCountdown(io, roomId, 'user-left');
+        socket.emit('leaveRoomResult', {
+          status: 200,
+          message: 'successLeaveRoom'
         });
-      }
 
-      const rooms = await roomService.getWaitingRooms();
-      io.to('lobby').emit('roomList', rooms);
+        if (!result.roomRemoved) {
+          socket.to(roomId).emit('leaveUser', {
+            users: result.updatedUsers,
+            newManager: result.newManager
+          });
+        }
 
-      console.log(`[Room] 방 나가기 완료 - 방 ID: ${roomId}, 방 삭제: ${result.roomRemoved}`);
+        const rooms = await roomService.getWaitingRooms();
+        io.to('lobby').emit('roomList', rooms);
+
+        console.log(`[Room] 방 나가기 완료 - 방 ID: ${roomId}, 방 삭제: ${result.roomRemoved}`);
+      });
     } catch (error) {
       console.error('[leaveRoom Error]', error);
       socket.emit('leaveRoomResult', {

@@ -3,6 +3,7 @@
  */
 
 const gameService = require('../services/gameService');
+const { withRoomLock } = require('./roomLock');
 const roomService = require('../services/roomService');
 
 // 방별 게임 시작 카운트다운 타이머 관리
@@ -59,15 +60,23 @@ async function startGameCountdown(io, roomId) {
 
   const timeoutId = setTimeout(() => {
     (async () => {
-      const latestRoom = await roomService.getRoomById(roomId);
-      if (!canStartGame(latestRoom)) {
-        clearGameCountdown(io, roomId, 'condition-changed');
-        return;
-      }
+      // 시작 가능 여부 확인과 게임 시작을 하나의 락 구간으로 묶어, 그 사이 퇴장/준비 취소와 경합하지 않게 한다
+      const gameStartData = await withRoomLock(roomId, async () => {
+        const latestRoom = await roomService.getRoomById(roomId);
+        if (!canStartGame(latestRoom)) {
+          clearGameCountdown(io, roomId, 'condition-changed');
+          return null;
+        }
+        clearGameCountdown(io, roomId, 'completed');
+        return gameService.startGame(roomId);
+      }).catch((error) => {
+        console.error('[Game Start Error]', error);
+        io.to(roomId).emit('gameStartError', error.message);
+        return null;
+      });
+      if (!gameStartData) return;
 
-      clearGameCountdown(io, roomId, 'completed');
       try {
-        const gameStartData = await gameService.startGame(roomId);
         const publicData = {
           roomId: gameStartData.id,
           status: gameStartData.status,
