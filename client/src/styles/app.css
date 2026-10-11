@@ -3140,3 +3140,7 @@ body,
 .game-topbar { align-items: center; gap: 0.5rem; }
 .game-topbar .theme-picker-btn { width: 28px; height: 28px; }
 .game-topbar .theme-swatch { width: 16px; height: 16px; }
+
+/* 모달은 흰 배경이므로 본문(크림색) 글자색을 상속하지 않도록 고정 */
+.modal-content { color: #212529; }
+.modal-content .form-label { color: #212529; }

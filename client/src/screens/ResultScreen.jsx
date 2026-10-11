@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import AdBanner from '../components/AdBanner.jsx';
+import Icon from '../components/Icon.jsx';
 
 function createConfetti() {
   const colors = ['#ff0', '#f0f', '#0ff', '#0f0', '#f00'];
@@ -88,10 +89,10 @@ export default function ResultScreen() {
 
           <div className="d-flex gap-2 justify-content-center">
             <button className="btn btn-success" onClick={handlePlayAgain}>
-              <i className="icon ion-refresh me-2" />다시 하기
+              <Icon name="refresh" className="me-2" />다시 하기
             </button>
             <button className="btn btn-outline-light" onClick={handleLobby}>
-              <i className="icon ion-home me-2" />로비로
+              <Icon name="home" className="me-2" />로비로
             </button>
           </div>
         </div>

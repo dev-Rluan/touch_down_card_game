@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGame } from '../context/GameContext.jsx';
+import Icon from './Icon.jsx';
 
 export default function RoomList() {
   const { state, emit } = useGame();
@@ -16,11 +17,11 @@ export default function RoomList() {
   if (!roomList || roomList.length === 0) {
     return (
       <div className="text-center py-4">
-        <i className="icon ion-ios-people text-muted" style={{ fontSize: '3rem' }} />
+        <Icon name="people" size="3rem" className="text-muted" />
         <h6 className="text-muted mt-2">현재 생성된 방이 없습니다</h6>
         <p className="text-muted small">새로운 방을 만들어보세요!</p>
         <button className="btn btn-sm btn-outline-secondary" onClick={handleRefresh}>
-          <i className="icon ion-refresh me-1" />새로고침
+          <Icon name="refresh" className="me-1" />새로고침
         </button>
       </div>
     );
@@ -45,7 +46,7 @@ export default function RoomList() {
               onClick={() => handleJoin(room.id)}
               disabled={room.users.length >= room.maxUserCnt}
             >
-              <i className="icon ion-log-in me-1" />입장
+              <Icon name="log-in" className="me-1" />입장
             </button>
           </div>
         </div>

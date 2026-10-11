@@ -24,6 +24,6 @@
 - 방 최대 인원은 UI 에서 4명까지 선택 가능.
 - `npm audit` 잔여 3건(moderate)은 로그인 모듈(`passport-oauth2`)과 `uuid` — breaking 업데이트 필요,
   계정 기능을 다시 켜기 전에 처리.
-- AdSense: `env.js` 로 게시자 ID/슬롯은 전달되지만 `adsbygoogle.js` 스크립트 로드 코드는 없음 (광고 도입 시 추가).
+- AdSense: 로더/`ads.txt` 는 구현 완료, 환경변수만 넣으면 켜짐. 사람이 해야 할 일은 `docs/ADS_SETUP.md` 참고.
 - 예전 바닐라 JS 화면(`src/public/js`, `src/view`)은 빌드 결과가 없을 때만 쓰이는 레거시.
 - 소켓 이벤트 `halliGalli` 등 내부 이름은 그대로 (사용자 노출 없음).

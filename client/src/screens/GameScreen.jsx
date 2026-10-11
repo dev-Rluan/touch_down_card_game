@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext.jsx';
 import BellButton from '../components/BellButton.jsx';
 import ThemePicker from '../components/ThemePicker.jsx';
 import CountdownOverlay from '../components/CountdownOverlay.jsx';
+import Icon from '../components/Icon.jsx';
 
 const FRUIT_EMOJI = {
   strawberry: '🍓',
@@ -103,7 +104,7 @@ export default function GameScreen() {
       <div className="game-topbar">
         <ThemePicker />
         <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
-          <i className="icon ion-log-out me-1" />나가기
+          <Icon name="log-out" className="me-1" />나가기
         </button>
       </div>
 

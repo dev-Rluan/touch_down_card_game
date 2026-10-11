@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { GameProvider } from './context/GameContext.jsx';
 import App from './App.jsx';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './styles/app.css';
 import { getSavedTheme, applyTheme } from './theme/themes.js';
 

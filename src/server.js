@@ -100,6 +100,15 @@ if (accountsEnabled) {
   app.use('/api/shop', require('./routes/shop'));
 }
 
+// ── ads.txt (AdSense 승인/수익 인증용) ────────────────────────────────────────
+// ADSENSE_PUBLISHER_ID(ca-pub-XXXXXXXXXXXXXXXX)가 설정된 경우에만 제공한다.
+// SPA 폴백보다 먼저 등록해야 index.html 이 대신 응답되지 않는다.
+app.get('/ads.txt', (req, res) => {
+  const match = /^ca-(pub-\d{10,20})$/.exec(process.env.ADSENSE_PUBLISHER_ID || '');
+  if (!match) return res.status(404).type('text/plain').send('Not found');
+  res.type('text/plain').send(`google.com, ${match[1]}, DIRECT, f08c47fec0942fa0\n`);
+});
+
 // ── 정적 파일 및 클라이언트 설정 ──────────────────────────────────────────────
 // 정적 파일: 7일 브라우저 캐싱 (JS/CSS 변경 시 파일명에 버전 포함 권장)
 app.use('/public', express.static(__dirname + '/public', {
@@ -154,7 +163,8 @@ if (fs.existsSync(clientDist)) {
       req.path.startsWith('/auth') ||
       req.path.startsWith('/socket.io') ||
       req.path.startsWith('/public') ||
-      req.path === '/env.js'
+      req.path === '/env.js' ||
+      req.path === '/ads.txt'
     ) return next();
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(clientDist, 'index.html'));
