@@ -32,8 +32,8 @@ function PlayerStack({ playerName, cards, isCurrentTurn, isMe, cardCount }) {
         ) : (
           cards.map((card, i) => (
             <div key={i} className="stack-card" style={{ zIndex: i }}>
-              <div style={{ fontSize: 36 }}>{getFruitEmoji(card.fruit)}</div>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#333' }}>{card.count}</div>
+              <div className="stack-fruit">{getFruitEmoji(card.fruit)}</div>
+              <div className="stack-count">{card.count}</div>
             </div>
           ))
         )}
@@ -141,7 +141,7 @@ export default function GameScreen() {
                   <div className="discard-card-count">{topCard.count}</div>
                 </>
               ) : (
-                <div className="discard-placeholder">버림 카드 없음</div>
+                <div className="discard-placeholder">비어 있음</div>
               )}
             </div>
           </div>

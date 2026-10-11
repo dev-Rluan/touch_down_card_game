@@ -3021,3 +3021,40 @@ body,
 .player-stack-header { margin-bottom: 0; }
 .player-stack-cards { min-height: 96px; width: 100%; }
 .player-stack .stack-placeholder { margin: 0; }
+
+/* 카드 크게, 글자/여백은 작게 */
+.player-stack { padding: 0.6rem 0.6rem 0.75rem; gap: 0.5rem; min-width: 130px; max-width: 220px; }
+.player-stack-name { font-size: 0.72rem; padding: 0.1rem 0.45rem; }
+.player-stack-count { font-size: 10px; padding: 1px 5px; }
+.turn-badge { font-size: 10px; padding: 1px 7px; }
+.player-stack-header { gap: 4px; }
+.player-stack-cards { min-height: 138px; }
+.stack-card { width: 96px; height: 134px; border-radius: 0.6rem; }
+.stack-fruit { font-size: 3.4rem; line-height: 1; }
+.stack-count { font-size: 2rem; font-weight: 800; color: #2b2b2b; line-height: 1; margin-top: 0.15rem; }
+.stack-placeholder { font-size: 0.7rem; }
+.discard-pile { width: 84px; height: 118px; }
+.discard-area .small { font-size: 0.72rem; }
+@media (min-width: 768px) {
+  .player-stack-cards { min-height: 168px; }
+  .stack-card { width: 120px; height: 168px; }
+  .stack-fruit { font-size: 4.2rem; }
+  .stack-count { font-size: 2.4rem; }
+  .player-stack { max-width: 260px; }
+  .discard-pile { width: 100px; height: 140px; }
+}
+
+/* 게임 화면은 항상 한 화면 안에 (스크롤 잠금 상태이므로 잘리면 안 됨) */
+.game-board { height: 100vh; height: 100dvh; min-height: 0 !important; }
+.player-stacks-area { min-height: 0; gap: 1rem; }
+.discard-pile { width: 72px; height: 100px; }
+.discard-area .discard-pile .discard-placeholder { font-size: 0.7rem; white-space: nowrap; }
+.discard-area { padding: 0 1rem; margin-bottom: 0.25rem !important; }
+.player-section { padding: 0.75rem !important; }
+@media (min-width: 768px) {
+  .player-stack-cards { min-height: 150px; }
+  .stack-card { width: 104px; height: 146px; }
+  .stack-fruit { font-size: 3.6rem; }
+  .stack-count { font-size: 2.1rem; }
+  .discard-pile { width: 72px; height: 100px; }
+}
