@@ -1,10 +1,9 @@
 import React from 'react';
 import { useGame } from '../context/GameContext.jsx';
-import useAuth from '../hooks/useAuth.js';
+import ThemePicker from './ThemePicker.jsx';
 
 export default function Navbar() {
   const { state, emit } = useGame();
-  const { account, providers } = useAuth();
   const [editingNick, setEditingNick] = React.useState(false);
   const [nickInput, setNickInput] = React.useState('');
 
@@ -21,7 +20,6 @@ export default function Navbar() {
     <nav className="navbar navbar-expand-lg navbar-dark sticky-top">
       <div className="container-fluid">
         <span className="navbar-brand fw-bold">
-          <i className="icon ion-ios-bell me-2" />
           Touch Down
         </span>
 
@@ -35,6 +33,7 @@ export default function Navbar() {
                 value={nickInput}
                 onChange={e => setNickInput(e.target.value)}
                 placeholder="새 닉네임"
+                maxLength={12}
                 autoFocus
               />
               <button type="submit" className="btn btn-sm btn-light">확인</button>
@@ -47,34 +46,11 @@ export default function Navbar() {
               title="닉네임 변경"
             >
               <i className="icon ion-person" />
-              <span className="d-none d-sm-inline">{state.nickname}</span>
+              <span className="text-truncate" style={{ maxWidth: 110 }}>{state.nickname}</span>
             </button>
           )}
 
-          {/* 인증 영역 */}
-          {account ? (
-            <div className="d-flex align-items-center gap-1">
-              <span className="text-light small d-none d-md-inline">{account.displayName}</span>
-              {account.avatar
-                ? <img src={account.avatar} className="rounded-circle" width="28" height="28" style={{ objectFit: 'cover' }} alt="avatar" />
-                : <span className="navbar-avatar">{account.displayName.charAt(0).toUpperCase()}</span>
-              }
-              <a href="/auth/logout" className="btn btn-sm btn-outline-light ms-1">로그아웃</a>
-            </div>
-          ) : (
-            <div className="d-flex gap-1">
-              {providers.includes('google') && (
-                <a href="/auth/google" className="btn btn-sm btn-light">
-                  <i className="icon ion-social-google" /> Google
-                </a>
-              )}
-              {providers.includes('kakao') && (
-                <a href="/auth/kakao" className="btn btn-sm btn-warning">
-                  <i className="icon ion-social-buffer" /> Kakao
-                </a>
-              )}
-            </div>
-          )}
+          <ThemePicker />
         </div>
       </div>
     </nav>

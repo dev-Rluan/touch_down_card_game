@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import BellButton from '../components/BellButton.jsx';
+import ThemePicker from '../components/ThemePicker.jsx';
 import CountdownOverlay from '../components/CountdownOverlay.jsx';
 
 const FRUIT_EMOJI = {
@@ -14,7 +15,7 @@ function getFruitEmoji(fruit) {
   return FRUIT_EMOJI[fruit] || '🃏';
 }
 
-function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCount }) {
+function PlayerStack({ playerName, cards, isCurrentTurn, isMe, cardCount }) {
   return (
     <div className={`player-stack ${isCurrentTurn ? (isMe ? 'my-turn' : 'other-turn') : ''}`}>
       <div className="player-stack-header">
@@ -32,8 +33,8 @@ function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCou
         ) : (
           cards.map((card, i) => (
             <div key={i} className="stack-card" style={{ zIndex: i }}>
-              <div style={{ fontSize: 36 }}>{getFruitEmoji(card.fruit)}</div>
-              <div style={{ fontSize: 24, fontWeight: 'bold', color: '#333' }}>{card.count}</div>
+              <div className="stack-fruit">{getFruitEmoji(card.fruit)}</div>
+              <div className="stack-count">{card.count}</div>
             </div>
           ))
         )}
@@ -42,7 +43,7 @@ function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCou
   );
 }
 
-function MyDeckCard({ cards, onPlay }) {
+function MyDeckCard({ cards, onPlay, disabled }) {
   if (cards.length === 0) {
     return (
       <div className="deck-card empty">
@@ -55,6 +56,8 @@ function MyDeckCard({ cards, onPlay }) {
     <button
       className="deck-card my-deck-card card-back style-pattern"
       onClick={onPlay}
+      disabled={disabled}
+      style={disabled ? { opacity: 0.5, filter: 'grayscale(0.4)', cursor: 'not-allowed' } : undefined}
       aria-label="카드 내기"
     >
       <div className="card-back-pattern" />
@@ -62,19 +65,23 @@ function MyDeckCard({ cards, onPlay }) {
         {cards.length}장
       </div>
       <div style={{ position: 'relative', zIndex: 1, color: '#fde047', fontSize: 12, marginTop: 6, fontWeight: 600, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
-        클릭하여 플레이
+        {disabled ? '상대 턴' : '클릭하여 플레이'}
       </div>
     </button>
   );
 }
 
 export default function GameScreen() {
-  const { state, emit, dispatch } = useGame();
+  const { state, emit } = useGame();
   const {
     mySocketId, hand, playerStacks, gameStatePlayers,
     currentTurn, discardedCards, halliGalliResult,
-    countdown, countdownSub, users,
+    countdown, countdownSub, users, isMyTurn, roomId,
   } = state;
+
+  function handleLeave() {
+    if (roomId && window.confirm('게임을 나가시겠습니까?')) emit('leaveRoom', roomId);
+  }
 
   // body.in-game 클래스 토글 (overscroll lock)
   useEffect(() => {
@@ -91,16 +98,18 @@ export default function GameScreen() {
 
   const topCard = discardedCards.length > 0 ? discardedCards[discardedCards.length - 1] : null;
 
-  // 코스메틱 벨 스킨
-  const bellSkinClass = state.account
-    ? (state.account.cosmetics?.equipped?.bell ? state.account.cosmetics.equipped.bell.replace('bell-', 'bell-skin-') : '')
-    : '';
-
   return (
     <div className="game-board d-flex flex-column" style={{ minHeight: '100vh' }}>
+      <div className="game-topbar">
+        <ThemePicker />
+        <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
+          <i className="icon ion-log-out me-1" />나가기
+        </button>
+      </div>
+
       {/* 상단 플레이어 스택 영역 */}
       <div className="player-stacks-area flex-grow-1">
-        <div id="playerStacks" className="d-flex flex-wrap gap-3 justify-content-center p-3">
+        <div id="playerStacks" className={`d-flex flex-wrap justify-content-center ${players.length > 2 ? 'stacks-many' : ''}`}>
           {players.map((player, idx) => {
             const stack = playerStacks[player.id] || { cards: [] };
             const isCurrentTurn = idx === currentTurn;
@@ -108,7 +117,6 @@ export default function GameScreen() {
             return (
               <PlayerStack
                 key={player.id}
-                playerId={player.id}
                 playerName={player.name}
                 cards={stack.cards}
                 isCurrentTurn={isCurrentTurn}
@@ -130,7 +138,7 @@ export default function GameScreen() {
                   <div className="discard-card-count">{topCard.count}</div>
                 </>
               ) : (
-                <div className="discard-placeholder">버림 카드 없음</div>
+                <div className="discard-placeholder">비어 있음</div>
               )}
             </div>
           </div>
@@ -143,21 +151,21 @@ export default function GameScreen() {
           {/* 내 덱 */}
           <div className="text-center">
             <div className="small text-white-50 mb-1">내 덱</div>
-            <MyDeckCard cards={hand} onPlay={handlePlayCard} />
+            <MyDeckCard cards={hand} onPlay={handlePlayCard} disabled={!isMyTurn} />
           </div>
 
           {/* 벨 버튼 */}
-          <BellButton skinClass={bellSkinClass} />
+          <BellButton />
         </div>
       </div>
 
-      {/* 할리갈리 결과 알림 */}
+      {/* 벨 결과 알림 */}
       {halliGalliResult && (
         <div className={`halli-galli-notification ${halliGalliResult.success ? 'success show' : 'failure show'}`}>
           <div className="notification-icon">{halliGalliResult.success ? '🎉' : '❌'}</div>
           <div className="notification-text">
             <strong>
-              {halliGalliResult.playerName}님이 할리갈리 {halliGalliResult.success ? '성공!' : '실패!'}
+              {halliGalliResult.playerName}님이 터치다운 {halliGalliResult.success ? '성공!' : '실패!'}
             </strong>
             {halliGalliResult.success && (
               <div className="notification-score">+{halliGalliResult.scoreGained}점 획득!</div>

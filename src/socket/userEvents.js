@@ -5,6 +5,7 @@ const userService = require('../services/userServices');
 const roomService = require('../services/roomService');
 const { clearGameCountdown } = require('../utils/gameCountdown');
 const { limiters } = require('../utils/socketRateLimiter');
+const { generateNickname, sanitizeNickname } = require('../utils/nickname');
 
 /**
  * 사용자 관련 이벤트 핸들러 등록
@@ -16,7 +17,7 @@ module.exports = function(socket, io) {
   const sessionUser = socket.request?.user;
   const defaultName = sessionUser?.displayName
     ? sessionUser.displayName
-    : `User_${socket.id.substring(0, 8)}`;
+    : generateNickname();
 
   // 로비에 있는 클라이언트만 방 목록 업데이트를 받도록 로비 룸에 참가
   socket.join('lobby');
@@ -59,14 +60,15 @@ module.exports = function(socket, io) {
       return;
     }
     try {
-      if (!newName || !newName.trim()) {
+      const cleanName = sanitizeNickname(newName);
+      if (!cleanName) {
         socket.emit('name change error', '닉네임을 입력해주세요.');
         return;
       }
 
-      await userService.updateUserName(socket.id, newName.trim());
-      socket.emit('name change successful', newName.trim());
-      console.log(`[User] ${socket.id} 닉네임 변경: ${newName.trim()}`);
+      await userService.updateUserName(socket.id, cleanName);
+      socket.emit('name change successful', cleanName);
+      console.log(`[User] ${socket.id} 닉네임 변경: ${cleanName}`);
     } catch (error) {
       console.error('[change name Error]', error);
       socket.emit('name change error', error.message);

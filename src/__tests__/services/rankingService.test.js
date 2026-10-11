@@ -30,6 +30,15 @@ const mockRedis = {
     return zsetOf(key).get(member) ?? null;
   }),
   expire: jest.fn(async () => true),
+  // pipeline: 호출을 모았다가 exec 에서 순서대로 결과 반환
+  multi: jest.fn(() => {
+    const ops = [];
+    const pipeline = {
+      hGetAll: (key) => { ops.push(() => store[key] ?? {}); return pipeline; },
+      exec: async () => ops.map((op) => op()),
+    };
+    return pipeline;
+  }),
 };
 
 jest.mock('../../config/redisClient', () => ({

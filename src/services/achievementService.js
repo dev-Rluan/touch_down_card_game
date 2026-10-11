@@ -30,7 +30,7 @@ const ACHIEVEMENTS = [
   { id: 'first_game',    title: '첫 발걸음',      description: '첫 번째 게임을 완료했습니다',      icon: '🎮', stat: 'totalGames', threshold: 1   },
   { id: 'games_10',      title: '단골 플레이어',   description: '게임을 10번 완료했습니다',          icon: '🔟', stat: 'totalGames', threshold: 10  },
   { id: 'games_50',      title: '베테랑',          description: '게임을 50번 완료했습니다',          icon: '🏅', stat: 'totalGames', threshold: 50  },
-  { id: 'games_100',     title: '할리갈리 마스터', description: '게임을 100번 완료했습니다',         icon: '🏆', stat: 'totalGames', threshold: 100 },
+  { id: 'games_100',     title: '터치다운 마스터', description: '게임을 100번 완료했습니다',         icon: '🏆', stat: 'totalGames', threshold: 100 },
   // 승리
   { id: 'first_win',     title: '첫 승리',         description: '첫 번째 승리를 거뒀습니다',         icon: '🥇', stat: 'totalWins',  threshold: 1   },
   { id: 'wins_10',       title: '연전연승',         description: '10번 승리했습니다',                 icon: '🔥', stat: 'totalWins',  threshold: 10  },
