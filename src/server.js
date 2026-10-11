@@ -52,14 +52,22 @@ app.use((req, res, next) => {
 });
 
 // 헬스체크 (Redis 연결 상태 포함)
+// 호스팅의 헬스체크가 수 초~수십 초마다 호출하므로, Redis PING 결과를 짧게 캐시해
+// 종량제 Redis(Upstash 등)의 명령 수를 낭비하지 않는다.
+const HEALTH_CACHE_MS = 15000;
+let healthCache = { at: 0, ok: false };
 app.get('/healthz', async (req, res) => {
-  try {
-    const redis = await ensureRedisConnection();
-    await redis.ping();
-    res.json({ status: 'ok' });
-  } catch (err) {
-    res.status(503).json({ status: 'error' });
+  const now = Date.now();
+  if (now - healthCache.at > HEALTH_CACHE_MS) {
+    try {
+      const redis = await ensureRedisConnection();
+      await redis.ping();
+      healthCache = { at: now, ok: true };
+    } catch (err) {
+      healthCache = { at: now, ok: false };
+    }
   }
+  res.status(healthCache.ok ? 200 : 503).json({ status: healthCache.ok ? 'ok' : 'error' });
 });
 
 app.use(express.json({ limit: '10kb' }));
