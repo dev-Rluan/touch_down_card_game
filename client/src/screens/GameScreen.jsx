@@ -104,7 +104,7 @@ export default function GameScreen() {
 
   return (
     <div className="game-board d-flex flex-column" style={{ minHeight: '100vh' }}>
-      <div className="d-flex justify-content-end p-2">
+      <div className="game-topbar">
         <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
           <i className="icon ion-log-out me-1" />나가기
         </button>
@@ -112,7 +112,7 @@ export default function GameScreen() {
 
       {/* 상단 플레이어 스택 영역 */}
       <div className="player-stacks-area flex-grow-1">
-        <div id="playerStacks" className="d-flex flex-wrap gap-3 justify-content-center p-3">
+        <div id="playerStacks" className={`d-flex flex-wrap justify-content-center ${players.length > 2 ? 'stacks-many' : ''}`}>
           {players.map((player, idx) => {
             const stack = playerStacks[player.id] || { cards: [] };
             const isCurrentTurn = idx === currentTurn;
