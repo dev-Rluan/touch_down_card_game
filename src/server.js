@@ -3,9 +3,17 @@ const express = require('express');
 const compression = require('compression');
 const app = express();
 const server = require('http').Server(app);
+const isProduction = process.env.NODE_ENV === 'production';
+// 로그인/랭킹/상점 기능 플래그 (기본 꺼짐 — 임시 닉네임으로 바로 플레이)
+const accountsEnabled = process.env.ENABLE_ACCOUNTS === 'true';
+// 리버스 프록시(Koyeb, Nginx 등) 뒤에서 HTTPS/클라이언트 IP를 올바르게 인식
+app.set('trust proxy', 1);
 const io = require('socket.io')(server, {
   cors: {
-    origin: process.env.SOCKET_ALLOW_ORIGINS ? process.env.SOCKET_ALLOW_ORIGINS.split(',') : '*',
+    // 운영에서 SOCKET_ALLOW_ORIGINS 미설정 시 동일 출처만 허용(false), 개발은 모두 허용
+    origin: process.env.SOCKET_ALLOW_ORIGINS
+      ? process.env.SOCKET_ALLOW_ORIGINS.split(',')
+      : (isProduction ? false : '*'),
     methods: ['GET', 'POST'],
     credentials: true
   }
@@ -13,9 +21,10 @@ const io = require('socket.io')(server, {
 
 const cors = require('cors');
 const session = require('express-session');
-const passport = require('./config/passport');
+const passport = accountsEnabled ? require('./config/passport') : null;
 const { createClient } = require('redis');
 const { RedisStore } = require('connect-redis');
+const { resetRuntimeState } = require('./services/startupCleanup');
 
 // Socket.IO 이벤트 핸들러 초기화
 const socketEvent = require('./socket/socketEvent');
@@ -33,43 +42,63 @@ app.use(cors({
 // gzip 압축 (모든 응답에 적용, 1KB 이상만)
 app.use(compression({ threshold: 1024 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// ── 세션 설정 ─────────────────────────────────────────────────────────────────
-// SESSION_SECRET: 반드시 운영 환경에서는 강력한 랜덤 문자열로 교체하세요.
-const sessionSecret = process.env.SESSION_SECRET || 'touchdown-dev-secret-change-in-production';
-const sessionMaxAge = parseInt(process.env.SESSION_MAX_AGE || '604800000', 10); // 기본 7일
-
-const sessionMiddleware = session({
-  store: new RedisStore({ client: redisClient, prefix: 'sess:' }),
-  secret: sessionSecret,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: sessionMaxAge,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  },
-  name: 'tdcg.sid',
+// 기본 보안 헤더
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
 });
 
-app.use(sessionMiddleware);
+// 헬스체크 (Redis 연결 상태 포함)
+app.get('/healthz', async (req, res) => {
+  try {
+    const redis = await ensureRedisConnection();
+    await redis.ping();
+    res.json({ status: 'ok' });
+  } catch (err) {
+    res.status(503).json({ status: 'error' });
+  }
+});
 
-// ── Passport 초기화 ───────────────────────────────────────────────────────────
-app.use(passport.initialize());
-app.use(passport.session());
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true }));
 
-// ── 라우터 등록 ───────────────────────────────────────────────────────────────
-const authRouter = require('./routes/auth');
-app.use('/auth', authRouter);
+// ── 계정 기능 (ENABLE_ACCOUNTS=true 일 때만 활성화) ──────────────────────────────
+// 세션/Passport/로그인/랭킹/상점 라우터는 계정 기능이 꺼져 있으면 등록하지 않는다.
+let sessionMiddleware = null;
+if (accountsEnabled) {
+  // SESSION_SECRET: 운영 환경에서는 반드시 강력한 랜덤 문자열을 지정해야 한다.
+  if (isProduction && !process.env.SESSION_SECRET) {
+    console.error('[Server] 운영 환경에서 ENABLE_ACCOUNTS=true 인데 SESSION_SECRET 이 없습니다.');
+    process.exit(1);
+  }
+  const sessionSecret = process.env.SESSION_SECRET || 'touchdown-dev-secret-change-in-production';
+  const sessionMaxAge = parseInt(process.env.SESSION_MAX_AGE || '604800000', 10); // 기본 7일
 
-const apiRouter = require('./routes/api');
-app.use('/api', apiRouter);
+  sessionMiddleware = session({
+    store: new RedisStore({ client: redisClient, prefix: 'sess:' }),
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: isProduction,
+      httpOnly: true,
+      maxAge: sessionMaxAge,
+      sameSite: isProduction ? 'none' : 'lax',
+    },
+    name: 'tdcg.sid',
+  });
 
-const shopRouter = require('./routes/shop');
-app.use('/api/shop', shopRouter);
+  app.use(sessionMiddleware);
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  app.use('/auth', require('./routes/auth'));
+  app.use('/api', require('./routes/api'));
+  app.use('/api/shop', require('./routes/shop'));
+}
 
 // ── 정적 파일 및 클라이언트 설정 ──────────────────────────────────────────────
 // 정적 파일: 7일 브라우저 캐싱 (JS/CSS 변경 시 파일명에 버전 포함 권장)
@@ -127,9 +156,11 @@ if (fs.existsSync(clientDist)) {
 
 // ── Socket.IO 세션 공유 ───────────────────────────────────────────────────────
 // HTTP 세션을 Socket.IO 핸드셰이크에서도 읽을 수 있도록 미들웨어를 공유합니다.
-io.engine.use(sessionMiddleware);
-io.engine.use(passport.initialize());
-io.engine.use(passport.session());
+if (accountsEnabled) {
+  io.engine.use(sessionMiddleware);
+  io.engine.use(passport.initialize());
+  io.engine.use(passport.session());
+}
 
 // Socket.IO 이벤트 핸들러 등록
 socketEvent(io);
@@ -140,6 +171,8 @@ const PORT = process.env.PORT || 3000;
 async function bootstrap() {
   try {
     await ensureRedisConnection();
+    // 이전 프로세스가 남긴 방/유저 데이터 정리 (재배포 후 유령 방 방지)
+    await resetRuntimeState();
     server.listen(PORT, () => {
       console.log(`[Server] 서버가 ${PORT}번 포트에서 시작되었습니다.`);
       console.log(`[Server] 접속 URL: http://localhost:${PORT}`);

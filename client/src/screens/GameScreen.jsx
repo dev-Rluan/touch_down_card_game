@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import BellButton from '../components/BellButton.jsx';
+import ThemePicker from '../components/ThemePicker.jsx';
 import CountdownOverlay from '../components/CountdownOverlay.jsx';
 
 const FRUIT_EMOJI = {
@@ -97,14 +98,10 @@ export default function GameScreen() {
 
   const topCard = discardedCards.length > 0 ? discardedCards[discardedCards.length - 1] : null;
 
-  // 코스메틱 벨 스킨
-  const bellSkinClass = state.account
-    ? (state.account.cosmetics?.equipped?.bell ? state.account.cosmetics.equipped.bell.replace('bell-', 'bell-skin-') : '')
-    : '';
-
   return (
     <div className="game-board d-flex flex-column" style={{ minHeight: '100vh' }}>
       <div className="game-topbar">
+        <ThemePicker />
         <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
           <i className="icon ion-log-out me-1" />나가기
         </button>
@@ -158,7 +155,7 @@ export default function GameScreen() {
           </div>
 
           {/* 벨 버튼 */}
-          <BellButton skinClass={bellSkinClass} />
+          <BellButton />
         </div>
       </div>
 

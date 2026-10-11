@@ -3088,3 +3088,55 @@ body,
 @media (max-width: 767px) {
   .discard-area .discard-pile .discard-placeholder { font-size: 0.6rem; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   색 테마 — html[data-theme] 로 선택 (기본값은 위 :root = 딥그린)
+   ══════════════════════════════════════════════════════════════════ */
+[data-theme='green'] {
+  --bg: #0f2a22; --bg-raised: #17382d; --accent: #f0b429; --accent-strong: #d99a0b;
+  --accent-ink: #2a1d00; --card-back: #7a1f2b;
+}
+[data-theme='midnight'] {
+  --bg: #0e1626; --bg-raised: #162338; --accent: #4fd1c5; --accent-strong: #2fb5a9;
+  --accent-ink: #04211e; --card-back: #2f4b8f;
+}
+[data-theme='wine'] {
+  --bg: #2a0f1a; --bg-raised: #3a1826; --accent: #ff9f6b; --accent-strong: #ef8650;
+  --accent-ink: #3a1300; --card-back: #1f5a52;
+}
+[data-theme='charcoal'] {
+  --bg: #16181d; --bg-raised: #20242b; --accent: #ff6b4a; --accent-strong: #ea5232;
+  --accent-ink: #2a0900; --card-back: #3b4a9a;
+}
+
+/* 테마 선택 UI */
+.theme-picker { position: relative; }
+.theme-picker-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; padding: 0;
+  background: transparent; border: 1px solid var(--line); border-radius: 50%;
+  cursor: pointer;
+}
+.theme-picker-btn:hover { border-color: var(--ink-dim); }
+.theme-swatch { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.35); flex-shrink: 0; }
+.theme-picker-menu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 1100;
+  min-width: 150px; padding: 0.35rem;
+  background: var(--bg-raised); border: 1px solid var(--line); border-radius: 0.6rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.theme-option {
+  display: flex; align-items: center; gap: 0.6rem; width: 100%;
+  padding: 0.45rem 0.55rem; background: transparent; border: 0; border-radius: 0.4rem;
+  color: var(--ink); font-size: 0.9rem; text-align: left; cursor: pointer;
+}
+.theme-option:hover { background: rgba(255,255,255,0.08); }
+.theme-option.selected { background: rgba(255,255,255,0.14); font-weight: 700; }
+
+/* 벨 버튼/버림 더미: 테마 색 사용 */
+.halli-galli-bell { background: var(--accent); border-color: var(--accent-strong); }
+.halli-galli-bell:active, .halli-galli-bell.bell-pressed { background: var(--accent-strong); }
+.discard-pile { box-shadow: none; }
+.game-topbar { align-items: center; gap: 0.5rem; }
+.game-topbar .theme-picker-btn { width: 28px; height: 28px; }
+.game-topbar .theme-swatch { width: 16px; height: 16px; }

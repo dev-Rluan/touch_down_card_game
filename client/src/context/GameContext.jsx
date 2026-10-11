@@ -6,7 +6,6 @@ const GameContext = createContext(null);
 const initialState = {
   screen: 'loading',       // 'loading' | 'lobby' | 'waiting' | 'game' | 'result'
   socketConnected: false,  // 소켓 connecting 이벤트 수신 여부
-  pendingLobby: null,      // { nickname, roomList, account, socketId } — 인트로 화면 대기 중
   nickname: '',
   mySocketId: null,
   roomId: null,
@@ -14,7 +13,6 @@ const initialState = {
   users: [],
   maxUserCnt: 4,
   roomList: [],
-  account: null,           // OAuth 로그인 계정 정보
   isMyTurn: false,
   hand: [],                // 내 카드 배열
   playerStacks: {},        // { [playerId]: { cards: [], name: '' } }
@@ -33,53 +31,15 @@ function reducer(state, action) {
   switch (action.type) {
 
     case 'SOCKET_READY':
-      // 소켓 연결 완료 — 로그인 사용자면 바로 로비로, 게스트면 인트로 대기
-      if (action.account) {
-        return {
-          ...state,
-          screen: 'lobby',
-          socketConnected: true,
-          nickname: action.nickname,
-          mySocketId: action.socketId,
-          roomList: action.roomList || [],
-          account: action.account,
-          pendingLobby: null,
-        };
-      }
-      return {
-        ...state,
-        socketConnected: true,
-        pendingLobby: {
-          nickname: action.nickname,
-          roomList: action.roomList || [],
-          socketId: action.socketId,
-        },
-      };
-
-    case 'ENTER_LOBBY': {
-      const p = state.pendingLobby || {};
-      return {
-        ...state,
-        screen: 'lobby',
-        nickname: p.nickname || state.nickname,
-        mySocketId: p.socketId || state.mySocketId,
-        roomList: p.roomList || state.roomList,
-        account: null,
-        pendingLobby: null,
-      };
-    }
-
-    // 하위 호환 (직접 로비 진입)
-    case 'CONNECTED':
+      // 소켓 연결 완료 — 서버가 부여한 임시 닉네임으로 바로 로비 진입
       return {
         ...state,
         screen: 'lobby',
         socketConnected: true,
+        connectError: false,
         nickname: action.nickname,
         mySocketId: action.socketId,
         roomList: action.roomList || [],
-        account: action.account,
-        pendingLobby: null,
       };
 
     case 'CONNECT_ERROR':
@@ -264,13 +224,12 @@ export function GameProvider({ children }) {
       // socket.id는 connect 이후 사용 가능
     });
 
-    socket.on('connecting', ({ nickname, roomList, account }) => {
+    socket.on('connecting', ({ nickname, roomList }) => {
       dispatch({
         type: 'SOCKET_READY',
         nickname,
         socketId: socket.id,
         roomList: roomList || [],
-        account,
       });
     });
 
