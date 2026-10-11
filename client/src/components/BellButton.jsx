@@ -59,9 +59,9 @@ export default function BellButton({ skinClass = '' }) {
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onClick={trigger}
-        aria-label="벨 울리기"
+        aria-label="TOUCH DOWN"
       >
-        <span className="bell-label">벨!</span>
+        <span className="bell-label">TOUCH<br />DOWN</span>
       </button>
     </div>
   );
