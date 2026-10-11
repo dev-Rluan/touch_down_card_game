@@ -200,7 +200,17 @@ const PORT = process.env.PORT || 3000;
 
 async function bootstrap() {
   try {
-    await ensureRedisConnection();
+    // 비밀번호 오류 등으로 Redis 에 붙지 못하면 node-redis 는 에러 없이 재시도만 반복한다.
+    // 컨테이너가 "실행 중"처럼 보이는 채로 멈추지 않도록, 제한 시간 안에 못 붙으면 종료해
+    // 호스팅/Docker 의 자동 재시작과 알림이 동작하게 한다.
+    const connectTimeoutMs = parseInt(process.env.REDIS_CONNECT_TIMEOUT_MS || '20000', 10);
+    let timer;
+    await Promise.race([
+      ensureRedisConnection(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Redis 연결 시간 초과 (${connectTimeoutMs}ms) — REDIS_URL/비밀번호를 확인하세요`)), connectTimeoutMs);
+      }),
+    ]).finally(() => clearTimeout(timer));
     // 이전 프로세스가 남긴 방/유저 데이터 정리 (재배포 후 유령 방 방지)
     await resetRuntimeState();
     server.listen(PORT, () => {

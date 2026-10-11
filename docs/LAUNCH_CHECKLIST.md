@@ -27,3 +27,7 @@
 - AdSense: 로더/`ads.txt` 는 구현 완료, 환경변수만 넣으면 켜짐. 사람이 해야 할 일은 `docs/ADS_SETUP.md` 참고.
 - 예전 바닐라 JS 화면(`src/public/js`, `src/view`)은 빌드 결과가 없을 때만 쓰이는 레거시.
 - 소켓 이벤트 `halliGalli` 등 내부 이름은 그대로 (사용자 노출 없음).
+
+## 배포 가이드
+- 한국 사용자 대상 권장: VPS(서울) → `docs/DEPLOY_VPS.md` (`docker-compose.yml`, `Caddyfile`, `.env.vps.example`)
+- 무료로 먼저 테스트: Koyeb + 외부 Redis → `docs/DEPLOY_KOYEB.md`

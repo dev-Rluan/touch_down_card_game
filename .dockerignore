@@ -62,3 +62,11 @@ src/server_backup.js
 *.bsdesign
 touch_down_game_dessign.bsdesign
 
+
+# 빌드 컨텍스트 축소 (클라이언트는 Docker 안에서 새로 빌드)
+client/node_modules
+src/public/dist
+.claude
+docs
+*.md
+dump.rdb
