@@ -23,7 +23,7 @@ const initialState = {
   discardedCards: [],
   countdown: null,         // null | number | 'GO!'
   countdownSub: '',
-  halliGalliResult: null,  // 최근 할리갈리 결과
+  halliGalliResult: null,  // 최근 벨 결과
   gameResult: null,        // { winner, finalScores }
   connectError: false,
   notification: null,      // { message, type } 일시 알림

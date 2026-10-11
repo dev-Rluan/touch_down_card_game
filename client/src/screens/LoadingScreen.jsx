@@ -31,9 +31,8 @@ export default function LoadingScreen() {
       <div className="intro-content">
         {/* 로고 */}
         <div className="intro-logo">
-          <div className="intro-bell">🔔</div>
           <h1 className="intro-title">Touch Down</h1>
-          <p className="intro-subtitle">온라인 할리갈리 멀티플레이어</p>
+          <p className="intro-subtitle">온라인 멀티플레이 카드게임</p>
         </div>
 
         {/* OAuth 오류 알림 */}

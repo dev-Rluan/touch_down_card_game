@@ -2998,3 +2998,17 @@ body,
 .player-stack-count { background: rgba(243, 239, 227, 0.14) !important; color: var(--ink) !important; }
 .player-grid { justify-content: center; }
 .my-deck-card:disabled { opacity: 0.65 !important; }
+
+/* 아이콘 대신 워드마크 / 벨 버튼은 텍스트 중심 */
+.intro-logo { padding-top: 0.5rem; }
+.intro-title { letter-spacing: -0.02em; }
+.intro-title::after {
+  content: '';
+  display: block;
+  width: 56px;
+  height: 4px;
+  margin: 0.9rem auto 0;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.halli-galli-bell .bell-label { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.01em; margin: 0; }

@@ -162,13 +162,13 @@ export default function GameScreen() {
         </div>
       </div>
 
-      {/* 할리갈리 결과 알림 */}
+      {/* 벨 결과 알림 */}
       {halliGalliResult && (
         <div className={`halli-galli-notification ${halliGalliResult.success ? 'success show' : 'failure show'}`}>
           <div className="notification-icon">{halliGalliResult.success ? '🎉' : '❌'}</div>
           <div className="notification-text">
             <strong>
-              {halliGalliResult.playerName}님이 할리갈리 {halliGalliResult.success ? '성공!' : '실패!'}
+              {halliGalliResult.playerName}님이 벨 {halliGalliResult.success ? '성공!' : '실패!'}
             </strong>
             {halliGalliResult.success && (
               <div className="notification-score">+{halliGalliResult.scoreGained}점 획득!</div>

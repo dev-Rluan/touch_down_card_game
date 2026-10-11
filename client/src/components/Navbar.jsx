@@ -21,7 +21,6 @@ export default function Navbar() {
     <nav className="navbar navbar-expand-lg navbar-dark sticky-top">
       <div className="container-fluid">
         <span className="navbar-brand fw-bold">
-          <i className="icon ion-ios-bell me-2" />
           Touch Down
         </span>
 
