@@ -165,3 +165,6 @@ dist
 # React 클라이언트 빌드 산출물
 client/node_modules/
 src/public/dist/
+
+# Redis 로컬 스냅샷
+dump.rdb
