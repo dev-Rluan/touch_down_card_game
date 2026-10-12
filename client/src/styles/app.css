@@ -3261,3 +3261,19 @@ body,
   border-color: var(--accent);
   box-shadow: 0 0 0 0.2rem color-mix(in srgb, var(--accent) 30%, transparent);
 }
+
+/* 벨 결과 알림: 게임이 계속 진행되는 동안 떠 있으므로 카드를 가리는 면적을 줄인다 */
+.halli-galli-notification {
+  padding: 0.55rem 1rem;
+  gap: 0.6rem;
+  border-radius: 0.75rem;
+  border-width: 2px;
+  max-width: 92vw;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+}
+.halli-galli-notification .notification-icon { font-size: 28px; }
+.halli-galli-notification .notification-text strong { font-size: 1.05rem; margin-bottom: 0; }
+.halli-galli-notification .notification-score { font-size: 0.85rem; }
+/* 위치: 플레이어 카드/버림 더미/덱/벨을 가리지 않는 "내 덱" 라벨 줄 부근 */
+.halli-galli-notification { top: 69%; }
