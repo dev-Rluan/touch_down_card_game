@@ -359,3 +359,122 @@ describe('정보 비공개 (숨겨진 카드가 클라이언트로 새지 않는
     io.emitted.filter(e => e.event === 'yourHand').forEach(e => expect(e.to).toMatch(/^sock\d$/));
   });
 });
+
+describe('게임 중 퇴장 (차례/종료 처리)', () => {
+  // 현재 차례를 원하는 위치로 맞춰 저장한다
+  async function withTurn(g, turn) {
+    const room = await g.load();
+    room.gameState.currentTurn = turn;
+    await roomService.saveRoomState(room);
+    return room;
+  }
+  const lastState = (io) => io.emitted.filter(e => e.event === 'gameState').at(-1)?.payload;
+  const turnHolderId = (gs) => gs.players[gs.currentTurn].id;
+
+  test('차례인 사람이 나가면 다음 사람이 차례를 이어받고 최신 gameState 가 전송된다', async () => {
+    const g = await setupGame(4);
+    const room = await withTurn(g, 1);
+    const leaver = room.users[1].id, next = room.users[2].id;
+    g.io.emitted.length = 0;
+
+    await g.byId[leaver].fire('leaveRoom', g.roomId);
+
+    const gs = lastState(g.io);
+    expect(gs).toBeDefined();
+    expect(gs.players).toHaveLength(3);
+    expect(gs.players.map(p => p.id)).not.toContain(leaver);
+    expect(turnHolderId(gs)).toBe(next);
+  });
+
+  test('앞 순번 사람이 나가도 같은 사람이 계속 차례를 가진다', async () => {
+    const g = await setupGame(4);
+    const room = await withTurn(g, 2);
+    const holder = room.users[2].id;
+    g.io.emitted.length = 0;
+
+    await g.byId[room.users[0].id].fire('leaveRoom', g.roomId);
+
+    expect(turnHolderId(lastState(g.io))).toBe(holder);
+    expect((await g.load()).gameState.currentTurn).toBe(1); // 한 칸 당겨짐
+  });
+
+  test('마지막 순번인 사람이 나가면 처음 사람에게 차례가 돌아간다', async () => {
+    const g = await setupGame(4);
+    const room = await withTurn(g, 3);
+    g.io.emitted.length = 0;
+
+    await g.byId[room.users[3].id].fire('leaveRoom', g.roomId);
+
+    expect(turnHolderId(lastState(g.io))).toBe(room.users[0].id);
+  });
+
+  test('뒤 순번 사람이 나가면 차례는 그대로다', async () => {
+    const g = await setupGame(4);
+    const room = await withTurn(g, 0);
+    g.io.emitted.length = 0;
+
+    await g.byId[room.users[3].id].fire('leaveRoom', g.roomId);
+
+    expect(turnHolderId(lastState(g.io))).toBe(room.users[0].id);
+  });
+
+  test('나간 뒤 남은 사람이 실제로 카드를 낼 수 있다 (교착 없음)', async () => {
+    const g = await setupGame(4);
+    const room = await withTurn(g, 1);
+    await g.byId[room.users[1].id].fire('leaveRoom', g.roomId);
+    const nextId = room.users[2].id;
+    g.io.emitted.length = 0;
+
+    await g.byId[nextId].fire('playCard', 0);
+
+    expect(g.byId[nextId].own.filter(e => e.event === 'playCardError')).toEqual([]);
+    expect(g.io.emitted.find(e => e.event === 'cardPlayed').payload.playerId).toBe(nextId);
+  });
+
+  test('2명이 하다 한 명이 나가면 남은 사람이 승자로 게임이 종료된다', async () => {
+    const g = await setupGame(2);
+    const room = await g.load();
+    g.io.emitted.length = 0;
+
+    await g.byId[room.users[0].id].fire('leaveRoom', g.roomId);
+
+    const end = g.io.emitted.find(e => e.event === 'gameEnd');
+    expect(end).toBeDefined();
+    expect(end.payload.winner.id).toBe(room.users[1].id);
+    const after = await g.load();
+    expect(after.status).toBe('waiting');
+    expect(await mockRedis.sMembers('rooms:waiting')).toContain(g.roomId);
+  });
+
+  test('퇴장자의 바닥 카드 더미는 벨 판정에서 빠진다', async () => {
+    const g = await setupGame(3);
+    const room = await g.load();
+    const [a, b, c] = room.users.map(u => u.id);
+    // a 의 더미에 banana 3 이 있어 b 의 banana 2 와 합치면 5 가 되는 상황
+    room.gameState.playerStacks = { [a]: [{ fruit: 'banana', count: 3 }], [b]: [{ fruit: 'banana', count: 2 }], [c]: [] };
+    room.gameState.centerCards = [{ fruit: 'banana', count: 3 }, { fruit: 'banana', count: 2 }];
+    room.gameState.currentTurn = 1;
+    await roomService.saveRoomState(room);
+
+    await g.byId[a].fire('leaveRoom', g.roomId);
+    const after = await g.load();
+    expect(after.gameState.playerStacks[a]).toBeUndefined();
+
+    g.io.emitted.length = 0;
+    await g.byId[b].fire('halliGalli');
+    expect(g.io.emitted.find(e => e.event === 'halliGalliResult').payload.success).toBe(false); // 나간 사람의 3 은 더 이상 합쳐지지 않음
+  });
+
+  test('대기실에서 나가는 것은 게임 상태 이벤트를 만들지 않는다', async () => {
+    const io = makeIo();
+    for (const id of ['w1', 'w2']) await userService.connectUser(id, id);
+    const w1 = makeSocket('w1', io), w2 = makeSocket('w2', io);
+    const room = await roomService.createRoom('w1', '대기방', 2);
+    await roomService.joinRoom('w2', room.id);
+    io.emitted.length = 0;
+    await w2.fire('leaveRoom', room.id);
+    expect(io.emitted.find(e => e.event === 'gameState' || e.event === 'gameEnd')).toBeUndefined();
+    expect(io.emitted.find(e => e.event === 'leaveUser')).toBeDefined();
+    void w1;
+  });
+});

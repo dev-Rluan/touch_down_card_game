@@ -7,6 +7,7 @@ const { clearGameCountdown } = require('../utils/gameCountdown');
 const { limiters } = require('../utils/socketRateLimiter');
 const { generateNickname, sanitizeNickname } = require('../utils/nickname');
 const { withRoomLock } = require('../utils/roomLock');
+const { syncGameAfterLeave } = require('./leaveSync');
 const { toPublicRoom, toPublicRooms, toPublicUser, toPublicUsers } = require('../utils/publicView');
 
 /**
@@ -100,6 +101,8 @@ module.exports = function(socket, io) {
               users: toPublicUsers(result.updatedUsers),
               newManager: toPublicUser(result.newManager)
             });
+            // 게임 중 연결이 끊긴 경우에도 남은 사람들의 차례/플레이어 목록을 맞추거나 게임을 종료한다
+            await syncGameAfterLeave(io, currentRoom.id);
           }
 
           const rooms = await roomService.getWaitingRooms();

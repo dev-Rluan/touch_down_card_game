@@ -6,6 +6,7 @@ const userService = require('../services/userServices');
 const { clearGameCountdown } = require('../utils/gameCountdown');
 const { limiters } = require('../utils/socketRateLimiter');
 const { withRoomLock } = require('../utils/roomLock');
+const { syncGameAfterLeave } = require('./leaveSync');
 const { toPublicRoom, toPublicRooms, toPublicUser, toPublicUsers } = require('../utils/publicView');
 
 /**
@@ -110,6 +111,8 @@ module.exports = function(socket, io) {
             users: toPublicUsers(result.updatedUsers),
             newManager: toPublicUser(result.newManager)
           });
+          // 게임 중이었다면 남은 사람들의 화면(차례/플레이어 목록)을 맞추거나 게임을 종료한다
+          await syncGameAfterLeave(io, roomId);
         }
 
         const rooms = await roomService.getWaitingRooms();
