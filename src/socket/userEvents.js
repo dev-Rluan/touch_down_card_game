@@ -7,6 +7,7 @@ const { clearGameCountdown } = require('../utils/gameCountdown');
 const { limiters } = require('../utils/socketRateLimiter');
 const { generateNickname, sanitizeNickname } = require('../utils/nickname');
 const { withRoomLock } = require('../utils/roomLock');
+const { toPublicRoom, toPublicRooms, toPublicUser, toPublicUsers } = require('../utils/publicView');
 
 /**
  * 사용자 관련 이벤트 핸들러 등록
@@ -29,7 +30,7 @@ module.exports = function(socket, io) {
       const waitingRooms = await roomService.getWaitingRooms();
       socket.emit('connecting', {
         nickname: defaultName,
-        roomList: waitingRooms,
+        roomList: toPublicRooms(waitingRooms),
         // 로그인 사용자면 계정 정보도 함께 전달
         account: sessionUser
           ? {
@@ -77,29 +78,6 @@ module.exports = function(socket, io) {
   });
 
   /**
-   * 채팅 메시지 이벤트
-   */
-  socket.on('chat message', async (message) => {
-    try {
-      if (!message || !message.trim()) {
-        return;
-      }
-
-      const userName = await userService.getUserName(socket.id);
-      const chatData = {
-        user: userName,
-        message: message.trim(),
-        timestamp: new Date().toISOString()
-      };
-
-      console.log(`[Chat] ${userName}: ${message.trim()}`);
-      io.emit('chat message', chatData);
-    } catch (error) {
-      console.error('[chat message Error]', error);
-    }
-  });
-
-  /**
    * 연결 해제 이벤트
    */
   socket.on('disconnect', async () => {
@@ -119,13 +97,13 @@ module.exports = function(socket, io) {
 
           if (!result.roomRemoved) {
             socket.to(currentRoom.id).emit('leaveUser', {
-              users: result.updatedUsers,
-              newManager: result.newManager
+              users: toPublicUsers(result.updatedUsers),
+              newManager: toPublicUser(result.newManager)
             });
           }
 
           const rooms = await roomService.getWaitingRooms();
-          io.to('lobby').emit('roomList', rooms);
+          io.to('lobby').emit('roomList', toPublicRooms(rooms));
         });
       }
 

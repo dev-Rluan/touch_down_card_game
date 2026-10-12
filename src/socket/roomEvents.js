@@ -6,6 +6,7 @@ const userService = require('../services/userServices');
 const { clearGameCountdown } = require('../utils/gameCountdown');
 const { limiters } = require('../utils/socketRateLimiter');
 const { withRoomLock } = require('../utils/roomLock');
+const { toPublicRoom, toPublicRooms, toPublicUser, toPublicUsers } = require('../utils/publicView');
 
 /**
  * 방 관리 관련 이벤트 핸들러 등록
@@ -27,10 +28,10 @@ module.exports = function(socket, io) {
       const room = await roomService.createRoom(socket.id, roomName, maxCnt);
       socket.leave('lobby');  // 방 생성 → 로비 룸 탈퇴
       socket.join(room.id);
-      socket.emit('roomCreated', room);
+      socket.emit('roomCreated', toPublicRoom(room));
 
       const rooms = await roomService.getWaitingRooms();
-      io.to('lobby').emit('roomList', rooms);
+      io.to('lobby').emit('roomList', toPublicRooms(rooms));
 
       console.log(`[Room] 방 생성 완료 - ID: ${room.id}, 이름: ${room.name}`);
     } catch (error) {
@@ -45,7 +46,7 @@ module.exports = function(socket, io) {
   socket.on('roomList', async () => {
     try {
       const rooms = await roomService.getWaitingRooms();
-      socket.emit('roomList', rooms);
+      socket.emit('roomList', toPublicRooms(rooms));
       console.log(`[Room] 방 목록 조회 - ${rooms.length}개 방`);
     } catch (error) {
       console.error('[roomList Error]', error);
@@ -69,14 +70,14 @@ module.exports = function(socket, io) {
         socket.leave('lobby');  // 방 입장 → 로비 룸 탈퇴
         socket.join(roomId);
         clearGameCountdown(io, roomId, 'user-joined');
-        socket.emit('successJoinRoom', room);
+        socket.emit('successJoinRoom', toPublicRoom(room));
         socket.to(roomId).emit('joinUser', {
-          users: room.users,
+          users: toPublicUsers(room.users),
           maxUserCnt: room.maxUserCnt
         });
 
         const rooms = await roomService.getWaitingRooms();
-        io.to('lobby').emit('roomList', rooms);
+        io.to('lobby').emit('roomList', toPublicRooms(rooms));
 
         const userName = await userService.getUserName(socket.id);
         console.log(`[Room] 방 입장 완료 - 방: ${room.name}, 사용자: ${userName}`);
@@ -106,13 +107,13 @@ module.exports = function(socket, io) {
 
         if (!result.roomRemoved) {
           socket.to(roomId).emit('leaveUser', {
-            users: result.updatedUsers,
-            newManager: result.newManager
+            users: toPublicUsers(result.updatedUsers),
+            newManager: toPublicUser(result.newManager)
           });
         }
 
         const rooms = await roomService.getWaitingRooms();
-        io.to('lobby').emit('roomList', rooms);
+        io.to('lobby').emit('roomList', toPublicRooms(rooms));
 
         console.log(`[Room] 방 나가기 완료 - 방 ID: ${roomId}, 방 삭제: ${result.roomRemoved}`);
       });

@@ -7,6 +7,7 @@ const userService = require('../services/userServices');
 const { clearGameCountdown, startGameCountdown } = require('../utils/gameCountdown');
 const { limiters } = require('../utils/socketRateLimiter');
 const { withRoomLock } = require('../utils/roomLock');
+const { toPublicUsers } = require('../utils/publicView');
 const rankingService = require('../services/rankingService');
 const achievementService = require('../services/achievementService');
 const dailyMissionService = require('../services/dailyMissionService');
@@ -49,6 +50,12 @@ module.exports = function(socket, io) {
     }
     try {
       await withUserRoom(socket, 'readyError', async (currentRoom) => {
+        // 게임 중에는 준비 상태를 바꿀 수 없다 (게임 중 ready 로 상태가 꼬이거나 다른 이벤트를 유발하는 것을 막는다)
+        if (currentRoom.status !== 'waiting') {
+          socket.emit('readyError', '게임이 진행 중입니다.');
+          return;
+        }
+
         const user = currentRoom.users.find(u => u.id === socket.id);
         if (!user) {
           socket.emit('readyError', '사용자를 찾을 수 없습니다.');
@@ -57,11 +64,11 @@ module.exports = function(socket, io) {
 
         user.readyStatus = user.readyStatus === 'ready' ? 'waiting' : 'ready';
         await roomService.saveRoomState(currentRoom, { reindex: false });
-        io.to(currentRoom.id).emit('updateReadyStatus', currentRoom.users);
+        io.to(currentRoom.id).emit('updateReadyStatus', toPublicUsers(currentRoom.users));
 
         const allReady = currentRoom.users.every(u => u.readyStatus === 'ready');
         if (allReady && currentRoom.users.length >= 2) {
-          io.to(currentRoom.id).emit('allReady', currentRoom.users);
+          io.to(currentRoom.id).emit('allReady', toPublicUsers(currentRoom.users));
           await startGameCountdown(io, currentRoom.id);
         } else {
           clearGameCountdown(io, currentRoom.id, 'not-all-ready');
@@ -159,9 +166,9 @@ module.exports = function(socket, io) {
           centerCardsGained: result.centerCardsGained || 0,
           discardedCardsGained: result.discardedCardsGained || 0,
           newScore: result.newScore || 0,
-          discardedCard: result.discardedCard,
           centerCards: result.centerCards,
-          discardedCards: result.discardedCards
+          // 버림 더미는 뒤집어 놓은 카드이므로 내용(과일/개수)은 보내지 않고 장수만 보낸다
+          discardedCount: (result.discardedCards || []).length
         });
 
         // 결과 직후 최신 게임 상태를 같은 락 안에서 전송한다.

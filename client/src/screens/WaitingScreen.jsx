@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext.jsx';
 import Navbar from '../components/Navbar.jsx';
 import PlayerCard from '../components/PlayerCard.jsx';
 import CountdownOverlay from '../components/CountdownOverlay.jsx';
+import ChatPanel from '../components/ChatPanel.jsx';
 import Icon from '../components/Icon.jsx';
 
 export default function WaitingScreen() {
@@ -101,6 +102,10 @@ export default function WaitingScreen() {
             ? '모든 플레이어가 준비하면 게임이 시작됩니다.'
             : '최소 2명이 필요합니다.'}
         </p>
+
+        <div className="chat-wrap">
+          <ChatPanel variant="inline" />
+        </div>
       </div>
 
       <CountdownOverlay value={countdown} sub={countdownSub} />

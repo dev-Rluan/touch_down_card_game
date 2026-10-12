@@ -120,7 +120,8 @@ const buildGameState = (room) => {
     phase: room.gameState.phase,
     currentTurn: room.gameState.currentTurn,
     centerCards: room.gameState.centerCards,
-    discardedCards: room.gameState.discardedCards || [],
+    // 버림 더미는 뒤집어 놓은 카드 — 내용은 공개하지 않고 장수만
+    discardedCount: (room.gameState.discardedCards || []).length,
     remainingDeck: room.gameState.remainingDeck,
     players: room.users.map(user => ({
       id: user.id,

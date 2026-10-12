@@ -18,12 +18,15 @@ const initialState = {
   playerStacks: {},        // { [playerId]: { cards: [], name: '' } }
   gameStatePlayers: [],    // gameState에서 온 { id, name, cardCount }[]
   currentTurn: 0,
-  discardedCards: [],
+  discardedCount: 0,       // 버림 더미 장수 (뒤집어 놓은 카드라 내용은 모른다)
   countdown: null,         // null | number | 'GO!'
   countdownSub: '',
   halliGalliResult: null,  // 최근 벨 결과
   gameResult: null,        // { winner, finalScores }
   connectError: false,
+  chat: [],                // [{ userId, name, text, ts }] 같은 방의 채팅 (최근 100건)
+  chatUnread: 0,
+  chatOpen: false,         // 게임 화면의 채팅 시트가 열려 있는지
   notification: null,      // { message, type } 일시 알림
 };
 
@@ -51,6 +54,7 @@ function reducer(state, action) {
     case 'ROOM_JOINED':
       return {
         ...state,
+        ...(state.roomId !== action.room.id ? { chat: [], chatUnread: 0, chatOpen: false } : null),
         screen: 'waiting',
         roomId: action.room.id,
         roomName: action.room.name,
@@ -61,6 +65,9 @@ function reducer(state, action) {
     case 'ROOM_LEFT':
       return {
         ...state,
+        chat: [],
+        chatUnread: 0,
+        chatOpen: false,
         screen: 'lobby',
         roomId: null,
         roomName: '',
@@ -70,7 +77,7 @@ function reducer(state, action) {
         playerStacks: {},
         gameStatePlayers: [],
         currentTurn: 0,
-        discardedCards: [],
+        discardedCount: 0,
         gameResult: null,
       };
 
@@ -115,7 +122,7 @@ function reducer(state, action) {
         countdownSub: '',
         gameStatePlayers: action.players || [],
         playerStacks: stacks,
-        discardedCards: [],
+        discardedCount: 0,
         gameResult: null,
       };
     }
@@ -152,7 +159,7 @@ function reducer(state, action) {
     }
 
     case 'GAME_STATE': {
-      // { players: [{id, name, cardCount}], currentTurn, discardedCards }
+      // { players: [{id, name, cardCount}], currentTurn, discardedCount }
       const newIsMyTurn = action.players
         ? action.currentTurn < action.players.length &&
           action.players[action.currentTurn]?.id === state.mySocketId
@@ -161,7 +168,7 @@ function reducer(state, action) {
         ...state,
         gameStatePlayers: action.players || state.gameStatePlayers,
         currentTurn: action.currentTurn ?? state.currentTurn,
-        discardedCards: action.discardedCards || state.discardedCards,
+        discardedCount: action.discardedCount ?? state.discardedCount,
         isMyTurn: newIsMyTurn,
       };
     }
@@ -177,7 +184,7 @@ function reducer(state, action) {
         ...state,
         halliGalliResult: action,
         playerStacks: newStacks,
-        discardedCards: action.success ? [] : (action.discardedCards || state.discardedCards),
+        discardedCount: action.success ? 0 : (action.discardedCount ?? state.discardedCount),
       };
     }
 
@@ -195,6 +202,22 @@ function reducer(state, action) {
         // 서버가 종료 시 모든 유저를 waiting 으로 되돌리므로 동기화
         users: state.users.map(u => ({ ...u, readyStatus: 'waiting' })),
       };
+
+    case 'CHAT_MESSAGE': {
+      const msg = { userId: action.userId, name: action.name, text: action.text, ts: action.ts };
+      const mine = msg.userId === state.mySocketId;
+      return {
+        ...state,
+        chat: [...state.chat, msg].slice(-100),
+        chatUnread: state.chatOpen || mine ? state.chatUnread : state.chatUnread + 1,
+      };
+    }
+
+    case 'CHAT_OPEN':
+      return { ...state, chatOpen: true, chatUnread: 0 };
+
+    case 'CHAT_CLOSE':
+      return { ...state, chatOpen: false };
 
     case 'SHOW_NOTIFICATION':
       return { ...state, notification: { message: action.message, type: action.notifType } };
@@ -317,10 +340,14 @@ export function GameProvider({ children }) {
       dispatch({ type: 'GAME_END', ...data });
     });
 
+    socket.on('chat message', (msg) => {
+      if (msg && typeof msg.text === 'string') dispatch({ type: 'CHAT_MESSAGE', ...msg });
+    });
+
     // 서버 에러 이벤트 → 사용자 알림
     const errorEvents = [
       'createRoomError', 'roomListError', 'faildJoinRoom', 'readyError',
-      'playCardError', 'halliGalliError', 'gameStateError', 'name change error',
+      'playCardError', 'halliGalliError', 'gameStateError', 'name change error', 'chatError',
     ];
     errorEvents.forEach(evt => {
       socket.on(evt, (message) => {

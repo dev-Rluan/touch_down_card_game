@@ -29,6 +29,7 @@ const userService = require('../../services/userServices');
 const roomService = require('../../services/roomService');
 const gameService = require('../../services/gameService');
 const registerGameEvents = require('../../socket/gameEvents');
+const registerRoomEvents = require('../../socket/roomEvents');
 
 // ── 가짜 소켓/io ──────────────────────────────────────────────────────────────
 function makeIo() {
@@ -46,10 +47,14 @@ function makeSocket(id, io) {
     id,
     on: (ev, fn) => { handlers[ev] = fn; },
     emit: (event, payload) => own.push({ event, payload }),
+    to: (target) => ({ emit: (event, payload) => io.emitted.push({ to: target, event, payload, from: id }) }),
+    join: () => {},
+    leave: () => {},
     own,
     fire: (ev, ...args) => handlers[ev](...args),
   };
   registerGameEvents(socket, io);
+  registerRoomEvents(socket, io);
   return socket;
 }
 
@@ -215,10 +220,16 @@ describe('halliGalli 핸들러', () => {
 
     const result = io.emitted.find(e => e.event === 'halliGalliResult').payload;
     expect(result.success).toBe(false);
-    expect(result.discardedCard).toEqual(bottom);
+    // 버림 더미는 뒤집어 놓은 카드: 내용은 보내지 않고 장수만 보낸다
+    expect(result).not.toHaveProperty('discardedCard');
+    expect(result).not.toHaveProperty('discardedCards');
+    expect(result.discardedCount).toBe(1);
     const after = await load();
     expect(after.users[1].cardPack).toHaveLength(p.cardPack.length - 1);
-    expect(after.gameState.discardedCards).toEqual([bottom]);
+    expect(after.gameState.discardedCards).toEqual([bottom]); // 서버에는 그대로 저장
+    const gs = io.emitted.find(e => e.event === 'gameState').payload;
+    expect(gs.discardedCount).toBe(1);
+    expect(gs).not.toHaveProperty('discardedCards');
   });
 
   test('벨 처리에 필요한 Redis 명령은 3개(방ID 조회, 방 읽기, 방 저장)뿐이다', async () => {
@@ -261,5 +272,64 @@ describe('ready 핸들러', () => {
     const s = makeSocket('x', io);
     await s.fire('ready');
     expect(s.own.at(-1)).toEqual({ event: 'readyError', payload: '참여 중인 방이 없습니다.' });
+  });
+});
+
+describe('정보 비공개 (숨겨진 카드가 클라이언트로 새지 않는다)', () => {
+  const secretKeys = /"cardPack"|"discardedCards"|"discardedCard"/;
+  const leaks = (io, { exceptEvents = [] } = {}) =>
+    io.emitted.filter(e => !exceptEvents.includes(e.event) && secretKeys.test(JSON.stringify(e.payload)));
+
+  test('게임 중 ready 는 거부되고 다른 플레이어의 손패가 전송되지 않는다', async () => {
+    const { io, byId, load } = await setupGame(3);
+    const room = await load();
+    const statusBefore = room.users.map(u => u.readyStatus);
+    io.emitted.length = 0;
+
+    await byId[room.users[1].id].fire('ready');
+
+    expect(byId[room.users[1].id].own.at(-1)).toEqual({ event: 'readyError', payload: '게임이 진행 중입니다.' });
+    expect(io.emitted).toHaveLength(0);
+    expect((await load()).users.map(u => u.readyStatus)).toEqual(statusBefore);
+  });
+
+  test('게임 중 누군가 나가도 남은 사람들에게 가는 leaveUser 에 손패가 없다', async () => {
+    const { io, byId, roomId, load } = await setupGame(3);
+    const room = await load();
+    io.emitted.length = 0;
+
+    await byId[room.users[1].id].fire('leaveRoom', roomId);
+
+    const leave = io.emitted.find(e => e.event === 'leaveUser');
+    expect(leave).toBeDefined();
+    expect(leave.payload.users.every(u => typeof u.cardCount === 'number')).toBe(true);
+    expect(leaks(io)).toEqual([]);
+  });
+
+  test('방 생성/입장/목록 이벤트에 손패·게임 상태가 없다', async () => {
+    const io = makeIo();
+    for (const id of ['x', 'y']) await userService.connectUser(id, id);
+    const x = makeSocket('x', io), y = makeSocket('y', io);
+    await x.fire('createRoom', '공개방', 2);
+    const rooms = io.emitted.filter(e => e.event === 'roomList');
+    expect(rooms.length).toBeGreaterThan(0);
+    const created = x.own.find(e => e.event === 'roomCreated');
+    await y.fire('joinRoom', created.payload.id);
+    expect(Object.keys(created.payload).sort()).toEqual(['id', 'maxUserCnt', 'name', 'status', 'users']);
+    expect(leaks(io)).toEqual([]);
+    expect(y.own.filter(e => secretKeys.test(JSON.stringify(e.payload)))).toEqual([]);
+  });
+
+  test('카드 내기/벨/종료까지 한 판 동안 yourHand 외에는 손패가 전송되지 않는다', async () => {
+    const { io, byId, load } = await setupGame(2);
+    io.emitted.length = 0;
+    for (let i = 0; i < 6; i++) {
+      const room = await load();
+      if (room.status !== 'playing') break;
+      await byId[room.users[room.gameState.currentTurn].id].fire('playCard', 0);
+    }
+    expect(leaks(io, { exceptEvents: ['yourHand'] })).toEqual([]);
+    // yourHand 는 각 플레이어 본인에게만 간다
+    io.emitted.filter(e => e.event === 'yourHand').forEach(e => expect(e.to).toMatch(/^sock\d$/));
   });
 });
