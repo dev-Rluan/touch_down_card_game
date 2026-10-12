@@ -6,6 +6,7 @@ const roomService = require('../services/roomService');
 const { clearGameCountdown } = require('../utils/gameCountdown');
 const { limiters } = require('../utils/socketRateLimiter');
 const { generateNickname, sanitizeNickname } = require('../utils/nickname');
+const { withRoomLock } = require('../utils/roomLock');
 
 /**
  * 사용자 관련 이벤트 핸들러 등록
@@ -107,20 +108,25 @@ module.exports = function(socket, io) {
     try {
       console.log(`[Socket] 클라이언트 연결 해제: ${socket.id}`);
 
-      const currentRoom = await roomService.getRoomByUser(socket.id);
-      if (currentRoom) {
-        const result = await roomService.leaveRoom(socket.id, currentRoom.id);
-        clearGameCountdown(io, currentRoom.id, 'user-disconnected');
+      // 여러 명이 동시에 끊겨도 방 상태(JSON 통째 읽고-쓰기)가 서로 덮어쓰이지 않도록 방 단위로 직렬화
+      const roomId = await userService.getUserRoom(socket.id);
+      if (roomId) {
+        await withRoomLock(roomId, async () => {
+          const currentRoom = await roomService.getRoomByUser(socket.id);
+          if (!currentRoom) return;
+          const result = await roomService.leaveRoom(socket.id, currentRoom.id);
+          clearGameCountdown(io, currentRoom.id, 'user-disconnected');
 
-        if (!result.roomRemoved) {
-          socket.to(currentRoom.id).emit('leaveUser', {
-            users: result.updatedUsers,
-            newManager: result.newManager
-          });
-        }
+          if (!result.roomRemoved) {
+            socket.to(currentRoom.id).emit('leaveUser', {
+              users: result.updatedUsers,
+              newManager: result.newManager
+            });
+          }
 
-        const rooms = await roomService.getWaitingRooms();
-        io.to('lobby').emit('roomList', rooms);
+          const rooms = await roomService.getWaitingRooms();
+          io.to('lobby').emit('roomList', rooms);
+        });
       }
 
       await userService.disconnectUser(socket.id);

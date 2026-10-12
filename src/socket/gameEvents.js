@@ -12,6 +12,28 @@ const achievementService = require('../services/achievementService');
 const dailyMissionService = require('../services/dailyMissionService');
 
 /**
+ * 소켓 유저가 속한 방을 방 락 안에서 **한 번만** 읽어 fn 에 넘긴다.
+ *  - 방 ID 조회(HGET) 1회 + 방 읽기(GET) 1회. 이후 서비스 함수들은 이 객체를 재사용하므로
+ *    같은 방을 여러 번 읽지 않는다 (Redis 가 멀리 있을수록 왕복 횟수가 곧 지연이다).
+ *  - 락 덕분에 읽기~저장 사이에 같은 방의 다른 요청이 끼어들지 않는다.
+ */
+async function withUserRoom(socket, errorEvent, fn) {
+  const roomId = await userService.getUserRoom(socket.id);
+  if (!roomId) {
+    socket.emit(errorEvent, '참여 중인 방이 없습니다.');
+    return;
+  }
+  await withRoomLock(roomId, async () => {
+    const room = await roomService.getRoomById(roomId);
+    if (!room) {
+      socket.emit(errorEvent, '참여 중인 방이 없습니다.');
+      return;
+    }
+    await fn(room);
+  });
+}
+
+/**
  * 게임 관련 이벤트 핸들러 등록
  * @param {Socket} socket - Socket.IO Socket Instance
  * @param {Server} io - Socket.IO Server Instance
@@ -26,15 +48,7 @@ module.exports = function(socket, io) {
       return;
     }
     try {
-      const lockRoomId = await userService.getUserRoom(socket.id);
-      if (!lockRoomId) { socket.emit('readyError', '참여 중인 방이 없습니다.'); return; }
-      await withRoomLock(lockRoomId, async () => {
-        const currentRoom = await roomService.getRoomByUser(socket.id);
-        if (!currentRoom) {
-          socket.emit('readyError', '참여 중인 방이 없습니다.');
-          return;
-        }
-
+      await withUserRoom(socket, 'readyError', async (currentRoom) => {
         const user = currentRoom.users.find(u => u.id === socket.id);
         if (!user) {
           socket.emit('readyError', '사용자를 찾을 수 없습니다.');
@@ -42,7 +56,7 @@ module.exports = function(socket, io) {
         }
 
         user.readyStatus = user.readyStatus === 'ready' ? 'waiting' : 'ready';
-        await roomService.saveRoomState(currentRoom);
+        await roomService.saveRoomState(currentRoom, { reindex: false });
         io.to(currentRoom.id).emit('updateReadyStatus', currentRoom.users);
 
         const allReady = currentRoom.users.every(u => u.readyStatus === 'ready');
@@ -89,39 +103,30 @@ module.exports = function(socket, io) {
       return;
     }
     try {
-      const lockRoomId = await userService.getUserRoom(socket.id);
-      if (!lockRoomId) { socket.emit('playCardError', '참여 중인 방이 없습니다.'); return; }
-      await withRoomLock(lockRoomId, async () => {
-        const currentRoom = await roomService.getRoomByUser(socket.id);
-        if (!currentRoom) {
-          socket.emit('playCardError', '참여 중인 방이 없습니다.');
-          return;
-        }
-
-        const result = await gameService.playCard(currentRoom.id, socket.id, cardIndex);
-        const playerName = await userService.getUserName(socket.id);
-        io.to(currentRoom.id).emit('cardPlayed', {
+      await withUserRoom(socket, 'playCardError', async (room) => {
+        // 읽어 둔 room 을 서비스에 넘겨 재사용한다 (저장도 여기서 1회)
+        const result = await gameService.playCard(room.id, socket.id, cardIndex, room);
+        const playerName = room.users.find(u => u.id === socket.id)?.name || null;
+        io.to(room.id).emit('cardPlayed', {
           playerId: socket.id,
           playerName,
           result
         });
 
-        const latestRoom = await roomService.getRoomById(currentRoom.id);
-        if (latestRoom && Array.isArray(latestRoom.users)) {
-          latestRoom.users.forEach(u => {
-            try {
-              io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
-            } catch (e) {
-              console.error('[yourHand update Error]', e);
-            }
-          });
-        }
+        // playCard 가 room 을 변경·저장했으므로 같은 객체의 손패가 최신 상태다
+        room.users.forEach(u => {
+          try {
+            io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
+          } catch (e) {
+            console.error('[yourHand update Error]', e);
+          }
+        });
 
-        const gameEndResult = await gameService.checkGameEnd(currentRoom.id);
+        const gameEndResult = await gameService.checkGameEnd(room.id, room);
         if (gameEndResult.isEnded) {
-          io.to(currentRoom.id).emit('gameEnd', gameEndResult);
+          io.to(room.id).emit('gameEnd', gameEndResult);
           // 리텐션 훅: 게임 종료 시 랭킹/업적/미션 비동기 갱신
-          setImmediate(() => handleGameEndRetention(io, latestRoom, gameEndResult));
+          setImmediate(() => handleGameEndRetention(io, room, gameEndResult));
         }
 
         console.log(`[Game] 카드 내기 - 플레이어: ${playerName}, 카드 인덱스: ${cardIndex}`);
@@ -141,18 +146,12 @@ module.exports = function(socket, io) {
       return;
     }
     try {
-      const lockRoomId = await userService.getUserRoom(socket.id);
-      if (!lockRoomId) { socket.emit('halliGalliError', '참여 중인 방이 없습니다.'); return; }
-      await withRoomLock(lockRoomId, async () => {
-        const currentRoom = await roomService.getRoomByUser(socket.id);
-        if (!currentRoom) {
-          socket.emit('halliGalliError', '참여 중인 방이 없습니다.');
-          return;
-        }
-
-        const result = await gameService.handleHalliGalli(currentRoom.id, socket.id);
-        const playerName = await userService.getUserName(socket.id);
-        io.to(currentRoom.id).emit('halliGalliResult', {
+      await withUserRoom(socket, 'halliGalliError', async (room) => {
+        const result = await gameService.handleHalliGalli(room.id, socket.id, room);
+        const playerName = result.playerName
+          || room.users.find(u => u.id === socket.id)?.name
+          || null;
+        io.to(room.id).emit('halliGalliResult', {
           playerId: socket.id,
           playerName,
           success: result.success,
@@ -165,14 +164,13 @@ module.exports = function(socket, io) {
           discardedCards: result.discardedCards
         });
 
-        setTimeout(async () => {
-          try {
-            const gameState = await gameService.getGameState(currentRoom.id);
-            io.to(currentRoom.id).emit('gameState', gameState);
-          } catch (err) {
-            console.error('[gameState emit Error]', err);
-          }
-        }, 100);
+        // 결과 직후 최신 게임 상태를 같은 락 안에서 전송한다.
+        // (예전에는 100ms 뒤에 방을 다시 읽었는데, 그 사이 다음 카드가 나오면 오래된 상태가 덮어쓸 수 있었다)
+        try {
+          io.to(room.id).emit('gameState', gameService.buildGameState(room));
+        } catch (err) {
+          console.error('[gameState emit Error]', err);
+        }
 
         // 벨 성공 시 bellRings 업적/미션 갱신 (비동기)
         if (result.success) {

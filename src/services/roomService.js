@@ -18,9 +18,18 @@ async function fetchRoom(roomId) {
   return raw ? JSON.parse(raw) : null;
 }
 
-async function persistRoom(room) {
+/**
+ * 방 저장
+ * @param {Object} room
+ * @param {{reindex?: boolean}} [options]
+ *   reindex=false 이면 방 데이터만 저장한다. 이름 색인(ROOM_NAME_HASH)과 대기 방 목록(WAITING_ROOMS_SET)은
+ *   방 생성/입장/퇴장/게임 시작/종료처럼 이름·상태가 바뀔 때만 갱신하면 되므로,
+ *   카드 내기·벨 같은 게임 중 고빈도 경로에서는 끄고 Redis 명령 수를 줄인다.
+ */
+async function persistRoom(room, { reindex = true } = {}) {
   const redis = await ensureRedisConnection();
   await redis.set(getRoomKey(room.id), JSON.stringify(room));
+  if (!reindex) return;
   await redis.hSet(ROOM_NAME_HASH, room.name, room.id);
   if (room.status === 'waiting') {
     await redis.sAdd(WAITING_ROOMS_SET, room.id);
@@ -215,8 +224,8 @@ async function updateRoomStatus(roomId, status) {
   return true;
 }
 
-async function saveRoomState(room) {
-  await persistRoom(room);
+async function saveRoomState(room, options) {
+  await persistRoom(room, options);
 }
 
 module.exports = {

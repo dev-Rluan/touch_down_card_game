@@ -3,6 +3,7 @@ import { useGame } from '../context/GameContext.jsx';
 import Navbar from '../components/Navbar.jsx';
 import PlayerCard from '../components/PlayerCard.jsx';
 import CountdownOverlay from '../components/CountdownOverlay.jsx';
+import Icon from '../components/Icon.jsx';
 
 export default function WaitingScreen() {
   const { state, emit } = useGame();
@@ -37,7 +38,7 @@ export default function WaitingScreen() {
               <span className="badge bg-primary">{totalCount} / {maxUserCnt}</span>
             </div>
             <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
-              <i className="icon ion-log-out me-1" />나가기
+              <Icon name="log-out" className="me-1" />나가기
             </button>
           </div>
 
@@ -89,8 +90,8 @@ export default function WaitingScreen() {
             style={{ minWidth: 140 }}
           >
             {isReady
-              ? <><i className="icon ion-pause me-2" />준비 취소</>
-              : <><i className="icon ion-checkmark me-2" />Ready</>
+              ? <><Icon name="pause" className="me-2" />준비 취소</>
+              : <><Icon name="checkmark" className="me-2" />Ready</>
             }
           </button>
         </div>

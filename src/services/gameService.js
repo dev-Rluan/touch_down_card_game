@@ -103,8 +103,7 @@ const startGame = async (roomId) => {
  * @param {string} roomId - 방 ID
  * @returns {Object} 게임 상태
  */
-const getGameState = async (roomId) => {
-  const room = await getRoomById(roomId);
+const buildGameState = (room) => {
   if (!room) {
     throw new Error('방을 찾을 수 없습니다.');
   }
@@ -135,15 +134,19 @@ const getGameState = async (roomId) => {
   };
 };
 
+const getGameState = async (roomId) => buildGameState(await getRoomById(roomId));
+
 /**
  * 카드 내기
  * @param {string} roomId - 방 ID
  * @param {string} playerId - 플레이어 ID
  * @param {number} cardIndex - 내는 카드 인덱스
+ * @param {Object} [preloadedRoom] - 호출자가 이미 읽어 둔 방 객체 (있으면 다시 읽지 않는다).
+ *   호출자는 방 락을 잡은 상태여야 하며, 이 객체가 변경·저장된다.
  * @returns {Object} 카드 내기 결과
  */
-const playCard = async (roomId, playerId, cardIndex) => {
-  const room = await getRoomById(roomId);
+const playCard = async (roomId, playerId, cardIndex, preloadedRoom) => {
+  const room = preloadedRoom || await getRoomById(roomId);
   if (!room || !room.gameState) {
     throw new Error('게임이 시작되지 않았습니다.');
   }
@@ -162,7 +165,7 @@ const playCard = async (roomId, playerId, cardIndex) => {
     if (!playerHasCards(player)) {
       markPlayerActiveState(player);
       advanceTurn(room);
-      await saveRoomState(room);
+      await saveRoomState(room, { reindex: false });
       throw new Error('카드가 없어 탈락했습니다.');
     }
     throw new Error('유효하지 않은 카드입니다.');
@@ -191,7 +194,8 @@ const playCard = async (roomId, playerId, cardIndex) => {
 
   console.log(`[Game] 카드 내기 - 플레이어: ${player.name}, 카드: ${playedCard.fruit} ${playedCard.count}개`);
 
-  await saveRoomState(room);
+  // 게임 중에는 방 이름/상태가 바뀌지 않으므로 색인 갱신 생략
+  await saveRoomState(room, { reindex: false });
 
   return {
     playedCard,
@@ -209,10 +213,11 @@ const halliGalliLocks = new Set();
  * 할리갈리 처리
  * @param {string} roomId - 방 ID
  * @param {string} playerId - 플레이어 ID
+ * @param {Object} [preloadedRoom] - 호출자가 이미 읽어 둔 방 객체 (playCard 와 동일한 규칙)
  * @returns {Object} 할리갈리 처리 결과
  */
-const handleHalliGalli = async (roomId, playerId) => {
-  const room = await getRoomById(roomId);
+const handleHalliGalli = async (roomId, playerId, preloadedRoom) => {
+  const room = preloadedRoom || await getRoomById(roomId);
   if (!room || !room.gameState) {
     throw new Error('게임이 시작되지 않았습니다.');
   }
@@ -276,7 +281,7 @@ const handleHalliGalli = async (roomId, playerId) => {
     console.log(`[Game] 할리갈리 성공! - 플레이어: ${player.name}, 획득: 중앙 ${centerCardsCount}장 + 버림 ${discardedCardsCount}장 = 총 ${totalCardsGained}점, 현재 덱: ${player.cardPack.length}장`);
 
     markPlayerActiveState(player);
-    await saveRoomState(room);
+    await saveRoomState(room, { reindex: false });
 
     return {
       success: true,
@@ -299,7 +304,7 @@ const handleHalliGalli = async (roomId, playerId) => {
 
       markPlayerActiveState(player);
       normalizeCurrentTurn(room);
-      await saveRoomState(room);
+      await saveRoomState(room, { reindex: false });
 
       return {
         success: false,
@@ -313,7 +318,7 @@ const handleHalliGalli = async (roomId, playerId) => {
     // 카드가 없을 경우에도 실패 응답
     markPlayerActiveState(player);
     normalizeCurrentTurn(room);
-    await saveRoomState(room);
+    await saveRoomState(room, { reindex: false });
 
     return {
       success: false,
@@ -330,10 +335,11 @@ const handleHalliGalli = async (roomId, playerId) => {
 /**
  * 게임 종료 확인
  * @param {string} roomId - 방 ID
+ * @param {Object} [preloadedRoom] - 호출자가 이미 읽어 둔 방 객체 (playCard 와 동일한 규칙)
  * @returns {Object} 게임 종료 정보
  */
-const checkGameEnd = async (roomId) => {
-  const room = await getRoomById(roomId);
+const checkGameEnd = async (roomId, preloadedRoom) => {
+  const room = preloadedRoom || await getRoomById(roomId);
   if (!room || !room.gameState) {
     return { isEnded: false };
   }
@@ -408,6 +414,7 @@ const resetGame = async (roomId) => {
 module.exports = { 
   startGame, 
   getGameState, 
+  buildGameState, 
   playCard, 
   handleHalliGalli, 
   checkGameEnd, 

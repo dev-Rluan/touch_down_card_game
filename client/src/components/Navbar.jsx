@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import ThemePicker from './ThemePicker.jsx';
+import Icon from './Icon.jsx';
 
 export default function Navbar() {
   const { state, emit } = useGame();
@@ -45,7 +46,7 @@ export default function Navbar() {
               onClick={() => { setNickInput(state.nickname); setEditingNick(true); }}
               title="닉네임 변경"
             >
-              <i className="icon ion-person" />
+              <Icon name="person" />
               <span className="text-truncate" style={{ maxWidth: 110 }}>{state.nickname}</span>
             </button>
           )}

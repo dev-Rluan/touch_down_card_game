@@ -52,14 +52,22 @@ app.use((req, res, next) => {
 });
 
 // 헬스체크 (Redis 연결 상태 포함)
+// 호스팅의 헬스체크가 수 초~수십 초마다 호출하므로, Redis PING 결과를 짧게 캐시해
+// 종량제 Redis(Upstash 등)의 명령 수를 낭비하지 않는다.
+const HEALTH_CACHE_MS = 15000;
+let healthCache = { at: 0, ok: false };
 app.get('/healthz', async (req, res) => {
-  try {
-    const redis = await ensureRedisConnection();
-    await redis.ping();
-    res.json({ status: 'ok' });
-  } catch (err) {
-    res.status(503).json({ status: 'error' });
+  const now = Date.now();
+  if (now - healthCache.at > HEALTH_CACHE_MS) {
+    try {
+      const redis = await ensureRedisConnection();
+      await redis.ping();
+      healthCache = { at: now, ok: true };
+    } catch (err) {
+      healthCache = { at: now, ok: false };
+    }
   }
+  res.status(healthCache.ok ? 200 : 503).json({ status: healthCache.ok ? 'ok' : 'error' });
 });
 
 app.use(express.json({ limit: '10kb' }));
@@ -99,6 +107,15 @@ if (accountsEnabled) {
   app.use('/api', require('./routes/api'));
   app.use('/api/shop', require('./routes/shop'));
 }
+
+// ── ads.txt (AdSense 승인/수익 인증용) ────────────────────────────────────────
+// ADSENSE_PUBLISHER_ID(ca-pub-XXXXXXXXXXXXXXXX)가 설정된 경우에만 제공한다.
+// SPA 폴백보다 먼저 등록해야 index.html 이 대신 응답되지 않는다.
+app.get('/ads.txt', (req, res) => {
+  const match = /^ca-(pub-\d{10,20})$/.exec(process.env.ADSENSE_PUBLISHER_ID || '');
+  if (!match) return res.status(404).type('text/plain').send('Not found');
+  res.type('text/plain').send(`google.com, ${match[1]}, DIRECT, f08c47fec0942fa0\n`);
+});
 
 // ── 정적 파일 및 클라이언트 설정 ──────────────────────────────────────────────
 // 정적 파일: 7일 브라우저 캐싱 (JS/CSS 변경 시 파일명에 버전 포함 권장)
@@ -154,7 +171,8 @@ if (fs.existsSync(clientDist)) {
       req.path.startsWith('/auth') ||
       req.path.startsWith('/socket.io') ||
       req.path.startsWith('/public') ||
-      req.path === '/env.js'
+      req.path === '/env.js' ||
+      req.path === '/ads.txt'
     ) return next();
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(clientDist, 'index.html'));
@@ -182,7 +200,17 @@ const PORT = process.env.PORT || 3000;
 
 async function bootstrap() {
   try {
-    await ensureRedisConnection();
+    // 비밀번호 오류 등으로 Redis 에 붙지 못하면 node-redis 는 에러 없이 재시도만 반복한다.
+    // 컨테이너가 "실행 중"처럼 보이는 채로 멈추지 않도록, 제한 시간 안에 못 붙으면 종료해
+    // 호스팅/Docker 의 자동 재시작과 알림이 동작하게 한다.
+    const connectTimeoutMs = parseInt(process.env.REDIS_CONNECT_TIMEOUT_MS || '20000', 10);
+    let timer;
+    await Promise.race([
+      ensureRedisConnection(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Redis 연결 시간 초과 (${connectTimeoutMs}ms) — REDIS_URL/비밀번호를 확인하세요`)), connectTimeoutMs);
+      }),
+    ]).finally(() => clearTimeout(timer));
     // 이전 프로세스가 남긴 방/유저 데이터 정리 (재배포 후 유령 방 방지)
     await resetRuntimeState();
     server.listen(PORT, () => {
