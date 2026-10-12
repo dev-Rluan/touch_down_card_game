@@ -76,8 +76,13 @@ async function setupGame(playerCount = 2) {
 }
 const resetCalls = () => { mockCalls.length = 0; };
 
+const { limiters } = require('../../utils/socketRateLimiter');
+
 beforeEach(() => {
   mockStore.kv.clear(); mockStore.hash.clear(); mockStore.set.clear(); resetCalls();
+  // 속도 제한기는 프로세스 전역 상태이므로 테스트 간에 격리한다
+  ['sock0', 'sock1', 'sock2', 'sock3', 'a', 'b', 'x', 'y', 'lonely'].forEach(id =>
+    Object.values(limiters).forEach(l => l.reset(id)));
 });
 
 describe('playCard 핸들러', () => {
@@ -230,6 +235,27 @@ describe('halliGalli 핸들러', () => {
     const gs = io.emitted.find(e => e.event === 'gameState').payload;
     expect(gs.discardedCount).toBe(1);
     expect(gs).not.toHaveProperty('discardedCards');
+  });
+
+  test('벨 성공 후 각자의 손패(yourHand)가 최신으로 다시 전송된다', async () => {
+    const { io, byId, room, load } = await gameWithStacks([{ fruit: 'banana', count: 2 }, { fruit: 'banana', count: 3 }]);
+    const winner = room.users[0];
+    io.emitted.length = 0;
+    await byId[winner.id].fire('halliGalli');
+    const after = await load();
+    const hands = io.emitted.filter(e => e.event === 'yourHand');
+    expect(hands.map(h => h.to).sort()).toEqual(after.users.map(u => u.id).sort());
+    hands.forEach(h => expect(h.payload.cards).toHaveLength(after.users.find(u => u.id === h.to).cardPack.length));
+    expect(hands.find(h => h.to === winner.id).payload.cards).toHaveLength(room.users[0].cardPack.length + 2);
+  });
+
+  test('벨 실패 후에도 손패가 다시 전송된다 (버린 1장이 반영)', async () => {
+    const { io, byId, room } = await gameWithStacks([{ fruit: 'banana', count: 1 }, { fruit: 'lemon', count: 2 }]);
+    const p = room.users[1];
+    io.emitted.length = 0;
+    await byId[p.id].fire('halliGalli');
+    const mine = io.emitted.filter(e => e.event === 'yourHand').find(h => h.to === p.id);
+    expect(mine.payload.cards).toHaveLength(p.cardPack.length - 1);
   });
 
   test('벨 처리에 필요한 Redis 명령은 3개(방ID 조회, 방 읽기, 방 저장)뿐이다', async () => {

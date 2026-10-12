@@ -13,6 +13,20 @@ const achievementService = require('../services/achievementService');
 const dailyMissionService = require('../services/dailyMissionService');
 
 /**
+ * 방의 모든 플레이어에게 각자의 손패를 보낸다 (본인에게만 전달 — io.to(socketId)).
+ * 카드 수가 바뀌는 모든 동작(카드 내기, 벨 성공/실패) 뒤에 호출해 화면의 "내 덱 N장"을 최신으로 유지한다.
+ */
+function emitHands(io, room) {
+  room.users.forEach(u => {
+    try {
+      io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
+    } catch (e) {
+      console.error('[yourHand update Error]', e);
+    }
+  });
+}
+
+/**
  * 소켓 유저가 속한 방을 방 락 안에서 **한 번만** 읽어 fn 에 넘긴다.
  *  - 방 ID 조회(HGET) 1회 + 방 읽기(GET) 1회. 이후 서비스 함수들은 이 객체를 재사용하므로
  *    같은 방을 여러 번 읽지 않는다 (Redis 가 멀리 있을수록 왕복 횟수가 곧 지연이다).
@@ -121,13 +135,7 @@ module.exports = function(socket, io) {
         });
 
         // playCard 가 room 을 변경·저장했으므로 같은 객체의 손패가 최신 상태다
-        room.users.forEach(u => {
-          try {
-            io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
-          } catch (e) {
-            console.error('[yourHand update Error]', e);
-          }
-        });
+        emitHands(io, room);
 
         const gameEndResult = await gameService.checkGameEnd(room.id, room);
         if (gameEndResult.isEnded) {
@@ -178,6 +186,9 @@ module.exports = function(socket, io) {
         } catch (err) {
           console.error('[gameState emit Error]', err);
         }
+
+        // 벨 성공(카드 획득)/실패(카드 1장 버림) 모두 손패가 바뀌므로 각자의 손패를 다시 보낸다
+        emitHands(io, room);
 
         // 벨 성공 시 bellRings 업적/미션 갱신 (비동기)
         if (result.success) {
