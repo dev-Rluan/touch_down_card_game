@@ -185,6 +185,23 @@ async function leaveRoom(socketId, roomId) {
     newManager = room.users[0];
   }
 
+  // 게임 중 퇴장: 차례(currentTurn)는 users 배열의 "위치"를 가리키므로 퇴장자의 위치에 맞춰 보정하지 않으면
+  // 엉뚱한 사람이 차례를 가져가거나 아무도 낼 수 없는 상태가 된다.
+  if (room.status === 'playing' && room.gameState) {
+    const turn = room.gameState.currentTurn ?? 0;
+    if (userIndex < turn) {
+      room.gameState.currentTurn = turn - 1; // 앞사람이 빠지면 한 칸 당겨 같은 사람이 계속 차례를 가진다
+    }
+    // userIndex === turn: 인덱스 유지 → 배열이 당겨져 다음 사람이 차례를 이어받는다
+    if (room.gameState.currentTurn >= room.users.length) {
+      room.gameState.currentTurn = 0;
+    }
+    // 퇴장자가 바닥에 낸 카드 더미는 벨 판정(맨 위 카드 합)에 영향을 주지 않도록 제거
+    if (room.gameState.playerStacks) {
+      delete room.gameState.playerStacks[socketId];
+    }
+  }
+
   await persistRoom(room);
 
   return {

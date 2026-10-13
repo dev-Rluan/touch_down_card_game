@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import BellButton from '../components/BellButton.jsx';
 import ThemePicker from '../components/ThemePicker.jsx';
+import ChatPanel from '../components/ChatPanel.jsx';
 import CountdownOverlay from '../components/CountdownOverlay.jsx';
 import Icon from '../components/Icon.jsx';
 
@@ -76,9 +77,10 @@ export default function GameScreen() {
   const { state, emit } = useGame();
   const {
     mySocketId, hand, playerStacks, gameStatePlayers,
-    currentTurn, discardedCards, halliGalliResult,
-    countdown, countdownSub, users, isMyTurn, roomId,
+    currentTurn, discardedCount, halliGalliResult,
+    countdown, countdownSub, users, isMyTurn, roomId, chatUnread,
   } = state;
+  const [showChat, setShowChat] = useState(false);
 
   function handleLeave() {
     if (roomId && window.confirm('게임을 나가시겠습니까?')) emit('leaveRoom', roomId);
@@ -97,17 +99,8 @@ export default function GameScreen() {
   // 플레이어 목록: gameStatePlayers 우선, fallback users
   const players = gameStatePlayers.length > 0 ? gameStatePlayers : users.map(u => ({ ...u, cardCount: 0 }));
 
-  const topCard = discardedCards.length > 0 ? discardedCards[discardedCards.length - 1] : null;
-
   return (
     <div className="game-board d-flex flex-column" style={{ minHeight: '100vh' }}>
-      <div className="game-topbar">
-        <ThemePicker />
-        <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
-          <Icon name="log-out" className="me-1" />나가기
-        </button>
-      </div>
-
       {/* 상단 플레이어 스택 영역 */}
       <div className="player-stacks-area flex-grow-1">
         <div id="playerStacks" className={`d-flex flex-wrap justify-content-center ${players.length > 2 ? 'stacks-many' : ''}`}>
@@ -128,20 +121,39 @@ export default function GameScreen() {
           })}
         </div>
 
-        {/* 버림 카드 더미 */}
-        <div className="discard-area d-flex justify-content-center mb-2">
+        {/* 버림 카드 더미 + 보조 버튼 (왼쪽: 나가기, 오른쪽: 채팅/테마) — 위쪽 헤더 줄을 없애 카드 영역을 올렸다 */}
+        <div className="discard-area">
+          <div className="discard-side discard-side-left">
+            <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
+              <Icon name="log-out" className="me-1" />나가기
+            </button>
+          </div>
+
           <div className="discard-pile-container text-center">
-            <div className="small text-muted mb-1">버림 카드 더미 <span id="discardCount">{discardedCards.length}장</span></div>
-            <div id="discardPile" className="discard-pile">
-              {topCard ? (
+            <div className="small text-muted mb-1">버림 카드 더미 <span id="discardCount">{discardedCount}장</span></div>
+            {/* 버린 카드는 뒤집어 놓은 카드: 내용은 모르고 장수만 보인다 */}
+            <div id="discardPile" className={`discard-pile ${discardedCount > 0 ? 'face-down' : ''}`} data-count={Math.min(discardedCount, 3)}>
+              {discardedCount > 0 ? (
                 <>
-                  <div className="discard-card">{getFruitEmoji(topCard.fruit)}</div>
-                  <div className="discard-card-count">{topCard.count}</div>
+                  <div className="card-back-pattern" />
+                  <div className="discard-back-count">{discardedCount}</div>
                 </>
               ) : (
                 <div className="discard-placeholder">비어 있음</div>
               )}
             </div>
+          </div>
+
+          <div className="discard-side discard-side-right">
+            <button
+              className="btn btn-sm btn-outline-light chat-fab"
+              onClick={() => setShowChat(v => !v)}
+              aria-label="채팅 열기"
+            >
+              <Icon name="chat" className="me-1" />채팅
+              {chatUnread > 0 && !showChat && <span className="chat-badge">{chatUnread > 9 ? '9+' : chatUnread}</span>}
+            </button>
+            <ThemePicker />
           </div>
         </div>
       </div>
@@ -174,6 +186,8 @@ export default function GameScreen() {
           </div>
         </div>
       )}
+
+      {showChat && <ChatPanel variant="sheet" onClose={() => setShowChat(false)} />}
 
       <CountdownOverlay value={countdown} sub={countdownSub} />
     </div>

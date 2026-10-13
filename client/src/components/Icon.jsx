@@ -11,6 +11,8 @@ const PATHS = {
   pause: <><path d="M9 5v14" /><path d="M15 5v14" /></>,
   checkmark: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   plus: <><path d="M12 5v14" /><path d="M5 12h14" /></>,
+  chat: <path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z" />,
+  send: <><path d="M4 12 20 4l-5 16-3-7z" /><path d="m12 13 8-9" /></>,
 };
 
 export default function Icon({ name, size = '1em', className = '', style }) {

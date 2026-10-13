@@ -102,6 +102,9 @@ const limiters = {
 
   // 이름 변경: 5초에 최대 3회
   changeName: createRateLimiter({ maxRequests: 3, windowMs: 5000 }),
+
+  // 채팅: 5초에 최대 5건 (도배 방지)
+  chat: createRateLimiter({ maxRequests: 5, windowMs: 5000 }),
 };
 
 /**

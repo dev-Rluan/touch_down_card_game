@@ -119,8 +119,10 @@ const buildGameState = (room) => {
     status: room.status,
     phase: room.gameState.phase,
     currentTurn: room.gameState.currentTurn,
-    centerCards: room.gameState.centerCards,
-    discardedCards: room.gameState.discardedCards || [],
+    // 중앙 카드는 계속 쌓이는 목록이고 각 더미의 아래 카드는 가려진 카드이므로 장수만 보낸다
+    centerCount: (room.gameState.centerCards || []).length,
+    // 버림 더미는 뒤집어 놓은 카드 — 내용은 공개하지 않고 장수만
+    discardedCount: (room.gameState.discardedCards || []).length,
     remainingDeck: room.gameState.remainingDeck,
     players: room.users.map(user => ({
       id: user.id,
@@ -149,6 +151,11 @@ const playCard = async (roomId, playerId, cardIndex, preloadedRoom) => {
   const room = preloadedRoom || await getRoomById(roomId);
   if (!room || !room.gameState) {
     throw new Error('게임이 시작되지 않았습니다.');
+  }
+
+  // 끝난 게임(phase 'finished', 방은 waiting)에서 카드를 내면 상태가 다시 바뀌므로 거부한다
+  if (room.status !== 'playing' || room.gameState.phase !== 'playing') {
+    throw new Error('게임이 진행 중이 아닙니다.');
   }
 
   normalizeCurrentTurn(room);

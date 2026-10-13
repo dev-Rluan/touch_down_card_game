@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import AdBanner from '../components/AdBanner.jsx';
+import ChatPanel from '../components/ChatPanel.jsx';
 import Icon from '../components/Icon.jsx';
 
 function createConfetti() {
@@ -82,6 +83,10 @@ export default function ResultScreen() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="chat-wrap mb-3">
+            <ChatPanel variant="inline" />
           </div>
 
           {/* AdSense 게임 종료 광고 */}

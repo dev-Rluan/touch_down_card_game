@@ -7,9 +7,25 @@ const userService = require('../services/userServices');
 const { clearGameCountdown, startGameCountdown } = require('../utils/gameCountdown');
 const { limiters } = require('../utils/socketRateLimiter');
 const { withRoomLock } = require('../utils/roomLock');
+const { toPublicUsers } = require('../utils/publicView');
+const { broadcastLobby } = require('./lobbyBroadcast');
 const rankingService = require('../services/rankingService');
 const achievementService = require('../services/achievementService');
 const dailyMissionService = require('../services/dailyMissionService');
+
+/**
+ * 방의 모든 플레이어에게 각자의 손패를 보낸다 (본인에게만 전달 — io.to(socketId)).
+ * 카드 수가 바뀌는 모든 동작(카드 내기, 벨 성공/실패) 뒤에 호출해 화면의 "내 덱 N장"을 최신으로 유지한다.
+ */
+function emitHands(io, room) {
+  room.users.forEach(u => {
+    try {
+      io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
+    } catch (e) {
+      console.error('[yourHand update Error]', e);
+    }
+  });
+}
 
 /**
  * 소켓 유저가 속한 방을 방 락 안에서 **한 번만** 읽어 fn 에 넘긴다.
@@ -49,6 +65,12 @@ module.exports = function(socket, io) {
     }
     try {
       await withUserRoom(socket, 'readyError', async (currentRoom) => {
+        // 게임 중에는 준비 상태를 바꿀 수 없다 (게임 중 ready 로 상태가 꼬이거나 다른 이벤트를 유발하는 것을 막는다)
+        if (currentRoom.status !== 'waiting') {
+          socket.emit('readyError', '게임이 진행 중입니다.');
+          return;
+        }
+
         const user = currentRoom.users.find(u => u.id === socket.id);
         if (!user) {
           socket.emit('readyError', '사용자를 찾을 수 없습니다.');
@@ -57,11 +79,11 @@ module.exports = function(socket, io) {
 
         user.readyStatus = user.readyStatus === 'ready' ? 'waiting' : 'ready';
         await roomService.saveRoomState(currentRoom, { reindex: false });
-        io.to(currentRoom.id).emit('updateReadyStatus', currentRoom.users);
+        io.to(currentRoom.id).emit('updateReadyStatus', toPublicUsers(currentRoom.users));
 
         const allReady = currentRoom.users.every(u => u.readyStatus === 'ready');
         if (allReady && currentRoom.users.length >= 2) {
-          io.to(currentRoom.id).emit('allReady', currentRoom.users);
+          io.to(currentRoom.id).emit('allReady', toPublicUsers(currentRoom.users));
           await startGameCountdown(io, currentRoom.id);
         } else {
           clearGameCountdown(io, currentRoom.id, 'not-all-ready');
@@ -110,23 +132,26 @@ module.exports = function(socket, io) {
         io.to(room.id).emit('cardPlayed', {
           playerId: socket.id,
           playerName,
-          result
+          // 공개용 결과만 보낸다: 벨 정답(isHalliGalli)을 보내면 개발자도구로 "지금 치면 성공"을 알 수 있고,
+          // 중앙 카드 전체 목록은 가려진 카드까지 드러내며 판마다 계속 커진다
+          result: {
+            playedCard: result.playedCard,
+            nextTurn: result.nextTurn,
+            playerCardCount: result.playerCardCount,
+            centerCount: (result.centerCards || []).length,
+          }
         });
 
         // playCard 가 room 을 변경·저장했으므로 같은 객체의 손패가 최신 상태다
-        room.users.forEach(u => {
-          try {
-            io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
-          } catch (e) {
-            console.error('[yourHand update Error]', e);
-          }
-        });
+        emitHands(io, room);
 
         const gameEndResult = await gameService.checkGameEnd(room.id, room);
         if (gameEndResult.isEnded) {
           io.to(room.id).emit('gameEnd', gameEndResult);
           // 리텐션 훅: 게임 종료 시 랭킹/업적/미션 비동기 갱신
           setImmediate(() => handleGameEndRetention(io, room, gameEndResult));
+          // 끝난 방은 다시 대기 상태 → 로비 목록에 다시 보이도록
+          await broadcastLobby(io);
         }
 
         console.log(`[Game] 카드 내기 - 플레이어: ${playerName}, 카드 인덱스: ${cardIndex}`);
@@ -159,9 +184,9 @@ module.exports = function(socket, io) {
           centerCardsGained: result.centerCardsGained || 0,
           discardedCardsGained: result.discardedCardsGained || 0,
           newScore: result.newScore || 0,
-          discardedCard: result.discardedCard,
-          centerCards: result.centerCards,
-          discardedCards: result.discardedCards
+          centerCount: (result.centerCards || []).length,
+          // 버림 더미는 뒤집어 놓은 카드이므로 내용(과일/개수)은 보내지 않고 장수만 보낸다
+          discardedCount: (result.discardedCards || []).length
         });
 
         // 결과 직후 최신 게임 상태를 같은 락 안에서 전송한다.
@@ -170,6 +195,17 @@ module.exports = function(socket, io) {
           io.to(room.id).emit('gameState', gameService.buildGameState(room));
         } catch (err) {
           console.error('[gameState emit Error]', err);
+        }
+
+        // 벨 성공(카드 획득)/실패(카드 1장 버림) 모두 손패가 바뀌므로 각자의 손패를 다시 보낸다
+        emitHands(io, room);
+
+        // 벨 실패로 마지막 카드를 잃어 카드가 있는 사람이 1명 이하가 되면 바로 게임을 끝낸다
+        const gameEndResult = await gameService.checkGameEnd(room.id, room);
+        if (gameEndResult.isEnded) {
+          io.to(room.id).emit('gameEnd', gameEndResult);
+          setImmediate(() => handleGameEndRetention(io, room, gameEndResult));
+          await broadcastLobby(io);
         }
 
         // 벨 성공 시 bellRings 업적/미션 갱신 (비동기)
