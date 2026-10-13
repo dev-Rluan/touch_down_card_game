@@ -200,6 +200,9 @@ async function leaveRoom(socketId, roomId) {
     if (room.gameState.playerStacks) {
       delete room.gameState.playerStacks[socketId];
     }
+    // 바닥이 바뀌었으므로 직전 바닥(벨 시간 보정용)은 더 이상 쓰지 않는다
+    room.gameState.prevTopCards = null;
+    room.gameState.boardSeq = (room.gameState.boardSeq || 0) + 1;
   }
 
   await persistRoom(room);

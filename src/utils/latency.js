@@ -9,6 +9,7 @@
 const { performance } = require('perf_hooks');
 
 const PROBE_INTERVAL_MS = 3000;
+const LOBBY_EVERY = 5; // 방에 없는(로비) 소켓은 5번에 1번만 = 15초마다 (로비에는 핑이 필요 없어 부하만 줄인다)
 const PROBE_TIMEOUT_MS = 2000;
 const MAX_SAMPLES = 10;
 const EWMA_ALPHA = 0.25;
@@ -55,10 +56,18 @@ function getLatency(socketId) {
   };
 }
 
-/** 소켓 연결 시 호출: 바로 1회 + 이후 주기적으로 측정. 연결이 끊기면 스스로 정리된다 */
+// 방(대기실·게임)에 들어가 있는지: 소켓은 자기 ID 룸, 로비 룸, 입장한 방 룸에 속한다
+function inGameRoom(socket) {
+  for (const r of socket.rooms || []) if (r !== socket.id && r !== 'lobby') return true;
+  return false;
+}
+
+/** 소켓 연결 시 호출: 바로 1회 + 이후 주기적으로 측정 (방 안 3초, 로비 15초). 연결이 끊기면 스스로 정리된다 */
 function startProbe(socket) {
+  let tick = 0;
   const probe = () => {
     if (!socket.connected) return;
+    if (tick++ % LOBBY_EVERY !== 0 && !inGameRoom(socket)) return;
     const t0 = performance.now();
     socket.timeout(PROBE_TIMEOUT_MS).emit('latencyPing', Date.now(), (err) => {
       if (err) recordTimeout(socket.id);

@@ -25,7 +25,7 @@ describe('latency', () => {
     const handlers = {};
     let pending = null;
     const socket = {
-      id: 'p1', connected: true,
+      id: 'p1', connected: true, rooms: new Set(['p1', 'room-1']),
       on: (ev, fn) => { handlers[ev] = fn; },
       timeout: () => ({ emit: (ev, ts, cb) => { expect(ev).toBe('latencyPing'); pending = cb; } }),
     };
@@ -57,4 +57,24 @@ describe('latency', () => {
     expect(s.sinceStart.buckets.find(b => b.upTo === 30).count).toBeGreaterThan(0);
     expect(s.sinceStart.buckets.at(-1)).toMatchObject({ upTo: null });
   });
+});
+
+test('startProbe: 로비에 있는 소켓은 15초(5번)에 1번만 측정한다', () => {
+  jest.useFakeTimers();
+  let sent = 0;
+  const socket = {
+    id: 'lob', connected: true, rooms: new Set(['lob', 'lobby']),
+    on: () => {},
+    timeout: () => ({ emit: () => { sent++; } }),
+  };
+  latency.startProbe(socket);
+  expect(sent).toBe(1); // 연결 직후 1회
+  jest.advanceTimersByTime(latency.PROBE_INTERVAL_MS * 4);
+  expect(sent).toBe(1);
+  jest.advanceTimersByTime(latency.PROBE_INTERVAL_MS);
+  expect(sent).toBe(2);
+  socket.rooms.add('room-9'); // 방에 들어가면 3초마다
+  jest.advanceTimersByTime(latency.PROBE_INTERVAL_MS * 3);
+  expect(sent).toBe(5);
+  jest.useRealTimers();
 });

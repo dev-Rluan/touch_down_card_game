@@ -1,6 +1,9 @@
 // 소켓 핸들러(ready / playCard / halliGalli)를 가짜 소켓 + 메모리 Redis 로 실행해
 // 이벤트 내용, 저장된 상태, Redis 명령 수를 검증한다.
 
+// 벨 판정 대기 창(보정용 100ms)은 이 파일에서는 0 으로 — 대기 창 자체는 아래 '벨 시간 보정' 테스트에서 따로 검증
+process.env.BELL_JUDGE_WINDOW_MS = '0';
+
 // ── 메모리 Redis (명령 호출 기록 포함) ─────────────────────────────────────────
 const mockStore = { kv: new Map(), hash: new Map(), set: new Map() };
 const mockCalls = [];
@@ -490,7 +493,7 @@ describe('공정성/종료 처리 보강', () => {
     expect(played.result).not.toHaveProperty('isHalliGalli');
     expect(played.result).not.toHaveProperty('centerCards');
     expect(played.result.centerCount).toBe(1);
-    expect(Object.keys(played.result).sort()).toEqual(['centerCount', 'nextTurn', 'playedCard', 'playerCardCount']);
+    expect(Object.keys(played.result).sort()).toEqual(['boardSeq', 'centerCount', 'nextTurn', 'playedCard', 'playerCardCount']);
   });
 
   test('벨 결과에도 중앙 카드 목록 대신 장수만 간다', async () => {
@@ -675,5 +678,99 @@ describe('벨 내부 쿨타임 / 누른 순서', () => {
     expect(r3.round).not.toBe(r1.round);
     expect(bellOrder.recordPress('u', { id: 'x', name: 'X' }, 1000, { canStart: false })).toBeNull();
     bellOrder.clearRound('t');
+  });
+});
+
+describe('벨 시간 보정 (2단계)', () => {
+  const latency = require('../../utils/latency');
+  const bellTiming = require('../../utils/bellTiming');
+  afterEach(() => { latency._stats.clear(); process.env.BELL_JUDGE_WINDOW_MS = '0'; });
+
+  async function twoWithFive() {
+    const g = await setupGame(2);
+    const room = await g.load();
+    const [a, b] = room.users;
+    room.gameState.playerStacks = { [a.id]: [{ fruit: 'plum', count: 3 }], [b.id]: [{ fruit: 'plum', count: 2 }] };
+    room.gameState.centerCards = [{ fruit: 'plum', count: 3 }, { fruit: 'plum', count: 2 }];
+    await roomService.saveRoomState(room);
+    return { ...g, a, b };
+  }
+
+  test('핑이 높은 사람이 실제로 먼저 눌렀으면, 늦게 도착해도 보정해서 이긴다', async () => {
+    process.env.BELL_JUDGE_WINDOW_MS = '60';
+    const g = await twoWithFive();
+    [140, 140, 140].forEach(v => latency.record(g.b.id, v)); // b: 왕복 140ms → 보정 최대 90ms
+    [4, 4, 4].forEach(v => latency.record(g.a.id, v));       // a: 거의 0
+    g.io.emitted.length = 0;
+    const t = Date.now();
+    // a 가 먼저 도착하지만, b 는 그보다 50ms 먼저 눌렀다고 보고 (보정 범위 안)
+    const pa = g.byId[g.a.id].fire('halliGalli', { pressedAt: t });
+    await new Promise(r => setTimeout(r, 20));
+    const pb = g.byId[g.b.id].fire('halliGalli', { pressedAt: t - 50 });
+    await Promise.all([pa, pb]);
+
+    const results = g.io.emitted.filter(e => e.event === 'halliGalliResult');
+    expect(results).toHaveLength(1);
+    expect(results[0].payload).toMatchObject({ playerId: g.b.id, success: true });
+    expect(g.byId[g.a.id].own.at(-1)).toEqual({ event: 'halliGalliError', payload: '한 발 늦었어요!' });
+    const order = g.io.emitted.filter(e => e.event === 'bellOrder').at(-1).payload.presses;
+    expect(order.map(p => p.playerId)).toEqual([g.b.id, g.a.id]);
+    expect(order[0].ping).toBe(140);
+  });
+
+  test('보정은 서버가 잰 지연만큼만: 터무니없이 이른 시각을 보내도 이득이 없다', async () => {
+    process.env.BELL_JUDGE_WINDOW_MS = '60';
+    const g = await twoWithFive();
+    [4, 4, 4].forEach(v => { latency.record(g.a.id, v); latency.record(g.b.id, v); }); // 둘 다 지연 없음
+    g.io.emitted.length = 0;
+    const pa = g.byId[g.a.id].fire('halliGalli', { pressedAt: Date.now() });
+    await new Promise(r => setTimeout(r, 30));
+    const pb = g.byId[g.b.id].fire('halliGalli', { pressedAt: Date.now() - 10000 }); // 10초 전이라고 거짓말
+    await Promise.all([pa, pb]);
+    expect(g.io.emitted.find(e => e.event === 'halliGalliResult').payload.playerId).toBe(g.a.id);
+  });
+
+  test('새 카드가 깔리기 직전 바닥을 보고 누른 벨은 그 바닥으로 판정한다', async () => {
+    const g = await twoWithFive();
+    const room = await g.load();
+    // 지금 바닥: 합 5 (plum 3 + plum 2). 다음 카드로 깨진다
+    const cur = room.users[room.gameState.currentTurn];
+    const other = room.users.find(u => u.id !== cur.id);
+    cur.cardPack[0] = { fruit: 'lemon', count: 1 };
+    await roomService.saveRoomState(room);
+    const seqBefore = (await g.load()).gameState.boardSeq;
+    [100, 100].forEach(v => latency.record(other.id, v)); // 보정 최대 70ms
+    const pressedAt = Date.now() - 5; // 카드가 깔리기 조금 전에 누름
+
+    await g.byId[cur.id].fire('playCard', 0);                   // 그 직후 카드가 깔림 → 현재 바닥은 5 아님
+    g.io.emitted.length = 0;
+    await g.byId[other.id].fire('halliGalli', { pressedAt, boardSeq: seqBefore });
+
+    const r = g.io.emitted.find(e => e.event === 'halliGalliResult').payload;
+    expect(r).toMatchObject({ playerId: other.id, success: true, judgedOnPrev: true });
+  });
+
+  test('직전 바닥 인정은 그 바닥 번호를 보고 누른 경우만 (번호가 없거나 다르면 현재 바닥)', async () => {
+    const g = await twoWithFive();
+    const room = await g.load();
+    const cur = room.users[room.gameState.currentTurn];
+    const other = room.users.find(u => u.id !== cur.id);
+    cur.cardPack[0] = { fruit: 'lemon', count: 1 };
+    await roomService.saveRoomState(room);
+    [100, 100].forEach(v => latency.record(other.id, v));
+    const pressedAt = Date.now();
+    await g.byId[cur.id].fire('playCard', 0);
+    g.io.emitted.length = 0;
+    await g.byId[other.id].fire('halliGalli', { pressedAt }); // boardSeq 없음
+    expect(g.io.emitted.find(e => e.event === 'halliGalliResult').payload).toMatchObject({ success: false, judgedOnPrev: false });
+  });
+
+  test('effectiveTime: 보정 상한·미래 시각·측정값 없음', () => {
+    expect(bellTiming.effectiveTime(1000, 900, 400)).toEqual({ effective: 900, compensation: 100 }); // 상한 100
+    expect(bellTiming.effectiveTime(1000, 500, 400)).toEqual({ effective: 900, compensation: 100 }); // 거짓 시각은 잘림
+    expect(bellTiming.effectiveTime(1000, 990, 40)).toEqual({ effective: 990, compensation: 10 });
+    expect(bellTiming.effectiveTime(1000, 1500, 40)).toEqual({ effective: 1000, compensation: 0 }); // 미래 → 도착시각
+    expect(bellTiming.effectiveTime(1000, 900, null)).toEqual({ effective: 1000, compensation: 0 }); // 측정 전 → 보정 없음
+    expect(bellTiming.effectiveTime(1000, 'x', 100)).toEqual({ effective: 1000, compensation: 0 });
   });
 });

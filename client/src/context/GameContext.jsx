@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useRef, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { emitFx } from '../fx/fxBus.js';
-import { startClockSync } from '../net/clock.js';
+import { startClockSync, setClockActive } from '../net/clock.js';
 
 const GameContext = createContext(null);
 
@@ -249,6 +249,8 @@ function reducer(state, action) {
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef(null);
+  // 지금 보고 있는 바닥 번호 (벨 시간 보정: 어떤 바닥을 보고 눌렀는지 서버에 알린다)
+  const boardSeqRef = useRef(0);
 
   useEffect(() => {
     // env.js가 로드되면 __TOUCHDOWN_SOCKET_URL__ 사용, 아니면 현재 origin(개발: proxy 경유)
@@ -333,6 +335,7 @@ export function GameProvider({ children }) {
     });
 
     socket.on('gameStart', ({ message, gameData }) => {
+      boardSeqRef.current = gameData?.boardSeq ?? 0;
       emitFx('gameStart', gameData);
       const players = gameData?.players || [];
       dispatch({ type: 'GAME_START', players });
@@ -347,15 +350,18 @@ export function GameProvider({ children }) {
     });
 
     socket.on('cardPlayed', (data) => {
+      if (Number.isInteger(data?.result?.boardSeq)) boardSeqRef.current = data.result.boardSeq;
       emitFx('cardPlayed', data);
       dispatch({ type: 'CARD_PLAYED', ...data });
     });
 
     socket.on('gameState', (gs) => {
+      if (Number.isInteger(gs?.boardSeq)) boardSeqRef.current = gs.boardSeq;
       dispatch({ type: 'GAME_STATE', ...gs });
     });
 
     socket.on('halliGalliResult', (data) => {
+      if (Number.isInteger(data?.boardSeq)) boardSeqRef.current = data.boardSeq;
       // 성공 시 reducer 가 바닥 카드를 비우므로, 그 전에 이펙트가 카드 위치를 측정할 수 있게 먼저 알린다
       emitFx('halliResult', data);
       dispatch({ type: 'HALLI_RESULT', ...data });
@@ -434,10 +440,16 @@ export function GameProvider({ children }) {
     socketRef.current?.emit(event, ...args);
   }, []);
 
+  // 대기실·게임 화면에서만 핑/시계를 자주 잰다
+  useEffect(() => {
+    setClockActive(state.screen === 'waiting' || state.screen === 'game');
+  }, [state.screen]);
+
   const getSocketId = useCallback(() => socketRef.current?.id || null, []);
+  const getBoardSeq = useCallback(() => boardSeqRef.current, []);
 
   return (
-    <GameContext.Provider value={{ state, dispatch, emit, getSocketId }}>
+    <GameContext.Provider value={{ state, dispatch, emit, getSocketId, getBoardSeq }}>
       {children}
     </GameContext.Provider>
   );

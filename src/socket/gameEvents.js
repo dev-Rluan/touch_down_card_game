@@ -11,6 +11,7 @@ const { toPublicUsers } = require('../utils/publicView');
 const { broadcastLobby } = require('./lobbyBroadcast');
 const bellOrder = require('../utils/bellOrder');
 const latency = require('../utils/latency');
+const bellTiming = require('../utils/bellTiming');
 const rankingService = require('../services/rankingService');
 const achievementService = require('../services/achievementService');
 const dailyMissionService = require('../services/dailyMissionService');
@@ -143,6 +144,7 @@ module.exports = function(socket, io) {
             nextTurn: result.nextTurn,
             playerCardCount: result.playerCardCount,
             centerCount: (result.centerCards || []).length,
+            boardSeq: result.boardSeq,
           }
         });
 
@@ -169,40 +171,81 @@ module.exports = function(socket, io) {
 
   /**
    * 할리갈리 이벤트
+   * payload(선택): { pressedAt: 누른 순간의 서버 시계 기준 시각, boardSeq: 누를 때 보던 바닥 번호 }
+   * 바로 판정하지 않고 방별로 잠깐 모았다가 네트워크 지연을 보정한 시각 순으로 판정한다 (utils/bellTiming).
    */
-  socket.on('halliGalli', async () => {
-    // 누른 순서의 기준: 서버가 이벤트를 받은 시각 (Redis 조회 등 await 전에 잰다)
+  socket.on('halliGalli', async (payload) => {
+    // 보정의 기준: 서버가 이벤트를 받은 시각 (Redis 조회 등 await 전에 잰다)
     const arrivedAt = Date.now();
     if (!limiters.halliGalli.allow(socket.id)) {
       socket.emit('halliGalliError', '벨은 1초에 한 번만 누를 수 있습니다.');
       return;
     }
     try {
-      await withUserRoom(socket, 'halliGalliError', async (room) => {
-        // 진행 중인 게임에서 카드가 남은 플레이어의 누름만 순서에 넣는다 (탈락자·빈 바닥은 제외)
-        const presser = room.users.find(u => u.id === socket.id);
-        const order = room.gameState?.phase === 'playing' && presser && presser.cardPack?.length > 0
-          ? bellOrder.recordPress(room.id, presser, arrivedAt, {
+      const roomId = await userService.getUserRoom(socket.id);
+      if (!roomId) {
+        socket.emit('halliGalliError', '참여 중인 방이 없습니다.');
+        return;
+      }
+      const ping = latency.getLatency(socket.id)?.rtt ?? null;
+      const { effective, compensation } = bellTiming.effectiveTime(arrivedAt, payload?.pressedAt, ping);
+      const press = {
+        socket, playerId: socket.id, arrivedAt, effective, compensation, ping,
+        boardSeq: Number.isInteger(payload?.boardSeq) ? payload.boardSeq : null,
+      };
+      await bellTiming.enqueue(roomId, press, presses => judgeBells(io, roomId, presses));
+    } catch (error) {
+      console.error('[halliGalli Error]', error);
+      socket.emit('halliGalliError', error.message);
+    }
+  });
+};
+
+// ── 벨 판정 (보정시각 순으로 모인 누름들) ─────────────────────────────────────
+/**
+ * 한 묶음의 누름을 보정시각 순으로 하나씩 판정한다. 방 락 안에서 방을 한 번 읽어 재사용한다.
+ * 앞사람이 성공해 바닥이 비면 뒷사람은 벌칙 없이 "늦었음", 앞사람이 실패하면 뒷사람도 같은 바닥으로 판정.
+ */
+async function judgeBells(io, roomId, presses) {
+  await withRoomLock(roomId, async () => {
+    const room = await roomService.getRoomById(roomId);
+    for (const press of presses) {
+      const { socket } = press;
+      try {
+        if (!room || !room.gameState) {
+          socket.emit('halliGalliError', '게임이 시작되지 않았습니다.');
+          continue;
+        }
+        if (room.gameState.phase !== 'playing') {
+          socket.emit('halliGalliError', '게임이 진행 중이 아닙니다.');
+          continue;
+        }
+        const presser = room.users.find(u => u.id === press.playerId);
+        if (!presser) {
+          socket.emit('halliGalliError', '참여 중인 방이 없습니다.');
+          continue;
+        }
+
+        // 카드가 남은 플레이어의 누름만 순서에 넣는다 (탈락자·빈 바닥은 제외)
+        const order = presser.cardPack?.length > 0
+          ? bellOrder.recordPress(room.id, presser, press.effective, {
             canStart: (room.gameState.centerCards || []).length > 0,
-            ping: latency.getLatency(socket.id)?.rtt ?? null,
+            ping: press.ping,
           })
           : null;
         if (order) {
           io.to(room.id).emit('bellOrder', { round: order.round, presses: order.presses });
-          // 앞사람이 이미 성공해 바닥이 비었으면 판정 없이 "늦었음"만 알린다
           if (order.rank > 1 && (room.gameState.centerCards || []).length === 0) {
             socket.emit('halliGalliError', '한 발 늦었어요!');
-            return;
+            continue;
           }
         }
 
-        const result = await gameService.handleHalliGalli(room.id, socket.id, room);
-        const playerName = result.playerName
-          || room.users.find(u => u.id === socket.id)?.name
-          || null;
+        const usePrevBoard = bellTiming.shouldUsePrevBoard(press, room.gameState);
+        const result = await gameService.handleHalliGalli(room.id, press.playerId, room, { usePrevBoard });
         io.to(room.id).emit('halliGalliResult', {
-          playerId: socket.id,
-          playerName,
+          playerId: press.playerId,
+          playerName: result.playerName || presser.name || null,
           success: result.success,
           scoreGained: result.scoreGained || 0,
           centerCardsGained: result.centerCardsGained || 0,
@@ -210,11 +253,13 @@ module.exports = function(socket, io) {
           newScore: result.newScore || 0,
           centerCount: (result.centerCards || []).length,
           // 버림 더미는 뒤집어 놓은 카드이므로 내용(과일/개수)은 보내지 않고 장수만 보낸다
-          discardedCount: (result.discardedCards || []).length
+          discardedCount: (result.discardedCards || []).length,
+          boardSeq: result.boardSeq,
+          // 새 카드가 깔리기 직전 바닥을 보고 누른 것으로 인정된 판정
+          judgedOnPrev: Boolean(result.judgedOnPrev),
         });
 
-        // 결과 직후 최신 게임 상태를 같은 락 안에서 전송한다.
-        // (예전에는 100ms 뒤에 방을 다시 읽었는데, 그 사이 다음 카드가 나오면 오래된 상태가 덮어쓸 수 있었다)
+        // 결과 직후 최신 게임 상태를 같은 락 안에서 전송한다
         try {
           io.to(room.id).emit('gameState', gameService.buildGameState(room));
         } catch (err) {
@@ -233,18 +278,16 @@ module.exports = function(socket, io) {
           await broadcastLobby(io);
         }
 
-        // 벨 성공 시 bellRings 업적/미션 갱신 (비동기)
         if (result.success) {
-          setImmediate(() => recordBellSuccess(io, socket.id));
+          setImmediate(() => recordBellSuccess(io, press.playerId));
         }
-        console.log(`[Game] 할리갈리 - 플레이어: ${playerName}, 성공: ${result.success}`);
-      });
-    } catch (error) {
-      console.error('[halliGalli Error]', error);
-      socket.emit('halliGalliError', error.message);
+        console.log(`[Game] 할리갈리 - 플레이어: ${presser.name}, 성공: ${result.success}, 보정 ${press.compensation}ms${result.judgedOnPrev ? ', 직전 바닥 판정' : ''}`);
+      } catch (error) {
+        socket.emit('halliGalliError', error.message);
+      }
     }
   });
-};
+}
 
 // ── 리텐션 훅: 게임 종료 후 처리 ────────────────────────────────────────────
 /**
