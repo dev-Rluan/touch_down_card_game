@@ -7,9 +7,11 @@ import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './styles/app.css';
 import { getSavedTheme, applyTheme } from './theme/themes.js';
 import { unlockAudio } from './fx/sound.js';
+import { applyFxStyle } from './fx/style.js';
 
 // 저장된 테마 적용 (깜빡임 방지를 위해 렌더 전에 실행)
 applyTheme(getSavedTheme());
+applyFxStyle();
 
 // 모바일 브라우저는 사용자 조작 안에서만 오디오를 시작할 수 있다. 조작이 있을 때마다 (멈춰 있으면) 다시 깨운다.
 ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, unlockAudio, { passive: true, capture: true }));
