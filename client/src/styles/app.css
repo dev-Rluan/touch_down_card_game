@@ -3418,7 +3418,7 @@ body,
    가로(인원수만큼 나란히 놓이는 너비) 중 작은 값. 인원이 적을수록, 화면이 클수록 커진다. */
 @media (min-width: 768px) and (min-height: 560px) {
   body.in-game {
-    --card-h: clamp(146px, min((100vh - 270px) / 2.22, ((100vw - 4rem) / var(--players, 4) - 3.5rem) / 0.71), calc(420px - var(--players, 4) * 20px));
+    --card-h: clamp(146px, min((100vh - 270px) / 2.6, ((100vw - 4rem) / var(--players, 4) - 3.5rem) / 0.71 * 0.85), calc(360px - var(--players, 4) * 15px));
     --card-w: calc(var(--card-h) * 0.71);
     --pile-h: calc(var(--card-h) * 0.5);
     --deck-h: max(160px, var(--card-h) * 0.72);
