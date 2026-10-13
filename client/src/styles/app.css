@@ -3293,8 +3293,8 @@ body,
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 .fx-card-face { background: #fff; border: 1px solid #e5e7eb; }
-.fx-card-face .stack-fruit { font-size: 2.2rem; line-height: 1; }
-.fx-card-face .stack-count { font-size: 1.3rem; font-weight: 800; color: #2b2b2b; }
+.fx-card-face .stack-fruit { font-size: calc(var(--fx-h, 100px) * 0.36); line-height: 1; }
+.fx-card-face .stack-count { font-size: calc(var(--fx-h, 100px) * 0.2); font-weight: 800; color: #2b2b2b; line-height: 1; }
 .fx-card-back { background: var(--card-back); border: 2px solid rgba(255, 255, 255, 0.28); overflow: hidden; }
 
 /* 더미 위로 떠오르는 글자 */
@@ -3408,3 +3408,69 @@ body,
   [data-fx-style="stack"] .stack-card:last-child,
   [data-fx-style="stack"] .my-deck-card:not(:disabled) { animation: none; }
 }
+
+/* ══════════════ 내 덱 글자 ══════════════ */
+.deck-count { position: relative; z-index: 1; color: #fbbf24; font-size: 16px; font-weight: 700; text-shadow: 0 2px 6px rgba(0,0,0,0.8); }
+.deck-hint { position: relative; z-index: 1; color: #fde047; font-size: 12px; margin-top: 6px; font-weight: 600; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+
+/* ══════════════ PC 게임 화면: 화면 크기·인원수에 맞춰 카드/덱/벨 확대 ══════════════
+   --card-h 는 세로(스택 + 버림 더미 + 내 덱 줄이 한 화면에 들어가는 높이)와
+   가로(인원수만큼 나란히 놓이는 너비) 중 작은 값. 인원이 적을수록, 화면이 클수록 커진다. */
+@media (min-width: 768px) and (min-height: 560px) {
+  body.in-game {
+    --card-h: clamp(146px, min((100vh - 270px) / 2.6, ((100vw - 4rem) / var(--players, 4) - 3.5rem) / 0.71 * 0.85), calc(360px - var(--players, 4) * 15px));
+    --card-w: calc(var(--card-h) * 0.71);
+    --pile-h: calc(var(--card-h) * 0.5);
+    --deck-h: max(160px, var(--card-h) * 0.72);
+  }
+
+  .game-board .player-stacks-area { gap: 0.5rem; }
+  .game-board #playerStacks { gap: 1rem; padding: 0.75rem 1.5rem 0; flex-wrap: nowrap !important; }
+  .game-board .player-stack {
+    flex: 1 1 0; min-width: 0;
+    max-width: calc(var(--card-w) + 7rem);
+    padding: 0.7rem 1rem 1rem; gap: 0.6rem;
+  }
+  .game-board .player-stack-header { flex-wrap: nowrap; justify-content: center; min-width: 0; }
+  .game-board .player-stack-name { font-size: clamp(0.8rem, calc(var(--card-h) * 0.048), 1.05rem); flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .game-board .player-stack-count,
+  .game-board .turn-badge { flex-shrink: 0; white-space: nowrap; }
+  .game-board .player-stack-count,
+  .game-board .turn-badge { font-size: clamp(11px, calc(var(--card-h) * 0.04), 14px); padding: 2px 8px; }
+  .game-board .player-stack-cards { min-height: var(--card-h); }
+  .game-board .stack-card { width: var(--card-w); height: var(--card-h); border-radius: calc(var(--card-h) * 0.06); }
+  .game-board .stack-fruit { font-size: calc(var(--card-h) * 0.36); }
+  .game-board .stack-count { font-size: calc(var(--card-h) * 0.2); margin-top: calc(var(--card-h) * 0.02); }
+
+  .game-board .discard-area { padding: 0.25rem 1.5rem; }
+  .game-board .discard-pile { height: var(--pile-h); width: calc(var(--pile-h) * 0.71); border-radius: calc(var(--pile-h) * 0.07); }
+  .game-board .discard-back-count { font-size: calc(var(--pile-h) * 0.22); }
+  .game-board .discard-area .discard-pile .discard-placeholder { font-size: 0.8rem; }
+  .game-board .discard-area .small { font-size: 0.85rem; }
+  .game-board .discard-side .btn { font-size: 0.9rem; padding: 0.3rem 0.8rem; }
+
+  .game-board .player-section { padding: 0.5rem 1rem 0.9rem !important; }
+  .game-board .player-section .gap-4 { gap: calc(var(--card-h) * 0.18) !important; }
+  .game-board .player-section .small { font-size: 0.85rem; }
+  .game-board .deck-card { height: var(--deck-h); width: calc(var(--deck-h) * 0.69); border-radius: calc(var(--deck-h) * 0.07); }
+  .game-board .deck-count { font-size: calc(var(--deck-h) * 0.13); }
+  .game-board .deck-hint { font-size: calc(var(--deck-h) * 0.075); margin-top: calc(var(--deck-h) * 0.04); }
+  .game-board .halli-galli-bell-container { margin-top: 0; }
+  .game-board .halli-galli-bell { width: calc(var(--deck-h) * 0.88); height: calc(var(--deck-h) * 0.88); }
+  .game-board .halli-galli-bell .bell-label { font-size: calc(var(--deck-h) * 0.09); }
+
+  .fx-float { font-size: clamp(1.5rem, calc(var(--card-h, 146px) * 0.13), 2.6rem); }
+}
+
+/* ══════════════ 피드백 ══════════════ */
+.feedback-entry {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.5rem 0.75rem;
+  margin-top: 1rem; padding: 0.75rem; color: var(--ink-dim); font-size: 0.85rem; text-align: center;
+}
+.feedback-cats { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.feedback-cat {
+  padding: 0.35rem 0.8rem; border-radius: 999px; border: 1px solid #ced4da;
+  background: #fff; color: #495057; font-size: 0.85rem; cursor: pointer;
+}
+.feedback-cat.active { background: var(--accent); border-color: var(--accent-strong); color: var(--accent-ink); font-weight: 700; }
+.feedback-thanks { font-size: 1.3rem; font-weight: 800; color: #212529; }

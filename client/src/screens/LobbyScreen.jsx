@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar.jsx';
 import RoomList from '../components/RoomList.jsx';
 import AdBanner from '../components/AdBanner.jsx';
 import Icon from '../components/Icon.jsx';
+import FeedbackButton from '../components/FeedbackButton.jsx';
 
 // ── 게임방 탭 ────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,8 @@ function RoomsPanel({ emit }) {
           <RoomList />
         </div>
       </div>
+
+      <FeedbackButton />
 
       {/* 방 만들기 모달 */}
       {showCreate && (

@@ -67,12 +67,8 @@ function MyDeckCard({ cards, onPlay, disabled }) {
       aria-label="카드 내기"
     >
       <div className="card-back-pattern" />
-      <div style={{ position: 'relative', zIndex: 1, color: '#fbbf24', fontSize: 16, fontWeight: 'bold', textShadow: '0 2px 6px rgba(0,0,0,0.8)' }}>
-        {cards.length}장
-      </div>
-      <div style={{ position: 'relative', zIndex: 1, color: '#fde047', fontSize: 12, marginTop: 6, fontWeight: 600, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>
-        {disabled ? '상대 턴' : '클릭하여 플레이'}
-      </div>
+      <div className="deck-count">{cards.length}장</div>
+      <div className="deck-hint">{disabled ? '상대 턴' : '클릭하여 플레이'}</div>
     </button>
   );
 }
@@ -146,6 +142,12 @@ export default function GameScreen() {
 
   // 플레이어 목록: gameStatePlayers 우선, fallback users
   const players = gameStatePlayers.length > 0 ? gameStatePlayers : users.map(u => ({ ...u, cardCount: 0 }));
+
+  // PC 화면에서 카드 크기를 인원수에 맞춰 계산하도록 CSS 에 인원수를 넘긴다 (이펙트 레이어도 쓰므로 body 에 둔다)
+  useEffect(() => {
+    document.body.style.setProperty('--players', String(Math.max(players.length, 2)));
+    return () => document.body.style.removeProperty('--players');
+  }, [players.length]);
 
   return (
     <div className="game-board d-flex flex-column" style={{ minHeight: '100vh' }}>

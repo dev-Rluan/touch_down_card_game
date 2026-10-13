@@ -82,6 +82,7 @@ function flyCard(fromRect, toRect, { html = '', className = '', duration = 420, 
   el.innerHTML = html;
   el.style.width = `${fromRect.width}px`;
   el.style.height = `${fromRect.height}px`;
+  el.style.setProperty('--fx-h', `${fromRect.height}px`); // 카드 크기에 맞춰 그림·숫자 크기 조절
   el.style.left = `${fromRect.left}px`;
   el.style.top = `${fromRect.top}px`;
   getLayer().appendChild(el);

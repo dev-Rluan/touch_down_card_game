@@ -5,6 +5,7 @@ const userEvents = require('./userEvents');
 const roomEvents = require('./roomEvents');
 const gameEvents = require('./gameEvents');
 const chatEvents = require('./chatEvents');
+const feedbackEvents = require('./feedbackEvents');
 
 /**
  * Socket.IO 서버 초기화
@@ -19,5 +20,6 @@ module.exports = function(io) {
     roomEvents(socket, io);
     gameEvents(socket, io);
     chatEvents(socket, io);
+    feedbackEvents(socket, io);
   });
 };
