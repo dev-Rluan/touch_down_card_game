@@ -11,6 +11,8 @@ const PATHS = {
   pause: <><path d="M9 5v14" /><path d="M15 5v14" /></>,
   checkmark: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   plus: <><path d="M12 5v14" /><path d="M5 12h14" /></>,
+  sound: <><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M16.5 8.5a5 5 0 0 1 0 7" /><path d="M19 6a8.5 8.5 0 0 1 0 12" /></>,
+  mute: <><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="m17 9 5 6" /><path d="m22 9-5 6" /></>,
   chat: <path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z" />,
   send: <><path d="M4 12 20 4l-5 16-3-7z" /><path d="m12 13 8-9" /></>,
 };

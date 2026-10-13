@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import BellButton from '../components/BellButton.jsx';
 import ThemePicker from '../components/ThemePicker.jsx';
 import ChatPanel from '../components/ChatPanel.jsx';
 import CountdownOverlay from '../components/CountdownOverlay.jsx';
 import Icon from '../components/Icon.jsx';
+import SoundToggle from '../components/SoundToggle.jsx';
+import { onFx } from '../fx/fxBus.js';
+import { playSound, vibrate } from '../fx/sound.js';
+import { deckToStack, sweepTo, failToDiscard, floatText, flash } from '../fx/effects.js';
 
 const FRUIT_EMOJI = {
   strawberry: '🍓',
@@ -17,9 +21,9 @@ function getFruitEmoji(fruit) {
   return FRUIT_EMOJI[fruit] || '🃏';
 }
 
-function PlayerStack({ playerName, cards, isCurrentTurn, isMe, cardCount }) {
+function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCount }) {
   return (
-    <div className={`player-stack ${isCurrentTurn ? (isMe ? 'my-turn' : 'other-turn') : ''}`}>
+    <div className={`player-stack ${isCurrentTurn ? (isMe ? 'my-turn' : 'other-turn') : ''}`} data-stack-id={playerId}>
       <div className="player-stack-header">
         <span className="player-stack-name">{playerName}</span>
         <span className="player-stack-count">🃏 {cardCount ?? cards.length}</span>
@@ -34,7 +38,7 @@ function PlayerStack({ playerName, cards, isCurrentTurn, isMe, cardCount }) {
           <div className="stack-placeholder">대기중</div>
         ) : (
           cards.map((card, i) => (
-            <div key={i} className="stack-card" style={{ zIndex: i }}>
+            <div key={card._k ?? i} className="stack-card" style={{ zIndex: i }}>
               <div className="stack-fruit">{getFruitEmoji(card.fruit)}</div>
               <div className="stack-count">{card.count}</div>
             </div>
@@ -82,6 +86,50 @@ export default function GameScreen() {
   } = state;
   const [showChat, setShowChat] = useState(false);
 
+  // 이펙트 리스너는 한 번만 등록하고, 최신 상태는 ref 로 읽는다
+  const latest = useRef(state);
+  latest.current = state;
+
+  useEffect(() => onFx((type, data) => {
+    const { mySocketId: me, gameStatePlayers: players } = latest.current;
+
+    if (type === 'cardPlayed') {
+      const count = data?.result?.playedCard?.count || 1;
+      playSound('cardPlace', { pitch: 0.9 + count * 0.05 });
+      if (data.playerId === me) {
+        deckToStack(me);
+        vibrate(15);
+      }
+    }
+
+    if (type === 'halliResult') {
+      const mine = data.playerId === me;
+      if (data.success) {
+        sweepTo(data.playerId);
+        flash('good');
+        floatText(data.playerId, `터치다운! +${data.scoreGained || 0}`, 'good');
+        playSound('bellSuccess');
+        if (mine) vibrate([30, 40, 30]);
+      } else {
+        const hadCards = (players.find(p => p.id === data.playerId)?.cardCount || 0) > 0;
+        failToDiscard(data.playerId);
+        floatText(data.playerId, hadCards ? '실패 -1' : '실패', 'bad');
+        playSound('bellFail');
+        if (mine) vibrate([60, 40, 60]);
+      }
+    }
+  }), []);
+
+  // 내 차례가 시작되는 순간: 소리 + 짧은 진동 (덱이 빛나는 효과는 CSS)
+  const wasMyTurn = useRef(isMyTurn);
+  useEffect(() => {
+    if (isMyTurn && !wasMyTurn.current) {
+      playSound('myTurn');
+      vibrate(25);
+    }
+    wasMyTurn.current = isMyTurn;
+  }, [isMyTurn]);
+
   function handleLeave() {
     if (roomId && window.confirm('게임을 나가시겠습니까?')) emit('leaveRoom', roomId);
   }
@@ -111,6 +159,7 @@ export default function GameScreen() {
             return (
               <PlayerStack
                 key={player.id}
+                playerId={player.id}
                 playerName={player.name}
                 cards={stack.cards}
                 isCurrentTurn={isCurrentTurn}
@@ -150,9 +199,10 @@ export default function GameScreen() {
               onClick={() => setShowChat(v => !v)}
               aria-label="채팅 열기"
             >
-              <Icon name="chat" className="me-1" />채팅
+              <Icon name="chat" /><span className="chat-fab-label">채팅</span>
               {chatUnread > 0 && !showChat && <span className="chat-badge">{chatUnread > 9 ? '9+' : chatUnread}</span>}
             </button>
+            <SoundToggle />
             <ThemePicker />
           </div>
         </div>
@@ -172,20 +222,12 @@ export default function GameScreen() {
         </div>
       </div>
 
-      {/* 벨 결과 알림 */}
-      {halliGalliResult && (
-        <div className={`halli-galli-notification ${halliGalliResult.success ? 'success show' : 'failure show'}`}>
-          <div className="notification-icon">{halliGalliResult.success ? '🎉' : '❌'}</div>
-          <div className="notification-text">
-            <strong>
-              {halliGalliResult.playerName}님이 터치다운 {halliGalliResult.success ? '성공!' : '실패!'}
-            </strong>
-            {halliGalliResult.success && (
-              <div className="notification-score">+{halliGalliResult.scoreGained}점 획득!</div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* 벨 결과는 이펙트(더미 위 숫자, 카드 이동, 소리)로 보여준다. 화면 낭독기 사용자를 위한 안내만 남긴다 */}
+      <div className="visually-hidden" aria-live="polite">
+        {halliGalliResult
+          ? `${halliGalliResult.playerName}님 터치다운 ${halliGalliResult.success ? `성공, ${halliGalliResult.scoreGained}점` : '실패'}`
+          : ''}
+      </div>
 
       {showChat && <ChatPanel variant="sheet" onClose={() => setShowChat(false)} />}
 
