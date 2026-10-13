@@ -5,6 +5,7 @@ import PlayerCard from '../components/PlayerCard.jsx';
 import CountdownOverlay from '../components/CountdownOverlay.jsx';
 import ChatPanel from '../components/ChatPanel.jsx';
 import Icon from '../components/Icon.jsx';
+import HowToPlay from '../components/HowToPlay.jsx';
 
 export default function WaitingScreen() {
   const { state, emit } = useGame();
@@ -30,7 +31,8 @@ export default function WaitingScreen() {
     <>
       <Navbar />
 
-      <div className="container-fluid py-3">
+      <div className="container-fluid py-3 waiting-layout">
+        <div className="waiting-main">
         {/* 방 헤더 */}
         <div className="room-header mb-3">
           <div className="room-header-top d-flex justify-content-between align-items-center">
@@ -103,7 +105,12 @@ export default function WaitingScreen() {
             : '최소 2명이 필요합니다.'}
         </p>
 
-        <div className="chat-wrap">
+        {/* PC 에서만: 왼쪽 아래 빈 공간에 게임 방법 */}
+        <HowToPlay className="d-none d-lg-flex mt-4" />
+
+        </div>
+
+        <div className="chat-wrap waiting-chat">
           <ChatPanel variant="inline" />
         </div>
       </div>

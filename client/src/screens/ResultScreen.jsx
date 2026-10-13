@@ -54,7 +54,8 @@ export default function ResultScreen() {
   return (
     <div className="container-fluid py-4" style={{ minHeight: '100vh' }}>
       <div className="row justify-content-center">
-        <div className="col-lg-6 col-md-8">
+        <div className="col-lg-6 col-md-8 result-layout">
+          <div className="result-main">
           <div className="card text-center mb-3">
             <div className="card-body py-4">
               <div style={{ fontSize: '4rem' }}>{isWinner ? '🏆' : '😢'}</div>
@@ -85,20 +86,21 @@ export default function ResultScreen() {
             </div>
           </div>
 
-          <div className="chat-wrap mb-3">
-            <ChatPanel variant="inline" />
-          </div>
-
-          {/* AdSense 게임 종료 광고 */}
-          <AdBanner slot={window.__ADSENSE_GAME_END_SLOT__} className="mb-3" />
-
-          <div className="d-flex gap-2 justify-content-center">
+          <div className="d-flex gap-2 justify-content-center result-actions">
             <button className="btn btn-success" onClick={handlePlayAgain}>
               <Icon name="refresh" className="me-2" />다시 하기
             </button>
             <button className="btn btn-outline-light" onClick={handleLobby}>
               <Icon name="home" className="me-2" />로비로
             </button>
+          </div>
+
+          {/* AdSense 게임 종료 광고 */}
+          <AdBanner slot={window.__ADSENSE_GAME_END_SLOT__} className="mt-3" />
+          </div>
+
+          <div className="chat-wrap result-chat">
+            <ChatPanel variant="inline" />
           </div>
         </div>
       </div>

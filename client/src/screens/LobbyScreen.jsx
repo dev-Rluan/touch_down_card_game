@@ -5,6 +5,7 @@ import RoomList from '../components/RoomList.jsx';
 import AdBanner from '../components/AdBanner.jsx';
 import Icon from '../components/Icon.jsx';
 import FeedbackButton from '../components/FeedbackButton.jsx';
+import HowToPlay from '../components/HowToPlay.jsx';
 
 // ── 게임방 탭 ────────────────────────────────────────────────────────────────
 
@@ -38,7 +39,8 @@ function RoomsPanel({ emit }) {
   }
 
   return (
-    <div className="lobby-panel">
+    <div className="lobby-panel lobby-grid">
+      <section className="lobby-main">
       <AdBanner slot={window.__ADSENSE_LOBBY_SLOT__} className="mb-3" />
 
       {/* 방 목록 카드 */}
@@ -60,8 +62,12 @@ function RoomsPanel({ emit }) {
           <RoomList />
         </div>
       </div>
+      </section>
 
-      <FeedbackButton />
+      <aside className="lobby-aside">
+        <HowToPlay />
+        <FeedbackButton />
+      </aside>
 
       {/* 방 만들기 모달 */}
       {showCreate && (
