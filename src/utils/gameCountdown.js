@@ -89,7 +89,7 @@ async function startGameCountdown(io, roomId) {
             manager: u.manager
           })),
           currentTurn: gameStartData.gameState?.currentTurn ?? 0,
-          centerCards: gameStartData.gameState?.centerCards?.length ?? 0
+          centerCount: gameStartData.gameState?.centerCards?.length ?? 0
         };
         io.to(roomId).emit('gameStart', {
           message: '게임이 시작됩니다!',
