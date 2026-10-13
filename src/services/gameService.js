@@ -153,12 +153,13 @@ const getGameState = async (roomId) => buildGameState(await getRoomById(roomId))
  * 카드 내기
  * @param {string} roomId - 방 ID
  * @param {string} playerId - 플레이어 ID
- * @param {number} cardIndex - 내는 카드 인덱스
+ * @param {number} _cardIndex - (무시) 예전 클라이언트 호환용. 항상 덱 맨 위 카드를 낸다 — 덱 중간 카드를 골라 낼 수 없게
  * @param {Object} [preloadedRoom] - 호출자가 이미 읽어 둔 방 객체 (있으면 다시 읽지 않는다).
  *   호출자는 방 락을 잡은 상태여야 하며, 이 객체가 변경·저장된다.
  * @returns {Object} 카드 내기 결과
  */
-const playCard = async (roomId, playerId, cardIndex, preloadedRoom) => {
+const playCard = async (roomId, playerId, _cardIndex, preloadedRoom) => {
+  const cardIndex = 0;
   const room = preloadedRoom || await getRoomById(roomId);
   if (!room || !room.gameState) {
     throw new Error('게임이 시작되지 않았습니다.');

@@ -59,6 +59,35 @@ function enqueue(roomId, press, judge) {
 }
 
 /**
+ * 지금 바닥을 보고 누른 벨의 하한: 바닥을 바꾼 카드가 깔린 시각 + 그 사람의 편도 지연.
+ * 카드가 그 사람 화면에 도착하기 전에 눌렀다는 주장은 인정하지 않는다.
+ * (지연을 부풀려 보정을 크게 받으려 하면, 이 하한도 그만큼 늦어진다)
+ * @returns {number} 하한 시각 (적용할 것이 없으면 -Infinity)
+ */
+function currentBoardFloor(press, gameState) {
+  if (!gameState || !gameState.lastPlayAt) return -Infinity;
+  const oneWay = Number.isFinite(press.ping) && press.ping > 0 ? press.ping / 2 : 0;
+  return gameState.lastPlayAt + oneWay;
+}
+
+// 사람이 카드를 보고 누르는 데 걸리는 시간보다 짧은 반응 (기록만 하고 판정은 바꾸지 않는다)
+const SUSPICIOUS_REACTION_MS = 100;
+const suspicious = new Map(); // playerId -> { name, count, fastest }
+function noteReaction(press, name, gameState) {
+  if (!gameState || !gameState.lastPlayAt) return null;
+  const reaction = press.effective - currentBoardFloor(press, gameState);
+  if (reaction >= SUSPICIOUS_REACTION_MS) return reaction;
+  const s = suspicious.get(press.playerId) || { name, count: 0, fastest: Infinity };
+  s.count++; s.fastest = Math.min(s.fastest, Math.round(reaction)); s.name = name;
+  suspicious.set(press.playerId, s);
+  if (suspicious.size > 1000) suspicious.delete(suspicious.keys().next().value);
+  return reaction;
+}
+function suspiciousSummary() {
+  return [...suspicious.values()].sort((a, b) => b.count - a.count).slice(0, 50);
+}
+
+/**
  * 직전 바닥으로 판정할지: 그 사람이 보고 누른 바닥이 마지막 카드가 깔리기 직전 바닥이고,
  * 보정시각이 그 카드가 깔린 시각보다 앞서며, 카드가 깔린 뒤 보정 상한 안에 도착한 경우만.
  */
@@ -69,4 +98,4 @@ function shouldUsePrevBoard(press, gameState) {
   return press.effective < playedAt && press.arrivedAt - playedAt <= MAX_COMPENSATION_MS;
 }
 
-module.exports = { effectiveTime, enqueue, shouldUsePrevBoard, MAX_COMPENSATION_MS, MARGIN_MS, judgeWindowMs, _batches: batches };
+module.exports = { effectiveTime, enqueue, shouldUsePrevBoard, currentBoardFloor, noteReaction, suspiciousSummary, SUSPICIOUS_REACTION_MS, MAX_COMPENSATION_MS, MARGIN_MS, judgeWindowMs, _batches: batches };

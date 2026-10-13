@@ -9,6 +9,8 @@ const accountsEnabled = process.env.ENABLE_ACCOUNTS === 'true';
 // 리버스 프록시(Koyeb, Nginx 등) 뒤에서 HTTPS/클라이언트 IP를 올바르게 인식
 app.set('trust proxy', 1);
 const io = require('socket.io')(server, {
+  // 메시지 1개 최대 크기 (기본 1MB → 32KB). 가장 큰 정상 메시지(피드백 1,000자)도 수 KB 이하
+  maxHttpBufferSize: 32 * 1024,
   cors: {
     // 운영에서 SOCKET_ALLOW_ORIGINS 미설정 시 동일 출처만 허용(false), 개발은 모두 허용
     origin: process.env.SOCKET_ALLOW_ORIGINS
@@ -132,7 +134,7 @@ app.get('/admin/latency', (req, res) => {
   if (!adminAuthorized(req)) return res.status(404).type('text/plain').send('Not found');
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Robots-Tag', 'noindex');
-  res.json(require('./utils/latency').summary());
+  res.json({ ...require('./utils/latency').summary(), suspiciousBells: require('./utils/bellTiming').suspiciousSummary() });
 });
 
 // 피드백 확인 페이지
@@ -232,6 +234,9 @@ if (accountsEnabled) {
   io.engine.use(passport.initialize());
   io.engine.use(passport.session());
 }
+
+// IP당 동시 연결 수 제한 (한 컴퓨터에서 연결을 대량으로 열어 서버·Redis 를 채우는 것 방지)
+require('./socket/connectionLimit')(io, { maxPerIp: process.env.MAX_CONN_PER_IP !== undefined ? Number(process.env.MAX_CONN_PER_IP) : 10 });
 
 // Socket.IO 이벤트 핸들러 등록
 socketEvent(io);

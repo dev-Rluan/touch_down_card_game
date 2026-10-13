@@ -115,7 +115,9 @@ describe('playCard 핸들러', () => {
     // 모든 플레이어에게 자기 손패 전송
     const hands = io.emitted.filter(e => e.event === 'yourHand');
     expect(hands.map(h => h.to).sort()).toEqual(after.users.map(u => u.id).sort());
-    hands.forEach(h => expect(h.payload.cards).toEqual(after.users.find(u => u.id === h.to).cardPack));
+    hands.forEach(h => expect(h.payload).toEqual({ count: after.users.find(u => u.id === h.to).cardPack.length }));
+    // 카드 내용(다음에 나올 카드)은 보내지 않는다
+    hands.forEach(h => expect(h.payload).not.toHaveProperty('cards'));
     expect(io.emitted.find(e => e.event === 'gameEnd')).toBeUndefined();
   });
 
@@ -249,8 +251,8 @@ describe('halliGalli 핸들러', () => {
     const after = await load();
     const hands = io.emitted.filter(e => e.event === 'yourHand');
     expect(hands.map(h => h.to).sort()).toEqual(after.users.map(u => u.id).sort());
-    hands.forEach(h => expect(h.payload.cards).toHaveLength(after.users.find(u => u.id === h.to).cardPack.length));
-    expect(hands.find(h => h.to === winner.id).payload.cards).toHaveLength(room.users[0].cardPack.length + 2);
+    hands.forEach(h => expect(h.payload.count).toBe(after.users.find(u => u.id === h.to).cardPack.length));
+    expect(hands.find(h => h.to === winner.id).payload.count).toBe(room.users[0].cardPack.length + 2);
   });
 
   test('벨 실패 후에도 손패가 다시 전송된다 (버린 1장이 반영)', async () => {
@@ -259,7 +261,7 @@ describe('halliGalli 핸들러', () => {
     io.emitted.length = 0;
     await byId[p.id].fire('halliGalli');
     const mine = io.emitted.filter(e => e.event === 'yourHand').find(h => h.to === p.id);
-    expect(mine.payload.cards).toHaveLength(p.cardPack.length - 1);
+    expect(mine.payload.count).toBe(p.cardPack.length - 1);
   });
 
   test('벨 처리에 필요한 Redis 명령은 3개(방ID 조회, 방 읽기, 방 저장)뿐이다', async () => {
@@ -772,5 +774,62 @@ describe('벨 시간 보정 (2단계)', () => {
     expect(bellTiming.effectiveTime(1000, 1500, 40)).toEqual({ effective: 1000, compensation: 0 }); // 미래 → 도착시각
     expect(bellTiming.effectiveTime(1000, 900, null)).toEqual({ effective: 1000, compensation: 0 }); // 측정 전 → 보정 없음
     expect(bellTiming.effectiveTime(1000, 'x', 100)).toEqual({ effective: 1000, compensation: 0 });
+  });
+});
+
+describe('조작된 패킷 방어', () => {
+  const bellTiming = require('../../utils/bellTiming');
+  const latency = require('../../utils/latency');
+  afterEach(() => { latency._stats.clear(); process.env.BELL_JUDGE_WINDOW_MS = '0'; });
+
+  test('방 만들기: 최대 인원은 정수 2~4만, 방 이름은 정리 후 30자', async () => {
+    const io = makeIo();
+    await userService.connectUser('x', 'X');
+    const x = makeSocket('x', io);
+    for (const bad of ['abc', 100, 1, 2.5, -3, { a: 1 }]) {
+      await x.fire('createRoom', '방' + Math.random(), bad);
+      expect(x.own.at(-1).event).toBe('createRoomError');
+    }
+    limiters.roomAction.reset('x');
+    await x.fire('createRoom', '  가‮나' + '다'.repeat(100), 3);
+    const created = x.own.find(e => e.event === 'roomCreated').payload;
+    expect(created.name).toBe('가나' + '다'.repeat(28));
+    expect(created.maxUserCnt).toBe(3);
+  });
+
+  test('roomList·getGameState 연타는 속도 제한으로 무시된다', async () => {
+    const io = makeIo();
+    await userService.connectUser('y', 'Y');
+    const y = makeSocket('y', io);
+    resetCalls();
+    for (let i = 0; i < 30; i++) await y.fire('roomList');
+    expect(y.own.filter(e => e.event === 'roomList')).toHaveLength(5);
+  });
+
+  test('카드가 도착하기 전에 눌렀다는 주장은 인정하지 않는다 (핑 부풀리기 + 과거 시각)', async () => {
+    process.env.BELL_JUDGE_WINDOW_MS = '80';
+    const g = await setupGame(2);
+    const room = await g.load();
+    const turn = room.users[room.gameState.currentTurn];
+    const other = room.users.find(u => u.id !== turn.id);
+    room.gameState.playerStacks = { [turn.id]: [{ fruit: 'plum', count: 1 }], [other.id]: [{ fruit: 'plum', count: 2 }] };
+    room.gameState.centerCards = [{ fruit: 'plum', count: 1 }, { fruit: 'plum', count: 2 }];
+    turn.cardPack[0] = { fruit: 'plum', count: 3 };
+    await roomService.saveRoomState(room);
+    [250, 250, 250].forEach(v => latency.record(turn.id, v)); // turn: 핑을 250ms 로 부풀림 (실제로는 0)
+    [4, 4, 4].forEach(v => latency.record(other.id, v));
+
+    await g.byId[turn.id].fire('playCard', 0); // 카드가 깔림 → 합 5
+    const seq = (await g.load()).gameState.boardSeq;
+    g.io.emitted.length = 0;
+    // 정직한 사람이 먼저 누르고, 사기꾼은 60ms 늦게 누르면서 "1초 전에 눌렀다"고 주장
+    const honest = g.byId[other.id].fire('halliGalli', { pressedAt: Date.now(), boardSeq: seq });
+    await new Promise(r => setTimeout(r, 60));
+    const cheat = g.byId[turn.id].fire('halliGalli', { pressedAt: Date.now() - 1000, boardSeq: seq });
+    await Promise.all([cheat, honest]);
+    const r = g.io.emitted.find(e => e.event === 'halliGalliResult').payload;
+    expect(r.playerId).toBe(other.id);
+    // 사기꾼의 "카드 도착 전 누름" 주장은 의심 기록으로 남는다
+    expect(bellTiming.suspiciousSummary().some(s => s.name === turn.name)).toBe(true);
   });
 });

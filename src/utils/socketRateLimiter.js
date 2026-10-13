@@ -108,6 +108,10 @@ const limiters = {
   // 채팅: 5초에 최대 5건 (도배 방지)
   chat: createRateLimiter({ maxRequests: 5, windowMs: 5000 }),
 
+  // 조회 요청: Redis 를 읽는 이벤트라 연타로 Redis 명령을 소모하지 못하게
+  roomList: createRateLimiter({ maxRequests: 5, windowMs: 5000 }),
+  getGameState: createRateLimiter({ maxRequests: 5, windowMs: 2000 }),
+
   // 시계 맞추기: 5초에 최대 6회 (클라이언트는 3초마다 1회)
   timeSync: createRateLimiter({ maxRequests: 6, windowMs: 5000 }),
 

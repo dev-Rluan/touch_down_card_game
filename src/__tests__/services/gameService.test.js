@@ -109,11 +109,17 @@ describe('playCard', () => {
     await expect(playCard('room-1', 'p2', 0)).rejects.toThrow('당신의 턴이 아닙니다');
   });
 
-  test('유효하지 않은 카드 인덱스면 에러를 던진다', async () => {
+  test('카드 인덱스를 보내도 무시하고 항상 덱 맨 위 카드를 낸다 (덱 중간 카드 골라 내기 방지)', async () => {
     const room = makePlayingRoom();
     getRoomById.mockResolvedValue(room);
+    const top = room.users[0].cardPack[0];
 
-    await expect(playCard('room-1', 'p1', 99)).rejects.toThrow('유효하지 않은 카드');
+    for (const idx of [99, 1, -1, 'abc', { $gt: 0 }]) {
+      const r = makePlayingRoom();
+      getRoomById.mockResolvedValue(r);
+      const res = await playCard('room-1', 'p1', idx);
+      expect(res.playedCard).toEqual(top);
+    }
   });
 
   test('존재하지 않는 플레이어면 에러를 던진다', async () => {

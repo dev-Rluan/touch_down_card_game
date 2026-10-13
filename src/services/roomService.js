@@ -2,6 +2,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { ensureRedisConnection } = require('../config/redisClient');
 const userService = require('./userServices');
+const { sanitizeRoomName } = require('../utils/nickname');
 
 const ROOM_DATA_PREFIX = 'room:data:';
 const WAITING_ROOMS_SET = 'rooms:waiting';
@@ -54,15 +55,17 @@ async function ensureRoomNameUnique(roomName) {
 }
 
 async function createRoom(socketId, roomName, maxUserCnt) {
-  if (!socketId || !roomName || !roomName.trim()) {
+  const trimmedName = sanitizeRoomName(roomName);
+  if (!socketId || !trimmedName) {
     throw new Error('필수 입력값이 누락되었습니다.');
   }
 
-  if (maxUserCnt && (maxUserCnt < 2 || maxUserCnt > 8)) {
-    throw new Error('최대 인원수는 2명 이상 8명 이하여야 합니다.');
+  // 정수 2~4만 허용 (문자열·소수·큰 수로 인원 제한을 무력화하지 못하게)
+  if (maxUserCnt === undefined || maxUserCnt === null) maxUserCnt = 4;
+  if (!Number.isInteger(maxUserCnt) || maxUserCnt < 2 || maxUserCnt > 4) {
+    throw new Error('최대 인원수는 2명 이상 4명 이하여야 합니다.');
   }
 
-  const trimmedName = roomName.trim();
   await ensureRoomNameUnique(trimmedName);
 
   const currentRoomId = await userService.getUserRoom(socketId);
@@ -89,7 +92,7 @@ async function createRoom(socketId, roomName, maxUserCnt) {
       cardPack: []
     }],
     status: 'waiting',
-    maxUserCnt: maxUserCnt || 4,
+    maxUserCnt,
     upCardList: [],
     turn: 0,
     createdAt: new Date().toISOString(),

@@ -45,6 +45,7 @@ module.exports = function(socket, io) {
    * 방 목록 조회 이벤트
    */
   socket.on('roomList', async () => {
+    if (!limiters.roomList.allow(socket.id)) return; // 연타는 조용히 무시 (방 목록은 바뀔 때 서버가 알아서 보낸다)
     try {
       const rooms = await roomService.getWaitingRooms();
       socket.emit('roomList', toPublicRooms(rooms));
@@ -59,7 +60,7 @@ module.exports = function(socket, io) {
    * 방 입장 이벤트
    */
   socket.on('joinRoom', async (roomId) => {
-    if (!limiters.roomAction.allow(socket.id)) {
+    if (typeof roomId !== 'string' || !limiters.roomAction.allow(socket.id)) {
       socket.emit('faildJoinRoom', '요청이 너무 빠릅니다. 잠시 후 다시 시도하세요.');
       return;
     }
@@ -93,6 +94,10 @@ module.exports = function(socket, io) {
    * 방 나가기 이벤트
    */
   socket.on('leaveRoom', async (roomId) => {
+    if (typeof roomId !== 'string' || !limiters.roomAction.allow(socket.id)) {
+      socket.emit('leaveRoomResult', { status: 429, message: '요청이 너무 빠릅니다. 잠시 후 다시 시도하세요.' });
+      return;
+    }
     try {
       console.log(`[Room] 방 나가기 요청 - 방 ID: ${roomId}`);
 

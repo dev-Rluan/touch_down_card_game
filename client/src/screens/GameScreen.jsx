@@ -73,8 +73,8 @@ function BellOrder({ order, mySocketId }) {
   );
 }
 
-function MyDeckCard({ cards, onPlay, disabled, eliminated }) {
-  if (cards.length === 0) {
+function MyDeckCard({ count, onPlay, disabled, eliminated }) {
+  if (count === 0) {
     return (
       <div className={`deck-card empty ${eliminated ? 'deck-out' : ''}`}>
         <span className="deck-empty-label">{eliminated ? '탈락' : '덱 비움'}</span>
@@ -92,7 +92,7 @@ function MyDeckCard({ cards, onPlay, disabled, eliminated }) {
       aria-label="카드 내기"
     >
       <div className="card-back-pattern" />
-      <div className="deck-count">{cards.length}장</div>
+      <div className="deck-count">{count}장</div>
       <div className="deck-hint">{disabled ? '상대 턴' : '클릭하여 플레이'}</div>
     </button>
   );
@@ -101,7 +101,7 @@ function MyDeckCard({ cards, onPlay, disabled, eliminated }) {
 export default function GameScreen() {
   const { state, emit } = useGame();
   const {
-    mySocketId, hand, playerStacks, gameStatePlayers,
+    mySocketId, handCount, playerStacks, gameStatePlayers,
     currentTurn, discardedCount, halliGalliResult,
     countdown, countdownSub, users, isMyTurn, roomId, chatUnread, bellOrder,
   } = state;
@@ -271,7 +271,7 @@ export default function GameScreen() {
           {/* 내 덱 */}
           <div className="text-center">
             <div className="small text-white-50 mb-1">내 덱</div>
-            <MyDeckCard cards={hand} onPlay={handlePlayCard} disabled={!isMyTurn} eliminated={meOut} />
+            <MyDeckCard count={handCount} onPlay={handlePlayCard} disabled={!isMyTurn} eliminated={meOut} />
           </div>
 
           {/* 벨 버튼 */}

@@ -17,13 +17,14 @@ const achievementService = require('../services/achievementService');
 const dailyMissionService = require('../services/dailyMissionService');
 
 /**
- * 방의 모든 플레이어에게 각자의 손패를 보낸다 (본인에게만 전달 — io.to(socketId)).
+ * 방의 모든 플레이어에게 각자의 남은 카드 장수를 보낸다 (본인에게만 전달 — io.to(socketId)).
+ * 카드 내용은 보내지 않는다: 자기 덱의 다음 카드를 미리 알면 그 카드가 5를 만드는 순간 벨을 바로 누를 수 있다.
  * 카드 수가 바뀌는 모든 동작(카드 내기, 벨 성공/실패) 뒤에 호출해 화면의 "내 덱 N장"을 최신으로 유지한다.
  */
 function emitHands(io, room) {
   room.users.forEach(u => {
     try {
-      io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
+      io.to(u.id).emit('yourHand', { count: (u.cardPack || []).length });
     } catch (e) {
       console.error('[yourHand update Error]', e);
     }
@@ -104,6 +105,7 @@ module.exports = function(socket, io) {
    * 게임 상태 조회 이벤트
    */
   socket.on('getGameState', async () => {
+    if (!limiters.getGameState.allow(socket.id)) return;
     try {
       const currentRoom = await roomService.getRoomByUser(socket.id);
       if (!currentRoom) {
@@ -209,6 +211,27 @@ module.exports = function(socket, io) {
 async function judgeBells(io, roomId, presses) {
   await withRoomLock(roomId, async () => {
     const room = await roomService.getRoomById(roomId);
+    // 지금 바닥을 보고 누른 벨은 "카드가 그 사람에게 도착한 시각"보다 앞설 수 없다 → 하한 적용 후 다시 정렬
+    if (room?.gameState) {
+      presses.forEach(p => {
+        if (!bellTiming.shouldUsePrevBoard(p, room.gameState)) {
+          p.effective = Math.max(p.effective, Math.min(p.arrivedAt, bellTiming.currentBoardFloor(p, room.gameState)));
+        }
+      });
+      presses.sort((a, b) => a.effective - b.effective || a.arrivedAt - b.arrivedAt);
+
+      // 카드가 나온 뒤 사람이 반응할 수 없을 만큼 빠른 누름은 기록해 둔다 (판정은 바꾸지 않음, /admin/latency 에서 확인)
+      if ((room.gameState.centerCards || []).length > 0) {
+        presses.forEach(p => {
+          if (bellTiming.shouldUsePrevBoard(p, room.gameState)) return;
+          const name = room.users.find(u => u.id === p.playerId)?.name || null;
+          const reaction = bellTiming.noteReaction(p, name, room.gameState);
+          if (reaction !== null && reaction < bellTiming.SUSPICIOUS_REACTION_MS) {
+            console.warn(`[Bell] 비정상적으로 빠른 반응 - ${name}: ${Math.round(reaction)}ms (핑 ${p.ping ?? '-'}ms)`);
+          }
+        });
+      }
+    }
     for (const press of presses) {
       const { socket } = press;
       try {

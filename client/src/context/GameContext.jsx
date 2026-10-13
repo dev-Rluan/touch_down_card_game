@@ -16,7 +16,7 @@ const initialState = {
   maxUserCnt: 4,
   roomList: [],
   isMyTurn: false,
-  hand: [],                // 내 카드 배열
+  handCount: 0,            // 내 덱 장수 (서버는 내용 없이 장수만 보낸다)
   playerStacks: {},        // { [playerId]: { cards: [], name: '' } }
   gameStatePlayers: [],    // gameState에서 온 { id, name, cardCount }[]
   currentTurn: 0,
@@ -77,7 +77,7 @@ function reducer(state, action) {
         roomName: '',
         users: [],
         countdown: null,
-        hand: [],
+        handCount: 0,
         playerStacks: {},
         gameStatePlayers: [],
         currentTurn: 0,
@@ -137,7 +137,7 @@ function reducer(state, action) {
       return { ...state, countdown: null };
 
     case 'YOUR_HAND':
-      return { ...state, hand: action.cards || [] };
+      return { ...state, handCount: Number.isInteger(action.count) ? action.count : 0 };
 
     case 'CARD_PLAYED': {
       // action.playerId, action.result.playedCard
@@ -214,7 +214,7 @@ function reducer(state, action) {
         countdown: null,
         isMyTurn: false,
         bellOrder: null,
-        hand: [],
+        handCount: 0,
         // 서버가 종료 시 모든 유저를 waiting 으로 되돌리므로 동기화
         users: state.users.map(u => ({ ...u, readyStatus: 'waiting' })),
       };
@@ -345,8 +345,8 @@ export function GameProvider({ children }) {
       }
     });
 
-    socket.on('yourHand', ({ cards }) => {
-      dispatch({ type: 'YOUR_HAND', cards });
+    socket.on('yourHand', (data) => {
+      dispatch({ type: 'YOUR_HAND', count: data?.count });
     });
 
     socket.on('cardPlayed', (data) => {
