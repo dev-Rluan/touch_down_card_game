@@ -8,6 +8,7 @@ const { clearGameCountdown, startGameCountdown } = require('../utils/gameCountdo
 const { limiters } = require('../utils/socketRateLimiter');
 const { withRoomLock } = require('../utils/roomLock');
 const { toPublicUsers } = require('../utils/publicView');
+const { broadcastLobby } = require('./lobbyBroadcast');
 const rankingService = require('../services/rankingService');
 const achievementService = require('../services/achievementService');
 const dailyMissionService = require('../services/dailyMissionService');
@@ -131,7 +132,14 @@ module.exports = function(socket, io) {
         io.to(room.id).emit('cardPlayed', {
           playerId: socket.id,
           playerName,
-          result
+          // 공개용 결과만 보낸다: 벨 정답(isHalliGalli)을 보내면 개발자도구로 "지금 치면 성공"을 알 수 있고,
+          // 중앙 카드 전체 목록은 가려진 카드까지 드러내며 판마다 계속 커진다
+          result: {
+            playedCard: result.playedCard,
+            nextTurn: result.nextTurn,
+            playerCardCount: result.playerCardCount,
+            centerCount: (result.centerCards || []).length,
+          }
         });
 
         // playCard 가 room 을 변경·저장했으므로 같은 객체의 손패가 최신 상태다
@@ -142,6 +150,8 @@ module.exports = function(socket, io) {
           io.to(room.id).emit('gameEnd', gameEndResult);
           // 리텐션 훅: 게임 종료 시 랭킹/업적/미션 비동기 갱신
           setImmediate(() => handleGameEndRetention(io, room, gameEndResult));
+          // 끝난 방은 다시 대기 상태 → 로비 목록에 다시 보이도록
+          await broadcastLobby(io);
         }
 
         console.log(`[Game] 카드 내기 - 플레이어: ${playerName}, 카드 인덱스: ${cardIndex}`);
@@ -174,7 +184,7 @@ module.exports = function(socket, io) {
           centerCardsGained: result.centerCardsGained || 0,
           discardedCardsGained: result.discardedCardsGained || 0,
           newScore: result.newScore || 0,
-          centerCards: result.centerCards,
+          centerCount: (result.centerCards || []).length,
           // 버림 더미는 뒤집어 놓은 카드이므로 내용(과일/개수)은 보내지 않고 장수만 보낸다
           discardedCount: (result.discardedCards || []).length
         });
@@ -189,6 +199,14 @@ module.exports = function(socket, io) {
 
         // 벨 성공(카드 획득)/실패(카드 1장 버림) 모두 손패가 바뀌므로 각자의 손패를 다시 보낸다
         emitHands(io, room);
+
+        // 벨 실패로 마지막 카드를 잃어 카드가 있는 사람이 1명 이하가 되면 바로 게임을 끝낸다
+        const gameEndResult = await gameService.checkGameEnd(room.id, room);
+        if (gameEndResult.isEnded) {
+          io.to(room.id).emit('gameEnd', gameEndResult);
+          setImmediate(() => handleGameEndRetention(io, room, gameEndResult));
+          await broadcastLobby(io);
+        }
 
         // 벨 성공 시 bellRings 업적/미션 갱신 (비동기)
         if (result.success) {

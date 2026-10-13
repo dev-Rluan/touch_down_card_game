@@ -209,7 +209,8 @@ describe('halliGalli 핸들러', () => {
 
     const gs = io.emitted.find(e => e.event === 'gameState');
     expect(gs).toBeDefined();
-    expect(gs.payload.centerCards).toEqual([]);
+    expect(gs.payload.centerCount).toBe(0);
+    expect(gs.payload).not.toHaveProperty('centerCards');
     expect(gs.payload.players.find(p => p.id === winner.id).cardCount).toBe(handBefore + 2);
     // 결과가 gameState 보다 먼저 전송된다 (클라이언트 처리 순서)
     expect(io.emitted.findIndex(e => e.event === 'halliGalliResult')).toBeLessThan(io.emitted.findIndex(e => e.event === 'gameState'));
@@ -476,5 +477,90 @@ describe('게임 중 퇴장 (차례/종료 처리)', () => {
     expect(io.emitted.find(e => e.event === 'gameState' || e.event === 'gameEnd')).toBeUndefined();
     expect(io.emitted.find(e => e.event === 'leaveUser')).toBeDefined();
     void w1;
+  });
+});
+
+describe('공정성/종료 처리 보강', () => {
+  test('cardPlayed 에 벨 정답(isHalliGalli)과 중앙 카드 목록이 없다 (장수만)', async () => {
+    const g = await setupGame(2);
+    const room = await g.load();
+    g.io.emitted.length = 0;
+    await g.byId[room.users[room.gameState.currentTurn].id].fire('playCard', 0);
+    const played = g.io.emitted.find(e => e.event === 'cardPlayed').payload;
+    expect(played.result).not.toHaveProperty('isHalliGalli');
+    expect(played.result).not.toHaveProperty('centerCards');
+    expect(played.result.centerCount).toBe(1);
+    expect(Object.keys(played.result).sort()).toEqual(['centerCount', 'nextTurn', 'playedCard', 'playerCardCount']);
+  });
+
+  test('벨 결과에도 중앙 카드 목록 대신 장수만 간다', async () => {
+    const g = await setupGame(2);
+    const room = await g.load();
+    room.gameState.playerStacks = { [room.users[0].id]: [{ fruit: 'banana', count: 1 }], [room.users[1].id]: [{ fruit: 'lemon', count: 2 }] };
+    room.gameState.centerCards = [{ fruit: 'banana', count: 1 }, { fruit: 'lemon', count: 2 }];
+    await roomService.saveRoomState(room);
+    g.io.emitted.length = 0;
+    await g.byId[room.users[0].id].fire('halliGalli');
+    const r = g.io.emitted.find(e => e.event === 'halliGalliResult').payload;
+    expect(r).not.toHaveProperty('centerCards');
+    expect(r.centerCount).toBe(2);
+  });
+
+  test('끝난 게임에서는 카드를 낼 수 없고 상태가 바뀌지 않는다', async () => {
+    const g = await setupGame(2);
+    const room = await g.load();
+    const cur = room.gameState.currentTurn;
+    room.users[cur].cardPack = room.users[cur].cardPack.slice(0, 1);
+    room.users[1 - cur].cardPack = room.users[1 - cur].cardPack.slice(0, 2);
+    await roomService.saveRoomState(room);
+    await g.byId[room.users[cur].id].fire('playCard', 0); // 마지막 카드 → 게임 종료
+    const ended = await g.load();
+    expect(ended.status).toBe('waiting');
+    const snapshot = JSON.stringify(ended);
+    g.io.emitted.length = 0;
+
+    const other = g.byId[room.users[1 - cur].id];
+    await other.fire('playCard', 0);
+
+    expect(other.own.at(-1)).toEqual({ event: 'playCardError', payload: '게임이 진행 중이 아닙니다.' });
+    expect(g.io.emitted.find(e => e.event === 'cardPlayed' || e.event === 'gameEnd')).toBeUndefined();
+    expect(JSON.stringify(await g.load())).toBe(snapshot);
+  });
+
+  test('벨 실패로 마지막 카드를 잃어 카드가 있는 사람이 1명이 되면 바로 게임이 끝난다', async () => {
+    const g = await setupGame(2);
+    const room = await g.load();
+    const [a, b] = room.users;
+    a.cardPack = a.cardPack.slice(0, 1);          // a 는 1장만 남음
+    room.gameState.playerStacks = { [a.id]: [{ fruit: 'banana', count: 1 }], [b.id]: [{ fruit: 'lemon', count: 2 }] };
+    room.gameState.centerCards = [{ fruit: 'banana', count: 1 }, { fruit: 'lemon', count: 2 }];
+    await roomService.saveRoomState(room);
+    g.io.emitted.length = 0;
+
+    await g.byId[a.id].fire('halliGalli'); // 합 5 아님 → 실패 → 마지막 1장 버림
+
+    expect(g.io.emitted.find(e => e.event === 'halliGalliResult').payload.success).toBe(false);
+    const end = g.io.emitted.find(e => e.event === 'gameEnd');
+    expect(end).toBeDefined();
+    expect(end.payload.winner.id).toBe(b.id);
+    expect((await g.load()).status).toBe('waiting');
+  });
+
+  test('게임이 끝나면 로비에 갱신된 방 목록이 방송된다 (끝난 방이 다시 보임)', async () => {
+    const g = await setupGame(2);
+    const room = await g.load();
+    const cur = room.gameState.currentTurn;
+    room.users[cur].cardPack = room.users[cur].cardPack.slice(0, 1);
+    room.users[1 - cur].cardPack = room.users[1 - cur].cardPack.slice(0, 1);
+    await roomService.saveRoomState(room);
+    g.io.emitted.length = 0;
+
+    await g.byId[room.users[cur].id].fire('playCard', 0);
+
+    const lobby = g.io.emitted.filter(e => e.event === 'roomList' && e.to === 'lobby');
+    expect(lobby.length).toBeGreaterThan(0);
+    expect(lobby.at(-1).payload.map(r => r.id)).toContain(g.roomId);
+    // 게임 종료 이벤트 다음에 방송된다
+    expect(g.io.emitted.findIndex(e => e.event === 'gameEnd')).toBeLessThan(g.io.emitted.findIndex(e => e.event === 'roomList'));
   });
 });

@@ -237,6 +237,9 @@ export function GameProvider({ children }) {
   useEffect(() => {
     // env.js가 로드되면 __TOUCHDOWN_SOCKET_URL__ 사용, 아니면 현재 origin(개발: proxy 경유)
     const url = window.__TOUCHDOWN_SOCKET_URL__ || '';
+    // 벨 결과 알림 타이머: 결과가 연달아 오면 이전 타이머가 새 알림을 일찍 지우지 않도록 하나만 유지
+    let halliResultTimer = null;
+
     const socket = io(url, {
       reconnectionAttempts: 5,
       transports: ['websocket', 'polling'],
@@ -333,7 +336,8 @@ export function GameProvider({ children }) {
 
     socket.on('halliGalliResult', (data) => {
       dispatch({ type: 'HALLI_RESULT', ...data });
-      setTimeout(() => dispatch({ type: 'CLEAR_HALLI_RESULT' }), 3000);
+      clearTimeout(halliResultTimer);
+      halliResultTimer = setTimeout(() => dispatch({ type: 'CLEAR_HALLI_RESULT' }), 3000);
     });
 
     socket.on('gameEnd', (data) => {
@@ -378,6 +382,7 @@ export function GameProvider({ children }) {
     });
 
     return () => {
+      clearTimeout(halliResultTimer);
       socket.disconnect();
     };
   }, []);

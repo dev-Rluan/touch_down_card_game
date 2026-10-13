@@ -4,6 +4,7 @@
 
 const gameService = require('../services/gameService');
 const { withRoomLock } = require('./roomLock');
+const { broadcastLobby } = require('../socket/lobbyBroadcast');
 const roomService = require('../services/roomService');
 
 // 방별 게임 시작 카운트다운 타이머 관리
@@ -94,6 +95,8 @@ async function startGameCountdown(io, roomId) {
           message: '게임이 시작됩니다!',
           gameData: publicData
         });
+        // 시작된 방은 대기 목록에서 빠졌으므로 로비 화면도 갱신한다
+        broadcastLobby(io).catch(err => console.error('[lobby broadcast Error]', err));
 
         const latestRoomSnapshot = await roomService.getRoomById(roomId);
         if (latestRoomSnapshot && Array.isArray(latestRoomSnapshot.users)) {
