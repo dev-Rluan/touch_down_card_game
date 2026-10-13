@@ -9,6 +9,7 @@ const { limiters } = require('../utils/socketRateLimiter');
 const { withRoomLock } = require('../utils/roomLock');
 const { toPublicUsers } = require('../utils/publicView');
 const { broadcastLobby } = require('./lobbyBroadcast');
+const bellOrder = require('../utils/bellOrder');
 const rankingService = require('../services/rankingService');
 const achievementService = require('../services/achievementService');
 const dailyMissionService = require('../services/dailyMissionService');
@@ -128,6 +129,8 @@ module.exports = function(socket, io) {
       await withUserRoom(socket, 'playCardError', async (room) => {
         // 읽어 둔 room 을 서비스에 넘겨 재사용한다 (저장도 여기서 1회)
         const result = await gameService.playCard(room.id, socket.id, cardIndex, room);
+        // 바닥이 바뀌었으므로 이후의 벨은 새 라운드로 센다
+        bellOrder.clearRound(room.id);
         const playerName = room.users.find(u => u.id === socket.id)?.name || null;
         io.to(room.id).emit('cardPlayed', {
           playerId: socket.id,
@@ -147,6 +150,7 @@ module.exports = function(socket, io) {
 
         const gameEndResult = await gameService.checkGameEnd(room.id, room);
         if (gameEndResult.isEnded) {
+          bellOrder.clearRound(room.id);
           io.to(room.id).emit('gameEnd', gameEndResult);
           // 리텐션 훅: 게임 종료 시 랭킹/업적/미션 비동기 갱신
           setImmediate(() => handleGameEndRetention(io, room, gameEndResult));
@@ -166,12 +170,28 @@ module.exports = function(socket, io) {
    * 할리갈리 이벤트
    */
   socket.on('halliGalli', async () => {
+    // 누른 순서의 기준: 서버가 이벤트를 받은 시각 (Redis 조회 등 await 전에 잰다)
+    const arrivedAt = Date.now();
     if (!limiters.halliGalli.allow(socket.id)) {
-      socket.emit('halliGalliError', '요청이 너무 빠릅니다. 잠시 후 다시 시도하세요.');
+      socket.emit('halliGalliError', '벨은 1초에 한 번만 누를 수 있습니다.');
       return;
     }
     try {
       await withUserRoom(socket, 'halliGalliError', async (room) => {
+        // 진행 중인 게임에서 카드가 남은 플레이어의 누름만 순서에 넣는다 (탈락자·빈 바닥은 제외)
+        const presser = room.users.find(u => u.id === socket.id);
+        const order = room.gameState?.phase === 'playing' && presser && presser.cardPack?.length > 0
+          ? bellOrder.recordPress(room.id, presser, arrivedAt, { canStart: (room.gameState.centerCards || []).length > 0 })
+          : null;
+        if (order) {
+          io.to(room.id).emit('bellOrder', { round: order.round, presses: order.presses });
+          // 앞사람이 이미 성공해 바닥이 비었으면 판정 없이 "늦었음"만 알린다
+          if (order.rank > 1 && (room.gameState.centerCards || []).length === 0) {
+            socket.emit('halliGalliError', '한 발 늦었어요!');
+            return;
+          }
+        }
+
         const result = await gameService.handleHalliGalli(room.id, socket.id, room);
         const playerName = result.playerName
           || room.users.find(u => u.id === socket.id)?.name
@@ -203,6 +223,7 @@ module.exports = function(socket, io) {
         // 벨 실패로 마지막 카드를 잃어 카드가 있는 사람이 1명 이하가 되면 바로 게임을 끝낸다
         const gameEndResult = await gameService.checkGameEnd(room.id, room);
         if (gameEndResult.isEnded) {
+          bellOrder.clearRound(room.id);
           io.to(room.id).emit('gameEnd', gameEndResult);
           setImmediate(() => handleGameEndRetention(io, room, gameEndResult));
           await broadcastLobby(io);

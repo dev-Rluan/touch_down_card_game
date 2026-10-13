@@ -249,6 +249,11 @@ const handleHalliGalli = async (roomId, playerId, preloadedRoom) => {
     throw new Error('플레이어를 찾을 수 없습니다.');
   }
 
+  // 카드를 모두 잃은 플레이어는 탈락: 벨로 카드를 가져가 다시 살아나지 못한다 (3인 이상에서 게임이 계속되는 동안)
+  if (!playerHasCards(player)) {
+    throw new Error('카드를 모두 잃어 탈락했습니다.');
+  }
+
   halliGalliLocks.add(roomId);
   try {
   // 할리갈리 조건 확인 (각 플레이어의 맨 위 카드만 체크, 버림 카드 제외)
@@ -302,27 +307,12 @@ const handleHalliGalli = async (roomId, playerId, preloadedRoom) => {
       discardedCards: []
     };
   } else {
-    // 실패: 덱 맨 아래 카드 1장 버리기 (버림 카드 덱으로)
-    if (player.cardPack.length > 0) {
-      const discardedCard = player.cardPack.pop(); // 배열의 마지막 요소(맨 아래 카드) 제거
-      room.gameState.discardedCards.push(discardedCard);
+    // 실패: 덱 맨 아래 카드 1장 버리기 (버림 카드 덱으로). 마지막 1장이면 이걸로 탈락한다
+    const discardedCard = player.cardPack.pop(); // 배열의 마지막 요소(맨 아래 카드) 제거
+    room.gameState.discardedCards.push(discardedCard);
 
-      console.log(`[Game] 할리갈리 실패 - 플레이어: ${player.name}, 카드 버림: ${discardedCard.fruit} ${discardedCard.count}개`);
+    console.log(`[Game] 할리갈리 실패 - 플레이어: ${player.name}, 카드 버림: ${discardedCard.fruit} ${discardedCard.count}개`);
 
-      markPlayerActiveState(player);
-      normalizeCurrentTurn(room);
-      await saveRoomState(room, { reindex: false });
-
-      return {
-        success: false,
-        playerName: player.name,
-        discardedCard,
-        centerCards: room.gameState.centerCards,
-        discardedCards: room.gameState.discardedCards
-      };
-    }
-
-    // 카드가 없을 경우에도 실패 응답
     markPlayerActiveState(player);
     normalizeCurrentTurn(room);
     await saveRoomState(room, { reindex: false });
@@ -330,6 +320,7 @@ const handleHalliGalli = async (roomId, playerId, preloadedRoom) => {
     return {
       success: false,
       playerName: player.name,
+      discardedCard,
       centerCards: room.gameState.centerCards,
       discardedCards: room.gameState.discardedCards
     };

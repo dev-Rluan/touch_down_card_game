@@ -21,21 +21,27 @@ function getFruitEmoji(fruit) {
   return FRUIT_EMOJI[fruit] || '🃏';
 }
 
-function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCount }) {
+function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCount, eliminated, bellRank }) {
   return (
-    <div className={`player-stack ${isCurrentTurn ? (isMe ? 'my-turn' : 'other-turn') : ''}`} data-stack-id={playerId}>
+    <div
+      className={`player-stack ${isCurrentTurn ? (isMe ? 'my-turn' : 'other-turn') : ''} ${eliminated ? 'eliminated' : ''}`}
+      data-stack-id={playerId}
+    >
       <div className="player-stack-header">
         <span className="player-stack-name">{playerName}</span>
-        <span className="player-stack-count">🃏 {cardCount ?? cards.length}</span>
-        {isCurrentTurn && (
+        {eliminated
+          ? <span className="turn-badge out-badge">탈락</span>
+          : <span className="player-stack-count">🃏 {cardCount ?? cards.length}</span>}
+        {isCurrentTurn && !eliminated && (
           <span className={`turn-badge ${isMe ? 'my-turn-badge' : 'other-turn-badge'}`}>
             {isMe ? '내 턴' : '상대 턴'}
           </span>
         )}
       </div>
+      {bellRank && <span className={`bell-rank bell-rank-${Math.min(bellRank, 4)}`} aria-label={`벨 ${bellRank}번째`}>{bellRank}</span>}
       <div className="player-stack-cards">
         {cards.length === 0 ? (
-          <div className="stack-placeholder">대기중</div>
+          <div className="stack-placeholder">{eliminated ? '탈락' : '대기중'}</div>
         ) : (
           cards.map((card, i) => (
             <div key={card._k ?? i} className="stack-card" style={{ zIndex: i }}>
@@ -49,11 +55,28 @@ function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCou
   );
 }
 
-function MyDeckCard({ cards, onPlay, disabled }) {
+// 벨 누른 순서 (서버가 받은 순서). 첫 번째와의 시간 차이를 함께 보여준다
+function BellOrder({ order, mySocketId }) {
+  if (!order || order.presses.length === 0) return null;
+  return (
+    <ol className="bell-order" aria-label="벨 누른 순서">
+      {order.presses.map(p => (
+        <li key={p.playerId} className={p.playerId === mySocketId ? 'me' : ''}>
+          <span className={`bell-rank bell-rank-${Math.min(p.rank, 4)}`}>{p.rank}</span>
+          <span className="bell-order-name">{p.name}</span>
+          {p.rank > 1 && <span className="bell-order-delta">+{(p.delta / 1000).toFixed(2)}초</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function MyDeckCard({ cards, onPlay, disabled, eliminated }) {
   if (cards.length === 0) {
     return (
-      <div className="deck-card empty">
-        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>덱 비움</span>
+      <div className={`deck-card empty ${eliminated ? 'deck-out' : ''}`}>
+        <span className="deck-empty-label">{eliminated ? '탈락' : '덱 비움'}</span>
+        {eliminated && <span className="deck-empty-sub">관전 중</span>}
       </div>
     );
   }
@@ -78,7 +101,7 @@ export default function GameScreen() {
   const {
     mySocketId, hand, playerStacks, gameStatePlayers,
     currentTurn, discardedCount, halliGalliResult,
-    countdown, countdownSub, users, isMyTurn, roomId, chatUnread,
+    countdown, countdownSub, users, isMyTurn, roomId, chatUnread, bellOrder,
   } = state;
   const [showChat, setShowChat] = useState(false);
 
@@ -96,6 +119,12 @@ export default function GameScreen() {
         deckToStack(me);
         vibrate(15);
       }
+    }
+
+    if (type === 'bellError') {
+      const msg = data?.message || '';
+      const short = msg.includes('1초') ? '잠깐!' : msg.includes('탈락') ? '탈락' : msg.includes('늦었') ? '늦었어요!' : '';
+      if (short) floatText(me, short, 'bad');
     }
 
     if (type === 'halliResult') {
@@ -143,6 +172,26 @@ export default function GameScreen() {
   // 플레이어 목록: gameStatePlayers 우선, fallback users
   const players = gameStatePlayers.length > 0 ? gameStatePlayers : users.map(u => ({ ...u, cardCount: 0 }));
 
+  // 카드를 모두 잃은 플레이어 = 탈락 (서버도 벨/차례에서 제외한다)
+  const inGame = gameStatePlayers.length > 0;
+  const isOut = (p) => inGame && (p.cardCount ?? 0) === 0;
+  const meOut = inGame && isOut(players.find(p => p.id === mySocketId) || { cardCount: 1 });
+  const rankOf = Object.fromEntries((bellOrder?.presses || []).map(p => [p.playerId, p.rank]));
+
+  // 누군가 방금 탈락하면 그 더미 위에 "탈락" 표시
+  const prevCounts = useRef({});
+  useEffect(() => {
+    if (!inGame) return;
+    players.forEach(p => {
+      const prev = prevCounts.current[p.id];
+      if (prev > 0 && p.cardCount === 0) {
+        setTimeout(() => floatText(p.id, '탈락', 'bad'), 500); // 벨 실패 글자와 겹치지 않게 조금 뒤에
+        if (p.id === mySocketId) vibrate([80, 60, 80]);
+      }
+      prevCounts.current[p.id] = p.cardCount;
+    });
+  });
+
   // PC 화면에서 카드 크기를 인원수에 맞춰 계산하도록 CSS 에 인원수를 넘긴다 (이펙트 레이어도 쓰므로 body 에 둔다)
   useEffect(() => {
     document.body.style.setProperty('--players', String(Math.max(players.length, 2)));
@@ -167,6 +216,8 @@ export default function GameScreen() {
                 isCurrentTurn={isCurrentTurn}
                 isMe={isMe}
                 cardCount={player.cardCount}
+                eliminated={isOut(player)}
+                bellRank={rankOf[player.id]}
               />
             );
           })}
@@ -181,6 +232,7 @@ export default function GameScreen() {
           </div>
 
           <div className="discard-pile-container text-center">
+            <BellOrder order={bellOrder} mySocketId={mySocketId} />
             <div className="small text-muted mb-1">버림 카드 더미 <span id="discardCount">{discardedCount}장</span></div>
             {/* 버린 카드는 뒤집어 놓은 카드: 내용은 모르고 장수만 보인다 */}
             <div id="discardPile" className={`discard-pile ${discardedCount > 0 ? 'face-down' : ''}`} data-count={Math.min(discardedCount, 3)}>
@@ -216,11 +268,11 @@ export default function GameScreen() {
           {/* 내 덱 */}
           <div className="text-center">
             <div className="small text-white-50 mb-1">내 덱</div>
-            <MyDeckCard cards={hand} onPlay={handlePlayCard} disabled={!isMyTurn} />
+            <MyDeckCard cards={hand} onPlay={handlePlayCard} disabled={!isMyTurn} eliminated={meOut} />
           </div>
 
           {/* 벨 버튼 */}
-          <BellButton />
+          <BellButton eliminated={meOut} />
         </div>
       </div>
 

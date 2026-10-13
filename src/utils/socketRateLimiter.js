@@ -87,9 +87,11 @@ function createRateLimiter({ maxRequests, windowMs }) {
 
 // ── 이벤트별 limiter 인스턴스 ────────────────────────────────────────────────
 
+const BELL_COOLDOWN_MS = 1000;
+
 const limiters = {
-  // 벨 클릭: 1초에 최대 3회 (실제 게임에서 충분한 여유)
-  halliGalli: createRateLimiter({ maxRequests: 3, windowMs: 1000 }),
+  // 벨 클릭: 누른 뒤 1초 동안 다시 누를 수 없다 (내부 쿨타임 — 클라이언트도 같은 시간 동안 버튼을 잠근다)
+  halliGalli: createRateLimiter({ maxRequests: 1, windowMs: BELL_COOLDOWN_MS }),
 
   // 카드 내기: 1초에 최대 5회 (네트워크 지연 고려)
   playCard: createRateLimiter({ maxRequests: 5, windowMs: 1000 }),
@@ -119,4 +121,4 @@ function cleanupSocket(socketId) {
   Object.values(limiters).forEach(limiter => limiter.reset(socketId));
 }
 
-module.exports = { limiters, cleanupSocket, createRateLimiter };
+module.exports = { limiters, cleanupSocket, createRateLimiter, BELL_COOLDOWN_MS };

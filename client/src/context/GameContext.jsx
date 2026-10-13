@@ -23,6 +23,7 @@ const initialState = {
   countdown: null,         // null | number | 'GO!'
   countdownSub: '',
   halliGalliResult: null,  // 최근 벨 결과
+  bellOrder: null,         // { round, presses: [{ rank, playerId, name, delta }] } 서버가 받은 벨 누른 순서
   fxSeq: 0,                // 바닥에 놓인 카드마다 붙이는 고유 번호 (새로 놓인 카드만 애니메이션하기 위함)
   gameResult: null,        // { winner, finalScores }
   connectError: false,
@@ -80,6 +81,7 @@ function reducer(state, action) {
         gameStatePlayers: [],
         currentTurn: 0,
         discardedCount: 0,
+        bellOrder: null,
         gameResult: null,
       };
 
@@ -125,6 +127,7 @@ function reducer(state, action) {
         gameStatePlayers: action.players || [],
         playerStacks: stacks,
         discardedCount: 0,
+        bellOrder: null,
         gameResult: null,
       };
     }
@@ -195,6 +198,13 @@ function reducer(state, action) {
     case 'CLEAR_HALLI_RESULT':
       return { ...state, halliGalliResult: null };
 
+    case 'BELL_ORDER':
+      return { ...state, bellOrder: { round: action.round, presses: action.presses || [] } };
+
+    case 'CLEAR_BELL_ORDER':
+      // 그 사이 새 라운드가 시작됐으면 지우지 않는다
+      return state.bellOrder && state.bellOrder.round === action.round ? { ...state, bellOrder: null } : state;
+
     case 'GAME_END':
       return {
         ...state,
@@ -202,6 +212,7 @@ function reducer(state, action) {
         gameResult: { winner: action.winner, finalScores: action.finalScores },
         countdown: null,
         isMyTurn: false,
+        bellOrder: null,
         hand: [],
         // 서버가 종료 시 모든 유저를 waiting 으로 되돌리므로 동기화
         users: state.users.map(u => ({ ...u, readyStatus: 'waiting' })),
@@ -243,6 +254,7 @@ export function GameProvider({ children }) {
     const url = window.__TOUCHDOWN_SOCKET_URL__ || '';
     // 벨 결과 알림 타이머: 결과가 연달아 오면 이전 타이머가 새 알림을 일찍 지우지 않도록 하나만 유지
     let halliResultTimer = null;
+    let bellOrderTimer = null;
 
     const socket = io(url, {
       reconnectionAttempts: 5,
@@ -349,6 +361,20 @@ export function GameProvider({ children }) {
       halliResultTimer = setTimeout(() => dispatch({ type: 'CLEAR_HALLI_RESULT' }), 3000);
     });
 
+    // 벨 누른 순서 (서버 도착 순). 마지막 갱신 후 2.5초 동안 보여준다
+    socket.on('bellOrder', (data) => {
+      if (!data || !Array.isArray(data.presses)) return;
+      emitFx('bellOrder', data);
+      dispatch({ type: 'BELL_ORDER', ...data });
+      clearTimeout(bellOrderTimer);
+      bellOrderTimer = setTimeout(() => dispatch({ type: 'CLEAR_BELL_ORDER', round: data.round }), 2500);
+    });
+
+    // 벨 거부(쿨타임·늦음·탈락)는 알림 대신 내 더미 위 글자로 보여준다
+    socket.on('halliGalliError', (message) => {
+      emitFx('bellError', { message: typeof message === 'string' ? message : '' });
+    });
+
     socket.on('gameEnd', (data) => {
       emitFx('gameEnd', data);
       dispatch({ type: 'GAME_END', ...data });
@@ -364,7 +390,7 @@ export function GameProvider({ children }) {
     // 서버 에러 이벤트 → 사용자 알림
     const errorEvents = [
       'createRoomError', 'roomListError', 'faildJoinRoom', 'readyError',
-      'playCardError', 'halliGalliError', 'gameStateError', 'name change error', 'chatError',
+      'playCardError', 'gameStateError', 'name change error', 'chatError',
     ];
     errorEvents.forEach(evt => {
       socket.on(evt, (message) => {
@@ -396,6 +422,7 @@ export function GameProvider({ children }) {
 
     return () => {
       clearTimeout(halliResultTimer);
+      clearTimeout(bellOrderTimer);
       socket.disconnect();
     };
   }, []);

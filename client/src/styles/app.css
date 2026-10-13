@@ -3559,3 +3559,60 @@ body,
   .result-chat .chat-inline { height: calc(100vh - 3rem); height: calc(100dvh - 3rem); max-height: 720px; }
   .chat-inline .chat-bubble { font-size: 0.95rem; }
 }
+
+/* ══════════════ 벨 쿨타임 · 누른 순서 · 탈락 ══════════════ */
+/* 쿨타임: 버튼 위 어두운 원이 시계 방향으로 걷히며 다시 누를 수 있게 된다 */
+@property --bell-cool { syntax: '<angle>'; inherits: false; initial-value: 360deg; }
+.bell-cooldown-ring {
+  position: absolute; inset: -2px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(rgba(0, 0, 0, 0.42) var(--bell-cool), transparent 0);
+  animation: td-bell-cool var(--bell-cooldown, 1000ms) linear forwards;
+}
+@keyframes td-bell-cool { from { --bell-cool: 360deg; } to { --bell-cool: 0deg; } }
+.halli-galli-bell.bell-cooling { cursor: wait; }
+.halli-galli-bell.bell-out {
+  background: #5b5f66 !important; border-color: #3e4147 !important;
+  cursor: not-allowed; filter: grayscale(1); opacity: 0.7;
+}
+.halli-galli-bell.bell-out .bell-label { color: #e5e7eb; }
+
+/* 누른 순서 배지 (플레이어 더미 오른쪽 위 + 버림 더미 위 목록) */
+.player-stack { position: relative; }
+.player-stack > .bell-rank { position: absolute; top: -10px; right: -10px; z-index: 5; animation: td-rank-pop 260ms cubic-bezier(.2, 1.4, .4, 1) both; }
+.bell-rank {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  font-size: 0.85rem; font-weight: 900; line-height: 1;
+  background: #9ca3af; color: #111; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.bell-rank-1 { background: var(--accent); color: var(--accent-ink); }
+.bell-rank-2 { background: #d1d5db; }
+.bell-rank-3 { background: #d6a172; }
+@keyframes td-rank-pop { from { transform: scale(0.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.discard-pile-container { position: relative; top: auto; left: auto; transform: none; }
+.bell-order {
+  position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
+  z-index: 20; margin: 0; padding: 0.35rem 0.5rem; list-style: none; pointer-events: none;
+  display: flex; flex-direction: column; gap: 0.2rem; min-width: 150px;
+  background: rgba(0, 0, 0, 0.62); border-radius: 0.6rem;
+  animation: td-rank-pop 200ms ease-out both;
+}
+.bell-order li { display: flex; align-items: center; gap: 0.4rem; color: #fff; font-size: 0.82rem; white-space: nowrap; }
+.bell-order li.me .bell-order-name { font-weight: 800; }
+.bell-order .bell-rank { width: 20px; height: 20px; font-size: 0.72rem; box-shadow: none; }
+.bell-order-name { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+.bell-order-delta { color: rgba(255, 255, 255, 0.65); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+
+/* 탈락한 플레이어 */
+.player-stack.eliminated { opacity: 0.5; filter: grayscale(0.8); border-style: dashed; }
+.out-badge { background: #4b5563; color: #f3f4f6; }
+.deck-card.deck-out { flex-direction: column; gap: 4px; border-color: rgba(255, 255, 255, 0.15); }
+.deck-empty-label { font-size: 12px; color: rgba(255, 255, 255, 0.55); font-weight: 700; }
+.deck-card.deck-out .deck-empty-label { font-size: 16px; color: #f3f4f6; }
+.deck-empty-sub { font-size: 11px; color: rgba(255, 255, 255, 0.5); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bell-cooldown-ring { animation: none; background: rgba(0, 0, 0, 0.35); }
+  .player-stack > .bell-rank, .bell-order { animation: none; }
+}

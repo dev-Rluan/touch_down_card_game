@@ -564,3 +564,116 @@ describe('공정성/종료 처리 보강', () => {
     expect(g.io.emitted.findIndex(e => e.event === 'gameEnd')).toBeLessThan(g.io.emitted.findIndex(e => e.event === 'roomList'));
   });
 });
+
+describe('3인 이상: 카드를 모두 잃은 플레이어는 탈락', () => {
+  async function threeWithEliminated() {
+    const g = await setupGame(3);
+    const room = await g.load();
+    const [a, b, c] = room.users;
+    a.cardPack = [];                                   // a 는 카드를 모두 잃음
+    room.gameState.playerStacks = { [a.id]: [{ fruit: 'banana', count: 3 }], [b.id]: [{ fruit: 'banana', count: 2 }], [c.id]: [] };
+    room.gameState.centerCards = [{ fruit: 'banana', count: 3 }, { fruit: 'banana', count: 2 }];
+    room.gameState.currentTurn = 1;
+    await roomService.saveRoomState(room);
+    return { ...g, a, b, c };
+  }
+
+  test('탈락한 플레이어는 벨을 눌러도 카드를 가져가 부활하지 못한다', async () => {
+    const g = await threeWithEliminated();
+    g.io.emitted.length = 0;
+    await g.byId[g.a.id].fire('halliGalli');
+    expect(g.io.emitted.find(e => e.event === 'halliGalliResult')).toBeUndefined();
+    expect(g.byId[g.a.id].own.at(-1)).toEqual({ event: 'halliGalliError', payload: '카드를 모두 잃어 탈락했습니다.' });
+    const after = await g.load();
+    expect(after.users[0].cardPack).toHaveLength(0);
+    expect(after.gameState.centerCards).toHaveLength(2); // 판 그대로 → 남은 사람이 가져갈 수 있다
+  });
+
+  test('탈락한 플레이어의 차례는 건너뛰고 게임은 남은 2명으로 계속된다', async () => {
+    const g = await threeWithEliminated();
+    const room = await g.load();
+    room.gameState.currentTurn = 2;
+    await roomService.saveRoomState(room);
+    g.io.emitted.length = 0;
+    await g.byId[g.c.id].fire('playCard', 0);
+    const played = g.io.emitted.find(e => e.event === 'cardPlayed').payload;
+    expect(played.result.nextTurn).toBe(1); // a(0) 를 건너뛰고 b(1)
+    expect(g.io.emitted.find(e => e.event === 'gameEnd')).toBeUndefined();
+  });
+});
+
+describe('벨 내부 쿨타임 / 누른 순서', () => {
+  const bellOrder = require('../../utils/bellOrder');
+
+  async function threeWithFive() {
+    const g = await setupGame(3);
+    const room = await g.load();
+    const [a, b, c] = room.users;
+    room.gameState.playerStacks = { [a.id]: [{ fruit: 'banana', count: 3 }], [b.id]: [{ fruit: 'banana', count: 2 }], [c.id]: [] };
+    room.gameState.centerCards = [{ fruit: 'banana', count: 3 }, { fruit: 'banana', count: 2 }];
+    await roomService.saveRoomState(room);
+    return { ...g, a, b, c };
+  }
+
+  test('같은 사람이 1초 안에 다시 누르면 거부되고 판정하지 않는다', async () => {
+    const g = await threeWithFive();
+    const room = await g.load();
+    room.gameState.playerStacks[g.a.id] = [{ fruit: 'lemon', count: 1 }]; // 실패 상황
+    await roomService.saveRoomState(room);
+    await g.byId[g.b.id].fire('halliGalli');
+    g.io.emitted.length = 0;
+    await g.byId[g.b.id].fire('halliGalli');
+    expect(g.byId[g.b.id].own.at(-1)).toEqual({ event: 'halliGalliError', payload: '벨은 1초에 한 번만 누를 수 있습니다.' });
+    expect(g.io.emitted.find(e => e.event === 'halliGalliResult')).toBeUndefined();
+    expect((await g.load()).users[1].cardPack).toHaveLength(room.users[1].cardPack.length - 1); // 1장만 잃음
+  });
+
+  test('누른 순서가 서버 도착 순으로 방 전체에 전송되고, 늦게 누른 사람은 판정 없이 "늦었음"', async () => {
+    const g = await threeWithFive();
+    g.io.emitted.length = 0;
+    // 동시에 누름: c → a 순서로 서버에 도착
+    await Promise.all([g.byId[g.c.id].fire('halliGalli'), g.byId[g.a.id].fire('halliGalli')]);
+
+    const orders = g.io.emitted.filter(e => e.event === 'bellOrder');
+    expect(orders.map(o => o.to)).toEqual([g.roomId, g.roomId]);
+    expect(orders.at(-1).payload.presses.map(p => [p.rank, p.playerId])).toEqual([[1, g.c.id], [2, g.a.id]]);
+    expect(orders.at(-1).payload.presses[0].delta).toBe(0);
+    expect(orders[0].payload.round).toBe(orders[1].payload.round);
+
+    const results = g.io.emitted.filter(e => e.event === 'halliGalliResult');
+    expect(results).toHaveLength(1);
+    expect(results[0].payload).toMatchObject({ playerId: g.c.id, success: true });
+    expect(g.byId[g.a.id].own.at(-1)).toEqual({ event: 'halliGalliError', payload: '한 발 늦었어요!' });
+    const after = await g.load();
+    expect(after.users[0].cardPack).toHaveLength(g.a.cardPack.length); // 늦은 사람은 벌칙 없음
+  });
+
+  test('탈락자와 빈 바닥의 누름은 순서에 들어가지 않는다', async () => {
+    const g = await setupGame(3);
+    g.io.emitted.length = 0;
+    const room = await g.load();
+    await g.byId[room.users[0].id].fire('halliGalli'); // 바닥에 카드 없음
+    expect(g.io.emitted.find(e => e.event === 'bellOrder')).toBeUndefined();
+  });
+
+  test('카드가 새로 나오면 새 라운드가 시작된다', async () => {
+    const g = await threeWithFive();
+    await g.byId[g.b.id].fire('halliGalli');
+    const room = await g.load();
+    expect(bellOrder._rounds.has(g.roomId)).toBe(true);
+    await g.byId[room.users[room.gameState.currentTurn].id].fire('playCard', 0);
+    expect(bellOrder._rounds.has(g.roomId)).toBe(false);
+  });
+
+  test('recordPress: 1.5초가 지나면 새 라운드, 도착 시각 순 정렬', () => {
+    const r1 = bellOrder.recordPress('t', { id: 'x', name: 'X' }, 1000, { canStart: true });
+    const r2 = bellOrder.recordPress('t', { id: 'y', name: 'Y' }, 1200, { canStart: true });
+    expect(r2.round).toBe(r1.round);
+    expect(r2.presses.map(p => [p.name, p.delta])).toEqual([['X', 0], ['Y', 200]]);
+    expect(bellOrder.recordPress('t', { id: 'x', name: 'X' }, 1300, { canStart: true })).toBeNull(); // 같은 라운드 중복
+    const r3 = bellOrder.recordPress('t', { id: 'x', name: 'X' }, 3000, { canStart: true });
+    expect(r3.round).not.toBe(r1.round);
+    expect(bellOrder.recordPress('u', { id: 'x', name: 'X' }, 1000, { canStart: false })).toBeNull();
+    bellOrder.clearRound('t');
+  });
+});
