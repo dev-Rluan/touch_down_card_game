@@ -117,14 +117,27 @@ app.get('/ads.txt', (req, res) => {
   res.type('text/plain').send(`google.com, ${match[1]}, DIRECT, f08c47fec0942fa0\n`);
 });
 
-// ── 피드백 확인 페이지 (운영자용) ─────────────────────────────────────────────
-// FEEDBACK_ADMIN_TOKEN 이 설정된 경우에만 열린다: /admin/feedback?token=<토큰>
-app.get('/admin/feedback', async (req, res) => {
-  const expected = process.env.FEEDBACK_ADMIN_TOKEN || '';
+// ── 운영자 페이지 ─────────────────────────────────────────────────────────────
+// ADMIN_TOKEN(없으면 FEEDBACK_ADMIN_TOKEN) 이 설정된 경우에만 열린다: /admin/...?token=<토큰>
+function adminAuthorized(req) {
+  const expected = process.env.ADMIN_TOKEN || process.env.FEEDBACK_ADMIN_TOKEN || '';
   const given = String(req.query.token || (req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
   const crypto = require('crypto');
   const digest = v => crypto.createHash('sha256').update(v).digest();
-  if (!expected || !crypto.timingSafeEqual(digest(given), digest(expected))) {
+  return Boolean(expected) && crypto.timingSafeEqual(digest(given), digest(expected));
+}
+
+// 네트워크 지연 분포 (벨 시간 보정 기준을 정하기 위한 관측용)
+app.get('/admin/latency', (req, res) => {
+  if (!adminAuthorized(req)) return res.status(404).type('text/plain').send('Not found');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Robots-Tag', 'noindex');
+  res.json(require('./utils/latency').summary());
+});
+
+// 피드백 확인 페이지
+app.get('/admin/feedback', async (req, res) => {
+  if (!adminAuthorized(req)) {
     return res.status(404).type('text/plain').send('Not found');
   }
   res.setHeader('Cache-Control', 'no-store');

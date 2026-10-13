@@ -21,11 +21,12 @@ function sweep(now) {
  * @param {string} roomId
  * @param {{id: string, name: string}} player
  * @param {number} at - 서버 도착 시각 (ms)
- * @param {{canStart: boolean}} opts - 새 라운드를 시작해도 되는지 (바닥에 카드가 없으면 시작하지 않는다)
- * @returns {{round: number, rank: number, presses: Array<{rank, playerId, name, delta}>}|null}
+ * @param {{canStart: boolean, ping?: number|null}} opts - canStart: 새 라운드를 시작해도 되는지 (바닥에 카드가 없으면 시작하지 않는다),
+ *   ping: 누른 사람의 현재 왕복 지연(ms) — 표시용
+ * @returns {{round: number, rank: number, presses: Array<{rank, playerId, name, delta, ping}>}|null}
  *   기록했으면 현재까지의 순서, 기록하지 않았으면 null (같은 라운드에 이미 누름 / 시작 불가)
  */
-function recordPress(roomId, player, at, { canStart }) {
+function recordPress(roomId, player, at, { canStart, ping = null }) {
   let round = rounds.get(roomId);
   if (!round || at - round.firstAt > ROUND_WINDOW_MS) {
     if (!canStart) return null;
@@ -36,14 +37,14 @@ function recordPress(roomId, player, at, { canStart }) {
   if (round.presses.some(p => p.playerId === player.id)) return null;
 
   // 도착 시각 순으로 끼워 넣는다 (처리 순서가 도착 순서와 다를 경우 대비)
-  const entry = { playerId: player.id, name: player.name, at: Math.max(at, round.firstAt) };
+  const entry = { playerId: player.id, name: player.name, at: Math.max(at, round.firstAt), ping: ping ?? null };
   const idx = round.presses.findIndex(p => p.at > entry.at);
   if (idx === -1) round.presses.push(entry); else round.presses.splice(idx, 0, entry);
 
   return {
     round: round.id,
     rank: round.presses.indexOf(entry) + 1,
-    presses: round.presses.map((p, i) => ({ rank: i + 1, playerId: p.playerId, name: p.name, delta: p.at - round.firstAt })),
+    presses: round.presses.map((p, i) => ({ rank: i + 1, playerId: p.playerId, name: p.name, delta: p.at - round.firstAt, ping: p.ping })),
   };
 }
 

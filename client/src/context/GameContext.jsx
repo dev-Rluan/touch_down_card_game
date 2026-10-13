@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useRef, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { emitFx } from '../fx/fxBus.js';
+import { startClockSync } from '../net/clock.js';
 
 const GameContext = createContext(null);
 
@@ -261,6 +262,7 @@ export function GameProvider({ children }) {
       transports: ['websocket', 'polling'],
     });
     socketRef.current = socket;
+    const stopClockSync = startClockSync(socket);
 
     socket.on('connect', () => {
       // socket.id는 connect 이후 사용 가능
@@ -423,6 +425,7 @@ export function GameProvider({ children }) {
     return () => {
       clearTimeout(halliResultTimer);
       clearTimeout(bellOrderTimer);
+      stopClockSync();
       socket.disconnect();
     };
   }, []);

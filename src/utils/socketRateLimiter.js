@@ -108,6 +108,9 @@ const limiters = {
   // 채팅: 5초에 최대 5건 (도배 방지)
   chat: createRateLimiter({ maxRequests: 5, windowMs: 5000 }),
 
+  // 시계 맞추기: 5초에 최대 6회 (클라이언트는 3초마다 1회)
+  timeSync: createRateLimiter({ maxRequests: 6, windowMs: 5000 }),
+
   // 피드백: 소켓당 10분에 3건, 서버 전체 1시간에 120건
   feedback: createRateLimiter({ maxRequests: 3, windowMs: 10 * 60 * 1000 }),
   feedbackGlobal: createRateLimiter({ maxRequests: 120, windowMs: 60 * 60 * 1000 }),

@@ -6,6 +6,7 @@ import ChatPanel from '../components/ChatPanel.jsx';
 import CountdownOverlay from '../components/CountdownOverlay.jsx';
 import Icon from '../components/Icon.jsx';
 import SoundToggle from '../components/SoundToggle.jsx';
+import PingBadge, { pingLevel } from '../components/PingBadge.jsx';
 import { onFx } from '../fx/fxBus.js';
 import { playSound, vibrate } from '../fx/sound.js';
 import { deckToStack, sweepTo, failToDiscard, floatText, flash } from '../fx/effects.js';
@@ -65,6 +66,7 @@ function BellOrder({ order, mySocketId }) {
           <span className={`bell-rank bell-rank-${Math.min(p.rank, 4)}`}>{p.rank}</span>
           <span className="bell-order-name">{p.name}</span>
           {p.rank > 1 && <span className="bell-order-delta">+{(p.delta / 1000).toFixed(2)}초</span>}
+          {p.ping != null && <span className={`bell-order-ping ping-${pingLevel(p.ping)}`}>핑 {p.ping}ms</span>}
         </li>
       ))}
     </ol>
@@ -256,6 +258,7 @@ export default function GameScreen() {
               <Icon name="chat" /><span className="chat-fab-label">채팅</span>
               {chatUnread > 0 && !showChat && <span className="chat-badge">{chatUnread > 9 ? '9+' : chatUnread}</span>}
             </button>
+            <PingBadge />
             <SoundToggle />
             <ThemePicker />
           </div>

@@ -3616,3 +3616,24 @@ body,
   .bell-cooldown-ring { animation: none; background: rgba(0, 0, 0, 0.35); }
   .player-stack > .bell-rank, .bell-order { animation: none; }
 }
+
+/* ══════════════ 핑 표시 ══════════════ */
+.ping-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.72rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: var(--ink-dim); white-space: nowrap;
+}
+.ping-bars { display: inline-flex; align-items: flex-end; gap: 1px; height: 11px; }
+.ping-bars i { display: block; width: 3px; background: rgba(255, 255, 255, 0.2); border-radius: 1px; }
+.ping-bars i:nth-child(1) { height: 4px; }
+.ping-bars i:nth-child(2) { height: 7px; }
+.ping-bars i:nth-child(3) { height: 11px; }
+.ping-good { --ping: #4ade80; }
+.ping-ok { --ping: #facc15; }
+.ping-bad { --ping: #f87171; }
+.ping-badge .ping-bars i.on { background: var(--ping); }
+.ping-badge.ping-bad { color: #f87171; }
+.bell-order-ping { font-size: 0.68rem; color: var(--ping, rgba(255, 255, 255, 0.6)); font-variant-numeric: tabular-nums; }
+@media (max-width: 420px) {
+  .discard-side .ping-badge { font-size: 0.65rem; }
+}

@@ -10,6 +10,7 @@ const { withRoomLock } = require('../utils/roomLock');
 const { toPublicUsers } = require('../utils/publicView');
 const { broadcastLobby } = require('./lobbyBroadcast');
 const bellOrder = require('../utils/bellOrder');
+const latency = require('../utils/latency');
 const rankingService = require('../services/rankingService');
 const achievementService = require('../services/achievementService');
 const dailyMissionService = require('../services/dailyMissionService');
@@ -181,7 +182,10 @@ module.exports = function(socket, io) {
         // 진행 중인 게임에서 카드가 남은 플레이어의 누름만 순서에 넣는다 (탈락자·빈 바닥은 제외)
         const presser = room.users.find(u => u.id === socket.id);
         const order = room.gameState?.phase === 'playing' && presser && presser.cardPack?.length > 0
-          ? bellOrder.recordPress(room.id, presser, arrivedAt, { canStart: (room.gameState.centerCards || []).length > 0 })
+          ? bellOrder.recordPress(room.id, presser, arrivedAt, {
+            canStart: (room.gameState.centerCards || []).length > 0,
+            ping: latency.getLatency(socket.id)?.rtt ?? null,
+          })
           : null;
         if (order) {
           io.to(room.id).emit('bellOrder', { round: order.round, presses: order.presses });
