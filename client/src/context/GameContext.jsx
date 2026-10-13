@@ -307,6 +307,7 @@ export function GameProvider({ children }) {
     });
 
     socket.on('gameCountdown', ({ secondsLeft }) => {
+      emitFx('countdown', { secondsLeft });
       dispatch({ type: 'COUNTDOWN_TICK', secondsLeft });
     });
 
@@ -318,6 +319,7 @@ export function GameProvider({ children }) {
     });
 
     socket.on('gameStart', ({ message, gameData }) => {
+      emitFx('gameStart', gameData);
       const players = gameData?.players || [];
       dispatch({ type: 'GAME_START', players });
       setTimeout(() => dispatch({ type: 'HIDE_COUNTDOWN' }), 900);
@@ -348,11 +350,15 @@ export function GameProvider({ children }) {
     });
 
     socket.on('gameEnd', (data) => {
+      emitFx('gameEnd', data);
       dispatch({ type: 'GAME_END', ...data });
     });
 
     socket.on('chat message', (msg) => {
-      if (msg && typeof msg.text === 'string') dispatch({ type: 'CHAT_MESSAGE', ...msg });
+      if (msg && typeof msg.text === 'string') {
+        emitFx('chat', msg);
+        dispatch({ type: 'CHAT_MESSAGE', ...msg });
+      }
     });
 
     // 서버 에러 이벤트 → 사용자 알림
