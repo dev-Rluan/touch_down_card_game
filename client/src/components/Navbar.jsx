@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGame } from '../context/GameContext.jsx';
 import ThemePicker from './ThemePicker.jsx';
+import SoundToggle from './SoundToggle.jsx';
 import Icon from './Icon.jsx';
 
 export default function Navbar() {
@@ -51,6 +52,7 @@ export default function Navbar() {
             </button>
           )}
 
+          <SoundToggle />
           <ThemePicker />
         </div>
       </div>

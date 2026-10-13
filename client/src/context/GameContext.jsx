@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useRef, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
+import { emitFx } from '../fx/fxBus.js';
 
 const GameContext = createContext(null);
 
@@ -22,6 +23,7 @@ const initialState = {
   countdown: null,         // null | number | 'GO!'
   countdownSub: '',
   halliGalliResult: null,  // 최근 벨 결과
+  fxSeq: 0,                // 바닥에 놓인 카드마다 붙이는 고유 번호 (새로 놓인 카드만 애니메이션하기 위함)
   gameResult: null,        // { winner, finalScores }
   connectError: false,
   chat: [],                // [{ userId, name, text, ts }] 같은 방의 채팅 (최근 100건)
@@ -136,7 +138,8 @@ function reducer(state, action) {
     case 'CARD_PLAYED': {
       // action.playerId, action.result.playedCard
       if (!action.playerId || !action.result || !action.result.playedCard) return state;
-      const card = action.result.playedCard;
+      const fxSeq = (state.fxSeq || 0) + 1;
+      const card = { ...action.result.playedCard, _k: fxSeq };
       const prevStack = state.playerStacks[action.playerId] || { cards: [], name: action.playerName || '' };
       const newCards = [...prevStack.cards, card].slice(-3); // 최대 3장 표시
       const nextTurn = action.result.nextTurn;
@@ -148,6 +151,7 @@ function reducer(state, action) {
       const hasNextTurn = typeof nextTurn === 'number';
       return {
         ...state,
+        fxSeq,
         gameStatePlayers: players,
         currentTurn: hasNextTurn ? nextTurn : state.currentTurn,
         isMyTurn: hasNextTurn ? players[nextTurn]?.id === state.mySocketId : state.isMyTurn,
@@ -327,6 +331,7 @@ export function GameProvider({ children }) {
     });
 
     socket.on('cardPlayed', (data) => {
+      emitFx('cardPlayed', data);
       dispatch({ type: 'CARD_PLAYED', ...data });
     });
 
@@ -335,6 +340,8 @@ export function GameProvider({ children }) {
     });
 
     socket.on('halliGalliResult', (data) => {
+      // 성공 시 reducer 가 바닥 카드를 비우므로, 그 전에 이펙트가 카드 위치를 측정할 수 있게 먼저 알린다
+      emitFx('halliResult', data);
       dispatch({ type: 'HALLI_RESULT', ...data });
       clearTimeout(halliResultTimer);
       halliResultTimer = setTimeout(() => dispatch({ type: 'CLEAR_HALLI_RESULT' }), 3000);

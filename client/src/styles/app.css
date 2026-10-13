@@ -3277,3 +3277,88 @@ body,
 .halli-galli-notification .notification-score { font-size: 0.85rem; }
 /* 위치: 플레이어 카드/버림 더미/덱/벨을 가리지 않는 "내 덱" 라벨 줄 부근 */
 .halli-galli-notification { top: 69%; }
+
+/* ══════════════ 게임 이펙트 ══════════════ */
+:root { --fx-bad: #ff5a4f; --fx-good: var(--accent); }
+
+/* 이펙트 레이어: 화면 위에 떠 있지만 클릭은 통과 */
+.fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 1300; overflow: hidden; }
+
+/* 날아가는 카드 */
+.fx-card {
+  position: fixed;
+  border-radius: 0.6rem;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  will-change: transform, opacity;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+.fx-card-face { background: #fff; border: 1px solid #e5e7eb; }
+.fx-card-face .stack-fruit { font-size: 2.2rem; line-height: 1; }
+.fx-card-face .stack-count { font-size: 1.3rem; font-weight: 800; color: #2b2b2b; }
+.fx-card-back { background: var(--card-back); border: 2px solid rgba(255, 255, 255, 0.28); overflow: hidden; }
+
+/* 더미 위로 떠오르는 글자 */
+.fx-float {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-weight: 900;
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+  will-change: transform, opacity;
+}
+.fx-float-good { color: var(--fx-good); }
+.fx-float-bad { color: var(--fx-bad); }
+
+/* 화면 번쩍임 */
+.fx-flash { position: fixed; inset: 0; }
+.fx-flash-good { background: var(--fx-good); }
+.fx-flash-bad { background: var(--fx-bad); }
+
+/* 카드를 내려놓는 순간: 위에서 뒤집히며 "탁" 내려앉음 (새로 놓인 맨 위 카드만) */
+@keyframes td-card-drop {
+  0%   { transform: translateY(-34px) rotateY(90deg) scale(1.18); opacity: 0; }
+  55%  { transform: translateY(4px) rotateY(0deg) scale(1.04); opacity: 1; }
+  78%  { transform: translateY(-2px) scale(0.99); }
+  100% { transform: translateY(0) scale(1); }
+}
+.player-stack-cards { perspective: 600px; }
+.stack-card:last-child { animation: td-card-drop 340ms cubic-bezier(.2, .8, .3, 1) both; }
+
+/* 내 차례: 덱이 은은하게 빛나며 숨쉬듯 */
+@keyframes td-my-turn {
+  0%, 100% { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 0 0 var(--accent); transform: scale(1); }
+  50%      { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 0 4px var(--accent), 0 0 26px 6px var(--accent); transform: scale(1.03); }
+}
+.my-deck-card:not(:disabled) { animation: td-my-turn 1.5s ease-in-out infinite; }
+.my-deck-card:not(:disabled):active { transform: scale(0.96); }
+
+/* 소리 켜기/끄기 */
+.sound-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; padding: 0;
+  background: transparent; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 50%;
+  cursor: pointer; font-size: 1rem;
+}
+.sound-toggle:hover { border-color: var(--ink-dim); }
+.sound-toggle.is-off { color: var(--ink-dim); }
+.sound-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.discard-side .sound-toggle { width: 30px; height: 30px; }
+
+/* 기존 텍스트 배너는 이펙트로 대체 */
+.halli-galli-notification { display: none; }
+
+/* "동작 줄이기" 설정: 움직임 없이 결과만 */
+@media (prefers-reduced-motion: reduce) {
+  .stack-card:last-child { animation: none; }
+  .my-deck-card:not(:disabled) { animation: none; box-shadow: 0 0 0 3px var(--accent); }
+}
+
+/* 게임 화면 보조 버튼: 좁은 화면에서는 채팅 버튼을 아이콘만 */
+.discard-side { gap: 0.4rem; }
+.discard-side .chat-fab { white-space: nowrap; gap: 0.25rem; }
+@media (max-width: 420px) {
+  .chat-fab-label { display: none; }
+}
