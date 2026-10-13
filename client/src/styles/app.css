@@ -3461,3 +3461,16 @@ body,
 
   .fx-float { font-size: clamp(1.5rem, calc(var(--card-h, 146px) * 0.13), 2.6rem); }
 }
+
+/* ══════════════ 피드백 ══════════════ */
+.feedback-entry {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.5rem 0.75rem;
+  margin-top: 1rem; padding: 0.75rem; color: var(--ink-dim); font-size: 0.85rem; text-align: center;
+}
+.feedback-cats { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.feedback-cat {
+  padding: 0.35rem 0.8rem; border-radius: 999px; border: 1px solid #ced4da;
+  background: #fff; color: #495057; font-size: 0.85rem; cursor: pointer;
+}
+.feedback-cat.active { background: var(--accent); border-color: var(--accent-strong); color: var(--accent-ink); font-weight: 700; }
+.feedback-thanks { font-size: 1.3rem; font-weight: 800; color: #212529; }

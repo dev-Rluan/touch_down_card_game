@@ -117,6 +117,33 @@ app.get('/ads.txt', (req, res) => {
   res.type('text/plain').send(`google.com, ${match[1]}, DIRECT, f08c47fec0942fa0\n`);
 });
 
+// ── 피드백 확인 페이지 (운영자용) ─────────────────────────────────────────────
+// FEEDBACK_ADMIN_TOKEN 이 설정된 경우에만 열린다: /admin/feedback?token=<토큰>
+app.get('/admin/feedback', async (req, res) => {
+  const expected = process.env.FEEDBACK_ADMIN_TOKEN || '';
+  const given = String(req.query.token || (req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
+  const crypto = require('crypto');
+  const digest = v => crypto.createHash('sha256').update(v).digest();
+  if (!expected || !crypto.timingSafeEqual(digest(given), digest(expected))) {
+    return res.status(404).type('text/plain').send('Not found');
+  }
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Robots-Tag', 'noindex');
+  try {
+    const { listFeedback, CATEGORIES } = require('./utils/feedback');
+    const items = await listFeedback(Math.min(Number(req.query.limit) || 200, 1000));
+    if (req.query.format === 'json') return res.json(items);
+    const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const rows = items.map(f => `<li><div class="m"><b>${esc(CATEGORIES[f.category] || f.category)}</b> · ${esc(f.name || '익명')} · ${esc(new Date(f.ts).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }))}</div><p>${esc(f.text)}</p><div class="ua">${esc(f.ua)}</div></li>`).join('');
+    res.type('html').send(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>피드백 ${items.length}건</title>
+<style>body{font-family:system-ui,sans-serif;max-width:760px;margin:0 auto;padding:16px;background:#0f2a22;color:#f3efe3}ul{list-style:none;padding:0}li{background:#17382d;border-radius:10px;padding:12px 14px;margin:10px 0}.m{font-size:13px;color:#c9c3b2}b{color:#f0b429}p{white-space:pre-wrap;margin:6px 0;line-height:1.5}.ua{font-size:11px;color:#8a8576;overflow-wrap:anywhere}</style></head>
+<body><h1>피드백 ${items.length}건</h1><ul>${rows || '<li>아직 없습니다.</li>'}</ul></body></html>`);
+  } catch (err) {
+    console.error('[admin/feedback]', err);
+    res.status(500).type('text/plain').send('Error');
+  }
+});
+
 // ── 정적 파일 및 클라이언트 설정 ──────────────────────────────────────────────
 // 정적 파일: 7일 브라우저 캐싱 (JS/CSS 변경 시 파일명에 버전 포함 권장)
 app.use('/public', express.static(__dirname + '/public', {
@@ -172,7 +199,8 @@ if (fs.existsSync(clientDist)) {
       req.path.startsWith('/socket.io') ||
       req.path.startsWith('/public') ||
       req.path === '/env.js' ||
-      req.path === '/ads.txt'
+      req.path === '/ads.txt' ||
+      req.path.startsWith('/admin')
     ) return next();
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(clientDist, 'index.html'));
