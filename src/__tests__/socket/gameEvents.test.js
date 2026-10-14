@@ -833,3 +833,31 @@ describe('조작된 패킷 방어', () => {
     expect(bellTiming.suspiciousSummary().some(s => s.name === turn.name)).toBe(true);
   });
 });
+
+describe('같은 사람의 동시 요청', () => {
+  test('방 만들기를 연달아 두 번 보내도 방은 하나만 생긴다 (유령 방 방지)', async () => {
+    const io = makeIo();
+    await userService.connectUser('dbl', '더블');
+    const s = makeSocket('dbl', io);
+    await Promise.all([s.fire('createRoom', '중복A', 2), s.fire('createRoom', '중복B', 2)]);
+    expect(s.own.filter(e => e.event === 'roomCreated')).toHaveLength(1);
+    expect(s.own.find(e => e.event === 'createRoomError').payload).toBe('이미 다른 방에 참여 중입니다.');
+    expect(await mockRedis.sMembers('rooms:waiting')).toHaveLength(1);
+  });
+});
+
+describe('닉네임 변경', () => {
+  test('방 안에서는 바꿀 수 없고, 로비에서는 바뀐다', async () => {
+    const registerUserEvents = require('../../socket/userEvents');
+    const io = makeIo();
+    const s = makeSocket('nick', io);
+    registerUserEvents(s, io);
+    await new Promise(r => setTimeout(r, 20)); // 접속 처리(connectUser) 완료 대기
+    await s.fire('change name', '로비이름');
+    expect(s.own.at(-1)).toEqual({ event: 'name change successful', payload: '로비이름' });
+    await s.fire('createRoom', '닉방', 2);
+    await s.fire('change name', '방이름');
+    expect(s.own.at(-1)).toEqual({ event: 'name change error', payload: '방에서는 닉네임을 바꿀 수 없습니다.' });
+    expect(await userService.getUserName('nick')).toBe('로비이름');
+  });
+});

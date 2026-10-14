@@ -74,11 +74,6 @@ export function getPing() {
   return ping == null ? null : Math.round(ping);
 }
 
-/** 서버 시계 기준 현재 시각 */
-export function serverNow() {
-  return performance.timeOrigin + performance.now() + offset;
-}
-
 /** 이벤트의 timeStamp(performance.now 기준)를 서버 시계 기준 시각으로 */
 export function toServerTime(perfTimestamp) {
   return performance.timeOrigin + perfTimestamp + offset;

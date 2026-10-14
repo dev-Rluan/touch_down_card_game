@@ -45,7 +45,8 @@ export default function Navbar() {
             <button
               className="btn btn-sm btn-outline-light d-flex align-items-center gap-1"
               onClick={() => { setNickInput(state.nickname); setEditingNick(true); }}
-              title="닉네임 변경"
+              disabled={!!state.roomId}
+              title={state.roomId ? '방에서는 닉네임을 바꿀 수 없습니다' : '닉네임 변경'}
             >
               <Icon name="person" />
               <span className="text-truncate" style={{ maxWidth: 110 }}>{state.nickname}</span>

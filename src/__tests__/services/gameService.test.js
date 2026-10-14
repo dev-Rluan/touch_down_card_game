@@ -5,7 +5,7 @@ jest.mock('../../services/roomService', () => ({
 }));
 
 const { getRoomById, saveRoomState } = require('../../services/roomService');
-const { startGame, playCard, handleHalliGalli, checkGameEnd, resetGame } = require('../../services/gameService');
+const { startGame, playCard, handleHalliGalli, checkGameEnd } = require('../../services/gameService');
 
 // ── 헬퍼 ──────────────────────────────────────────────────────────────────
 const makeCard = (fruit, count) => ({ fruit, count });
@@ -224,25 +224,3 @@ describe('checkGameEnd', () => {
   });
 });
 
-describe('resetGame', () => {
-  test('게임 상태를 초기화한다', async () => {
-    const room = makePlayingRoom();
-    getRoomById.mockResolvedValue(room);
-
-    await resetGame('room-1');
-
-    expect(room.status).toBe('waiting');
-    expect(room.gameState).toBeNull();
-    room.users.forEach(user => {
-      expect(user.cardPack).toEqual([]);
-      expect(user.score).toBe(0);
-      expect(user.readyStatus).toBe('waiting');
-    });
-    expect(saveRoomState).toHaveBeenCalled();
-  });
-
-  test('존재하지 않는 방이면 에러를 던진다', async () => {
-    getRoomById.mockResolvedValue(null);
-    await expect(resetGame('없는방')).rejects.toThrow('방을 찾을 수 없습니다');
-  });
-});

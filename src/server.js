@@ -32,8 +32,6 @@ const { resetRuntimeState } = require('./services/startupCleanup');
 const socketEvent = require('./socket/socketEvent');
 const { ensureRedisConnection, redisClient } = require('./config/redisClient');
 
-// 정적 파일을 제공하기 위해 public 폴더를 지정합니다.
-app.set('views', __dirname + '/views');
 const allowedOrigins = process.env.SOCKET_ALLOW_ORIGINS ? process.env.SOCKET_ALLOW_ORIGINS.split(',') : undefined;
 
 app.use(cors({
@@ -219,11 +217,6 @@ if (fs.existsSync(clientDist)) {
     ) return next();
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(clientDist, 'index.html'));
-  });
-} else {
-  // fallback: 기존 index.html (Vite 빌드 없을 때)
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'view/index.html'));
   });
 }
 

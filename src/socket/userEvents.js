@@ -68,6 +68,11 @@ module.exports = function(socket, io) {
         socket.emit('name change error', '닉네임을 입력해주세요.');
         return;
       }
+      // 방 플레이어 목록에는 입장할 때의 이름이 저장되므로, 방 안에서 바꾸면 화면마다 이름이 달라진다
+      if (await userService.getUserRoom(socket.id)) {
+        socket.emit('name change error', '방에서는 닉네임을 바꿀 수 없습니다.');
+        return;
+      }
 
       await userService.updateUserName(socket.id, cleanName);
       socket.emit('name change successful', cleanName);

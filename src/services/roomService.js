@@ -239,14 +239,6 @@ async function getRoomByUser(socketId) {
   return roomId ? fetchRoom(roomId) : null;
 }
 
-async function updateRoomStatus(roomId, status) {
-  const room = await fetchRoom(roomId);
-  if (!room) return false;
-  room.status = status;
-  await persistRoom(room);
-  return true;
-}
-
 async function saveRoomState(room, options) {
   await persistRoom(room, options);
 }
@@ -258,6 +250,5 @@ module.exports = {
   getWaitingRooms,
   getRoomById,
   getRoomByUser,
-  updateRoomStatus,
   saveRoomState
 };
