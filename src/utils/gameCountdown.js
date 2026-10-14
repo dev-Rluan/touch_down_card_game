@@ -102,7 +102,7 @@ async function startGameCountdown(io, roomId) {
         if (latestRoomSnapshot && Array.isArray(latestRoomSnapshot.users)) {
           latestRoomSnapshot.users.forEach(u => {
             try {
-              io.to(u.id).emit('yourHand', { cards: u.cardPack || [] });
+              io.to(u.id).emit('yourHand', { count: (u.cardPack || []).length }); // 내용 없이 장수만
             } catch (e) {
               console.error('[yourHand emit Error]', e);
             }

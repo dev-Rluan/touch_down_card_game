@@ -25,4 +25,16 @@ function sanitizeNickname(input) {
     .slice(0, MAX_NICKNAME_LENGTH);
 }
 
-module.exports = { generateNickname, sanitizeNickname, MAX_NICKNAME_LENGTH };
+const MAX_ROOM_NAME_LENGTH = 30;
+
+/** 방 이름 정리: 닉네임과 같은 규칙, 최대 30자 (로비 전체에 방송되므로 길이를 반드시 제한) */
+function sanitizeRoomName(input) {
+  if (typeof input !== 'string') return '';
+  return Array.from(input
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001F\u007F\u200B-\u200F\u2028-\u202E\u2060-\u2069\uFEFF]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()).slice(0, MAX_ROOM_NAME_LENGTH).join('').trim();
+}
+
+module.exports = { generateNickname, sanitizeNickname, sanitizeRoomName, MAX_NICKNAME_LENGTH, MAX_ROOM_NAME_LENGTH };

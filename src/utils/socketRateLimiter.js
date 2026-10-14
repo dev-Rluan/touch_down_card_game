@@ -87,9 +87,11 @@ function createRateLimiter({ maxRequests, windowMs }) {
 
 // ── 이벤트별 limiter 인스턴스 ────────────────────────────────────────────────
 
+const BELL_COOLDOWN_MS = 1000;
+
 const limiters = {
-  // 벨 클릭: 1초에 최대 3회 (실제 게임에서 충분한 여유)
-  halliGalli: createRateLimiter({ maxRequests: 3, windowMs: 1000 }),
+  // 벨 클릭: 누른 뒤 1초 동안 다시 누를 수 없다 (내부 쿨타임 — 클라이언트도 같은 시간 동안 버튼을 잠근다)
+  halliGalli: createRateLimiter({ maxRequests: 1, windowMs: BELL_COOLDOWN_MS }),
 
   // 카드 내기: 1초에 최대 5회 (네트워크 지연 고려)
   playCard: createRateLimiter({ maxRequests: 5, windowMs: 1000 }),
@@ -106,6 +108,13 @@ const limiters = {
   // 채팅: 5초에 최대 5건 (도배 방지)
   chat: createRateLimiter({ maxRequests: 5, windowMs: 5000 }),
 
+  // 조회 요청: Redis 를 읽는 이벤트라 연타로 Redis 명령을 소모하지 못하게
+  roomList: createRateLimiter({ maxRequests: 5, windowMs: 5000 }),
+  getGameState: createRateLimiter({ maxRequests: 5, windowMs: 2000 }),
+
+  // 시계 맞추기: 5초에 최대 6회 (클라이언트는 3초마다 1회)
+  timeSync: createRateLimiter({ maxRequests: 6, windowMs: 5000 }),
+
   // 피드백: 소켓당 10분에 3건, 서버 전체 1시간에 120건
   feedback: createRateLimiter({ maxRequests: 3, windowMs: 10 * 60 * 1000 }),
   feedbackGlobal: createRateLimiter({ maxRequests: 120, windowMs: 60 * 60 * 1000 }),
@@ -119,4 +128,4 @@ function cleanupSocket(socketId) {
   Object.values(limiters).forEach(limiter => limiter.reset(socketId));
 }
 
-module.exports = { limiters, cleanupSocket, createRateLimiter };
+module.exports = { limiters, cleanupSocket, createRateLimiter, BELL_COOLDOWN_MS };

@@ -9,6 +9,8 @@ const accountsEnabled = process.env.ENABLE_ACCOUNTS === 'true';
 // 리버스 프록시(Koyeb, Nginx 등) 뒤에서 HTTPS/클라이언트 IP를 올바르게 인식
 app.set('trust proxy', 1);
 const io = require('socket.io')(server, {
+  // 메시지 1개 최대 크기 (기본 1MB → 32KB). 가장 큰 정상 메시지(피드백 1,000자)도 수 KB 이하
+  maxHttpBufferSize: 32 * 1024,
   cors: {
     // 운영에서 SOCKET_ALLOW_ORIGINS 미설정 시 동일 출처만 허용(false), 개발은 모두 허용
     origin: process.env.SOCKET_ALLOW_ORIGINS
@@ -30,8 +32,6 @@ const { resetRuntimeState } = require('./services/startupCleanup');
 const socketEvent = require('./socket/socketEvent');
 const { ensureRedisConnection, redisClient } = require('./config/redisClient');
 
-// 정적 파일을 제공하기 위해 public 폴더를 지정합니다.
-app.set('views', __dirname + '/views');
 const allowedOrigins = process.env.SOCKET_ALLOW_ORIGINS ? process.env.SOCKET_ALLOW_ORIGINS.split(',') : undefined;
 
 app.use(cors({
@@ -117,14 +117,27 @@ app.get('/ads.txt', (req, res) => {
   res.type('text/plain').send(`google.com, ${match[1]}, DIRECT, f08c47fec0942fa0\n`);
 });
 
-// ── 피드백 확인 페이지 (운영자용) ─────────────────────────────────────────────
-// FEEDBACK_ADMIN_TOKEN 이 설정된 경우에만 열린다: /admin/feedback?token=<토큰>
-app.get('/admin/feedback', async (req, res) => {
-  const expected = process.env.FEEDBACK_ADMIN_TOKEN || '';
+// ── 운영자 페이지 ─────────────────────────────────────────────────────────────
+// ADMIN_TOKEN(없으면 FEEDBACK_ADMIN_TOKEN) 이 설정된 경우에만 열린다: /admin/...?token=<토큰>
+function adminAuthorized(req) {
+  const expected = process.env.ADMIN_TOKEN || process.env.FEEDBACK_ADMIN_TOKEN || '';
   const given = String(req.query.token || (req.get('authorization') || '').replace(/^Bearer\s+/i, ''));
   const crypto = require('crypto');
   const digest = v => crypto.createHash('sha256').update(v).digest();
-  if (!expected || !crypto.timingSafeEqual(digest(given), digest(expected))) {
+  return Boolean(expected) && crypto.timingSafeEqual(digest(given), digest(expected));
+}
+
+// 네트워크 지연 분포 (벨 시간 보정 기준을 정하기 위한 관측용)
+app.get('/admin/latency', (req, res) => {
+  if (!adminAuthorized(req)) return res.status(404).type('text/plain').send('Not found');
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Robots-Tag', 'noindex');
+  res.json({ ...require('./utils/latency').summary(), suspiciousBells: require('./utils/bellTiming').suspiciousSummary() });
+});
+
+// 피드백 확인 페이지
+app.get('/admin/feedback', async (req, res) => {
+  if (!adminAuthorized(req)) {
     return res.status(404).type('text/plain').send('Not found');
   }
   res.setHeader('Cache-Control', 'no-store');
@@ -205,11 +218,6 @@ if (fs.existsSync(clientDist)) {
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(clientDist, 'index.html'));
   });
-} else {
-  // fallback: 기존 index.html (Vite 빌드 없을 때)
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'view/index.html'));
-  });
 }
 
 // ── Socket.IO 세션 공유 ───────────────────────────────────────────────────────
@@ -219,6 +227,9 @@ if (accountsEnabled) {
   io.engine.use(passport.initialize());
   io.engine.use(passport.session());
 }
+
+// IP당 동시 연결 수 제한 (한 컴퓨터에서 연결을 대량으로 열어 서버·Redis 를 채우는 것 방지)
+require('./socket/connectionLimit')(io, { maxPerIp: process.env.MAX_CONN_PER_IP !== undefined ? Number(process.env.MAX_CONN_PER_IP) : 10 });
 
 // Socket.IO 이벤트 핸들러 등록
 socketEvent(io);

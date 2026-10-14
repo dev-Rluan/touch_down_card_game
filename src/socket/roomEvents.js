@@ -14,6 +14,8 @@ const { toPublicRoom, toPublicRooms, toPublicUser, toPublicUsers } = require('..
  * @param {Socket} socket - Socket.IO Socket Instance
  * @param {Server} io - Socket.IO Server Instance
  */
+const userLockKey = socket => `user:${socket.id}`;
+
 module.exports = function(socket, io) {
   /**
    * 방 생성 이벤트
@@ -26,7 +28,8 @@ module.exports = function(socket, io) {
     try {
       console.log(`[Room] 방 생성 요청 - 이름: ${roomName}, 최대인원: ${maxCnt}`);
 
-      const room = await roomService.createRoom(socket.id, roomName, maxCnt);
+      // 같은 사람의 만들기/입장은 한 줄로: 연달아 보내면 "이미 다른 방" 검사를 둘 다 통과해 두 방에 들어갔다
+      const room = await withRoomLock(userLockKey(socket), () => roomService.createRoom(socket.id, roomName, maxCnt));
       socket.leave('lobby');  // 방 생성 → 로비 룸 탈퇴
       socket.join(room.id);
       socket.emit('roomCreated', toPublicRoom(room));
@@ -45,6 +48,7 @@ module.exports = function(socket, io) {
    * 방 목록 조회 이벤트
    */
   socket.on('roomList', async () => {
+    if (!limiters.roomList.allow(socket.id)) return; // 연타는 조용히 무시 (방 목록은 바뀔 때 서버가 알아서 보낸다)
     try {
       const rooms = await roomService.getWaitingRooms();
       socket.emit('roomList', toPublicRooms(rooms));
@@ -59,14 +63,14 @@ module.exports = function(socket, io) {
    * 방 입장 이벤트
    */
   socket.on('joinRoom', async (roomId) => {
-    if (!limiters.roomAction.allow(socket.id)) {
+    if (typeof roomId !== 'string' || !limiters.roomAction.allow(socket.id)) {
       socket.emit('faildJoinRoom', '요청이 너무 빠릅니다. 잠시 후 다시 시도하세요.');
       return;
     }
     try {
       console.log(`[Room] 방 입장 요청 - 방 ID: ${roomId}`);
 
-      await withRoomLock(roomId, async () => {
+      await withRoomLock(userLockKey(socket), () => withRoomLock(roomId, async () => {
         const room = await roomService.joinRoom(socket.id, roomId);
         socket.leave('lobby');  // 방 입장 → 로비 룸 탈퇴
         socket.join(roomId);
@@ -82,7 +86,7 @@ module.exports = function(socket, io) {
 
         const userName = await userService.getUserName(socket.id);
         console.log(`[Room] 방 입장 완료 - 방: ${room.name}, 사용자: ${userName}`);
-      });
+      }));
     } catch (error) {
       console.error('[joinRoom Error]', error);
       socket.emit('faildJoinRoom', error.message);
@@ -93,6 +97,10 @@ module.exports = function(socket, io) {
    * 방 나가기 이벤트
    */
   socket.on('leaveRoom', async (roomId) => {
+    if (typeof roomId !== 'string' || !limiters.roomAction.allow(socket.id)) {
+      socket.emit('leaveRoomResult', { status: 429, message: '요청이 너무 빠릅니다. 잠시 후 다시 시도하세요.' });
+      return;
+    }
     try {
       console.log(`[Room] 방 나가기 요청 - 방 ID: ${roomId}`);
 

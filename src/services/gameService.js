@@ -10,6 +10,13 @@ function playerHasCards(player) {
   return Array.isArray(player.cardPack) && player.cardPack.length > 0;
 }
 
+// 각 플레이어 더미의 맨 위 카드 (벨 판정 대상)
+function topCardsOf(room) {
+  return Object.values(room.gameState.playerStacks)
+    .filter(stack => stack.length > 0)
+    .map(stack => stack[stack.length - 1]);
+}
+
 function markPlayerActiveState(player) {
   player.isActive = playerHasCards(player);
 }
@@ -63,6 +70,9 @@ const startGame = async (roomId) => {
     centerCards: [], // 전체 중앙 카드 (히스토리용)
     playerStacks: {}, // 각 플레이어별 카드 스택 { playerId: [cards] }
     discardedCards: [], // 할리갈리 실패 시 버린 카드들
+    boardSeq: 0, // 바닥 번호: 카드가 나오거나 벨 성공으로 바닥이 비워질 때마다 +1 (벨 시간 보정용)
+    prevTopCards: null, // 마지막 카드가 나오기 직전의 맨 위 카드들
+    lastPlayAt: 0, // 마지막 카드가 나온 서버 시각
     gameStartTime: new Date().toISOString(),
     lastActionTime: new Date().toISOString()
   };
@@ -84,10 +94,6 @@ const startGame = async (roomId) => {
     user.isActive = true;
     user.readyStatus = 'playing'; // 게임중 상태로 변경
   });
-
-  // 남은 덱(기록 용도) 저장: 분배 후 각 플레이어 카드 수 총합을 제외한 남은 수
-  const totalDealt = room.users.reduce((sum, u) => sum + (u.cardPack?.length || 0), 0);
-  room.gameState.remainingDeck = Math.max(deck.length - totalDealt, 0);
 
   // 첫 번째 플레이어 설정
   room.gameState.currentTurn = 0;
@@ -123,7 +129,7 @@ const buildGameState = (room) => {
     centerCount: (room.gameState.centerCards || []).length,
     // 버림 더미는 뒤집어 놓은 카드 — 내용은 공개하지 않고 장수만
     discardedCount: (room.gameState.discardedCards || []).length,
-    remainingDeck: room.gameState.remainingDeck,
+    boardSeq: room.gameState.boardSeq || 0,
     players: room.users.map(user => ({
       id: user.id,
       name: user.name,
@@ -142,12 +148,13 @@ const getGameState = async (roomId) => buildGameState(await getRoomById(roomId))
  * 카드 내기
  * @param {string} roomId - 방 ID
  * @param {string} playerId - 플레이어 ID
- * @param {number} cardIndex - 내는 카드 인덱스
+ * @param {number} _cardIndex - (무시) 예전 클라이언트 호환용. 항상 덱 맨 위 카드를 낸다 — 덱 중간 카드를 골라 낼 수 없게
  * @param {Object} [preloadedRoom] - 호출자가 이미 읽어 둔 방 객체 (있으면 다시 읽지 않는다).
  *   호출자는 방 락을 잡은 상태여야 하며, 이 객체가 변경·저장된다.
  * @returns {Object} 카드 내기 결과
  */
-const playCard = async (roomId, playerId, cardIndex, preloadedRoom) => {
+const playCard = async (roomId, playerId, _cardIndex, preloadedRoom) => {
+  const cardIndex = 0;
   const room = preloadedRoom || await getRoomById(roomId);
   if (!room || !room.gameState) {
     throw new Error('게임이 시작되지 않았습니다.');
@@ -178,6 +185,11 @@ const playCard = async (roomId, playerId, cardIndex, preloadedRoom) => {
     throw new Error('유효하지 않은 카드입니다.');
   }
 
+  // 벨 시간 보정: 이 카드가 깔리기 직전의 바닥을 기억해 둔다 (그 바닥을 보고 누른 벨은 그 바닥으로 판정)
+  room.gameState.prevTopCards = topCardsOf(room);
+  room.gameState.boardSeq = (room.gameState.boardSeq || 0) + 1;
+  room.gameState.lastPlayAt = Date.now();
+
   // 카드 내기
   const playedCard = player.cardPack.splice(cardIndex, 1)[0];
   room.gameState.centerCards.push(playedCard);
@@ -189,11 +201,8 @@ const playCard = async (roomId, playerId, cardIndex, preloadedRoom) => {
   room.gameState.playerStacks[playerId].push(playedCard);
 
   // 할리갈리 조건 확인 (각 플레이어의 맨 위 카드만 체크)
-  const topCards = Object.values(room.gameState.playerStacks)
-    .filter(stack => stack.length > 0)
-    .map(stack => stack[stack.length - 1]); // 각 스택의 맨 위 카드
-  const isHalliGalli = checkHalliGalli(topCards);
-  
+  const isHalliGalli = checkHalliGalli(topCardsOf(room));
+
   // 턴 넘기기
   markPlayerActiveState(player);
   advanceTurn(room);
@@ -209,21 +218,21 @@ const playCard = async (roomId, playerId, cardIndex, preloadedRoom) => {
     centerCards: room.gameState.centerCards,
     isHalliGalli,
     nextTurn: room.gameState.currentTurn,
-    playerCardCount: player.cardPack.length
+    playerCardCount: player.cardPack.length,
+    boardSeq: room.gameState.boardSeq
   };
 };
-
-// 벨 클릭 후 처리가 완료될 때까지 동시 요청을 막기 위한 잠금 세트
-const halliGalliLocks = new Set();
 
 /**
  * 할리갈리 처리
  * @param {string} roomId - 방 ID
  * @param {string} playerId - 플레이어 ID
  * @param {Object} [preloadedRoom] - 호출자가 이미 읽어 둔 방 객체 (playCard 와 동일한 규칙)
+ * @param {{usePrevBoard?: boolean}} [opts] - usePrevBoard: 마지막 카드가 깔리기 직전 바닥으로 판정
+ *   (그 바닥을 보고 눌렀는데 네트워크 때문에 새 카드보다 늦게 도착한 벨 — 호출자가 조건을 검사한다)
  * @returns {Object} 할리갈리 처리 결과
  */
-const handleHalliGalli = async (roomId, playerId, preloadedRoom) => {
+const handleHalliGalli = async (roomId, playerId, preloadedRoom, { usePrevBoard = false } = {}) => {
   const room = preloadedRoom || await getRoomById(roomId);
   if (!room || !room.gameState) {
     throw new Error('게임이 시작되지 않았습니다.');
@@ -232,11 +241,6 @@ const handleHalliGalli = async (roomId, playerId, preloadedRoom) => {
   // 게임 진행 중 상태 검증
   if (room.gameState.phase !== 'playing') {
     throw new Error('게임이 진행 중이 아닙니다.');
-  }
-
-  // 방 단위 중복 처리 방지: 이미 처리 중인 halliGalli 요청이 있으면 차단
-  if (halliGalliLocks.has(roomId)) {
-    throw new Error('이미 처리 중입니다. 잠시 후 다시 시도하세요.');
   }
 
   // 중앙에 카드가 없으면 의미 없는 벨 클릭
@@ -249,12 +253,14 @@ const handleHalliGalli = async (roomId, playerId, preloadedRoom) => {
     throw new Error('플레이어를 찾을 수 없습니다.');
   }
 
-  halliGalliLocks.add(roomId);
-  try {
+  // 카드를 모두 잃은 플레이어는 탈락: 벨로 카드를 가져가 다시 살아나지 못한다 (3인 이상에서 게임이 계속되는 동안)
+  if (!playerHasCards(player)) {
+    throw new Error('카드를 모두 잃어 탈락했습니다.');
+  }
+
   // 할리갈리 조건 확인 (각 플레이어의 맨 위 카드만 체크, 버림 카드 제외)
-  const topCards = Object.values(room.gameState.playerStacks)
-    .filter(stack => stack.length > 0)
-    .map(stack => stack[stack.length - 1]); // 각 스택의 맨 위 카드
+  const judgedOnPrev = Boolean(usePrevBoard && Array.isArray(room.gameState.prevTopCards));
+  const topCards = judgedOnPrev ? room.gameState.prevTopCards : topCardsOf(room);
   const isHalliGalli = checkHalliGalli(topCards);
 
   // 디버깅: 맨 위 카드 상태 로깅
@@ -280,10 +286,12 @@ const handleHalliGalli = async (roomId, playerId, preloadedRoom) => {
     room.gameState.centerCards = [];
     room.gameState.discardedCards = [];
 
-    // 각 플레이어의 스택도 초기화
+    // 각 플레이어의 스택도 초기화 (바닥이 비워졌으므로 새 바닥 번호)
     Object.keys(room.gameState.playerStacks).forEach(pid => {
       room.gameState.playerStacks[pid] = [];
     });
+    room.gameState.boardSeq = (room.gameState.boardSeq || 0) + 1;
+    room.gameState.prevTopCards = null;
 
     console.log(`[Game] 할리갈리 성공! - 플레이어: ${player.name}, 획득: 중앙 ${centerCardsCount}장 + 버림 ${discardedCardsCount}장 = 총 ${totalCardsGained}점, 현재 덱: ${player.cardPack.length}장`);
 
@@ -298,31 +306,18 @@ const handleHalliGalli = async (roomId, playerId, preloadedRoom) => {
       discardedCardsGained: discardedCardsCount,
       newScore: player.score,
       playerCardCount: player.cardPack.length,
+      judgedOnPrev,
+      boardSeq: room.gameState.boardSeq,
       centerCards: [],
       discardedCards: []
     };
   } else {
-    // 실패: 덱 맨 아래 카드 1장 버리기 (버림 카드 덱으로)
-    if (player.cardPack.length > 0) {
-      const discardedCard = player.cardPack.pop(); // 배열의 마지막 요소(맨 아래 카드) 제거
-      room.gameState.discardedCards.push(discardedCard);
+    // 실패: 덱 맨 아래 카드 1장 버리기 (버림 카드 덱으로). 마지막 1장이면 이걸로 탈락한다
+    const discardedCard = player.cardPack.pop(); // 배열의 마지막 요소(맨 아래 카드) 제거
+    room.gameState.discardedCards.push(discardedCard);
 
-      console.log(`[Game] 할리갈리 실패 - 플레이어: ${player.name}, 카드 버림: ${discardedCard.fruit} ${discardedCard.count}개`);
+    console.log(`[Game] 할리갈리 실패 - 플레이어: ${player.name}, 카드 버림: ${discardedCard.fruit} ${discardedCard.count}개`);
 
-      markPlayerActiveState(player);
-      normalizeCurrentTurn(room);
-      await saveRoomState(room, { reindex: false });
-
-      return {
-        success: false,
-        playerName: player.name,
-        discardedCard,
-        centerCards: room.gameState.centerCards,
-        discardedCards: room.gameState.discardedCards
-      };
-    }
-
-    // 카드가 없을 경우에도 실패 응답
     markPlayerActiveState(player);
     normalizeCurrentTurn(room);
     await saveRoomState(room, { reindex: false });
@@ -330,12 +325,12 @@ const handleHalliGalli = async (roomId, playerId, preloadedRoom) => {
     return {
       success: false,
       playerName: player.name,
+      discardedCard,
+      judgedOnPrev,
+      boardSeq: room.gameState.boardSeq,
       centerCards: room.gameState.centerCards,
       discardedCards: room.gameState.discardedCards
     };
-  }
-  } finally {
-    halliGalliLocks.delete(roomId);
   }
 };
 
@@ -392,38 +387,11 @@ const checkGameEnd = async (roomId, preloadedRoom) => {
   return { isEnded: false };
 };
 
-/**
- * 게임 리셋
- * @param {string} roomId - 방 ID
- */
-const resetGame = async (roomId) => {
-  const room = await getRoomById(roomId);
-  if (!room) {
-    throw new Error('방을 찾을 수 없습니다.');
-  }
-
-  // 게임 상태 초기화
-  room.status = 'waiting';
-  room.gameState = null;
-  
-  // 플레이어 상태 초기화
-  room.users.forEach(user => {
-    user.cardPack = [];
-    user.score = 0;
-    user.isActive = false;
-    user.readyStatus = 'waiting';
-  });
-
-  console.log(`[Game] 게임 리셋 - 방: ${room.name}`);
-  await saveRoomState(room);
-};
-
 module.exports = { 
   startGame, 
   getGameState, 
   buildGameState, 
   playCard, 
   handleHalliGalli, 
-  checkGameEnd, 
-  resetGame 
+  checkGameEnd
 };

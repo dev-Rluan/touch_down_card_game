@@ -33,7 +33,12 @@ const createDeck = () => {
  */
 const shuffleCards = (cards = null) => {
   const deck = cards || createDeck();
-  return deck.sort(() => Math.random() - 0.5);
+  // Fisher–Yates: sort(() => Math.random() - 0.5) 는 원래 순서가 남는 편향이 있다
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
 };
 
 /**
@@ -85,36 +90,10 @@ const checkHalliGalli = (cards) => {
   return Object.values(sums).some(sum => sum === 5);
 };
 
-/**
- * 카드 ID 생성
- * @param {string} fruit - 과일 종류
- * @param {number} count - 개수
- * @returns {string} 카드 ID
- */
-const generateCardId = (fruit, count) => {
-  return `${fruit}_${count}`;
-};
-
-/**
- * 카드 정보 가져오기
- * @param {string} cardId - 카드 ID
- * @returns {Object} 카드 정보
- */
-const getCardInfo = (cardId) => {
-  const [fruit, count] = cardId.split('_');
-  return {
-    fruit,
-    count: parseInt(count),
-    id: cardId
-  };
-};
-
 module.exports = { 
   createDeck,
   shuffleCards, 
   calculateCardSum, 
   dealCards,
-  checkHalliGalli,
-  generateCardId,
-  getCardInfo
+  checkHalliGalli
 };

@@ -4,8 +4,6 @@ const {
   dealCards,
   calculateCardSum,
   checkHalliGalli,
-  generateCardId,
-  getCardInfo,
 } = require('../../utils/CardUtils');
 const Card = require('../../models/Card');
 
@@ -63,6 +61,14 @@ describe('CardUtils', () => {
       const shuffled = shuffleCards([...deck]);
       const sortFn = (a, b) => `${a.fruit}${a.count}`.localeCompare(`${b.fruit}${b.count}`);
       expect(shuffled.sort(sortFn)).toEqual(deck.sort(sortFn));
+    });
+
+    test('편향 없이 섞인다: 첫 카드가 각 위치에 고르게 간다', () => {
+      // 예전 sort(() => Math.random() - 0.5) 는 첫 카드가 맨 앞에 남을 확률이 기대값의 약 3배였다
+      const N = 28000, pos = new Array(56).fill(0);
+      for (let t = 0; t < N; t++) pos[shuffleCards([...Array(56).keys()]).indexOf(0)]++;
+      const expected = N / 56; // 500
+      pos.forEach(c => expect(Math.abs(c - expected)).toBeLessThan(expected * 0.3));
     });
   });
 
@@ -152,18 +158,4 @@ describe('CardUtils', () => {
     });
   });
 
-  describe('generateCardId', () => {
-    test('fruit_count 형식으로 ID를 반환한다', () => {
-      expect(generateCardId('banana', 3)).toBe('banana_3');
-    });
-  });
-
-  describe('getCardInfo', () => {
-    test('카드 ID를 파싱해 fruit, count, id를 반환한다', () => {
-      const info = getCardInfo('lemon_2');
-      expect(info.fruit).toBe('lemon');
-      expect(info.count).toBe(2);
-      expect(info.id).toBe('lemon_2');
-    });
-  });
 });

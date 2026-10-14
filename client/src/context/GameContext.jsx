@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useRef, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { emitFx } from '../fx/fxBus.js';
+import { startClockSync, setClockActive } from '../net/clock.js';
 
 const GameContext = createContext(null);
 
@@ -15,7 +16,7 @@ const initialState = {
   maxUserCnt: 4,
   roomList: [],
   isMyTurn: false,
-  hand: [],                // 내 카드 배열
+  handCount: 0,            // 내 덱 장수 (서버는 내용 없이 장수만 보낸다)
   playerStacks: {},        // { [playerId]: { cards: [], name: '' } }
   gameStatePlayers: [],    // gameState에서 온 { id, name, cardCount }[]
   currentTurn: 0,
@@ -23,6 +24,7 @@ const initialState = {
   countdown: null,         // null | number | 'GO!'
   countdownSub: '',
   halliGalliResult: null,  // 최근 벨 결과
+  bellOrder: null,         // { round, presses: [{ rank, playerId, name, delta }] } 서버가 받은 벨 누른 순서
   fxSeq: 0,                // 바닥에 놓인 카드마다 붙이는 고유 번호 (새로 놓인 카드만 애니메이션하기 위함)
   gameResult: null,        // { winner, finalScores }
   connectError: false,
@@ -75,11 +77,12 @@ function reducer(state, action) {
         roomName: '',
         users: [],
         countdown: null,
-        hand: [],
+        handCount: 0,
         playerStacks: {},
         gameStatePlayers: [],
         currentTurn: 0,
         discardedCount: 0,
+        bellOrder: null,
         gameResult: null,
       };
 
@@ -125,6 +128,7 @@ function reducer(state, action) {
         gameStatePlayers: action.players || [],
         playerStacks: stacks,
         discardedCount: 0,
+        bellOrder: null,
         gameResult: null,
       };
     }
@@ -133,7 +137,7 @@ function reducer(state, action) {
       return { ...state, countdown: null };
 
     case 'YOUR_HAND':
-      return { ...state, hand: action.cards || [] };
+      return { ...state, handCount: Number.isInteger(action.count) ? action.count : 0 };
 
     case 'CARD_PLAYED': {
       // action.playerId, action.result.playedCard
@@ -195,6 +199,13 @@ function reducer(state, action) {
     case 'CLEAR_HALLI_RESULT':
       return { ...state, halliGalliResult: null };
 
+    case 'BELL_ORDER':
+      return { ...state, bellOrder: { round: action.round, presses: action.presses || [] } };
+
+    case 'CLEAR_BELL_ORDER':
+      // 그 사이 새 라운드가 시작됐으면 지우지 않는다
+      return state.bellOrder && state.bellOrder.round === action.round ? { ...state, bellOrder: null } : state;
+
     case 'GAME_END':
       return {
         ...state,
@@ -202,7 +213,8 @@ function reducer(state, action) {
         gameResult: { winner: action.winner, finalScores: action.finalScores },
         countdown: null,
         isMyTurn: false,
-        hand: [],
+        bellOrder: null,
+        handCount: 0,
         // 서버가 종료 시 모든 유저를 waiting 으로 되돌리므로 동기화
         users: state.users.map(u => ({ ...u, readyStatus: 'waiting' })),
       };
@@ -237,18 +249,22 @@ function reducer(state, action) {
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const socketRef = useRef(null);
+  // 지금 보고 있는 바닥 번호 (벨 시간 보정: 어떤 바닥을 보고 눌렀는지 서버에 알린다)
+  const boardSeqRef = useRef(0);
 
   useEffect(() => {
     // env.js가 로드되면 __TOUCHDOWN_SOCKET_URL__ 사용, 아니면 현재 origin(개발: proxy 경유)
     const url = window.__TOUCHDOWN_SOCKET_URL__ || '';
     // 벨 결과 알림 타이머: 결과가 연달아 오면 이전 타이머가 새 알림을 일찍 지우지 않도록 하나만 유지
     let halliResultTimer = null;
+    let bellOrderTimer = null;
 
     const socket = io(url, {
       reconnectionAttempts: 5,
       transports: ['websocket', 'polling'],
     });
     socketRef.current = socket;
+    const stopClockSync = startClockSync(socket);
 
     socket.on('connect', () => {
       // socket.id는 connect 이후 사용 가능
@@ -319,6 +335,7 @@ export function GameProvider({ children }) {
     });
 
     socket.on('gameStart', ({ message, gameData }) => {
+      boardSeqRef.current = gameData?.boardSeq ?? 0;
       emitFx('gameStart', gameData);
       const players = gameData?.players || [];
       dispatch({ type: 'GAME_START', players });
@@ -328,25 +345,42 @@ export function GameProvider({ children }) {
       }
     });
 
-    socket.on('yourHand', ({ cards }) => {
-      dispatch({ type: 'YOUR_HAND', cards });
+    socket.on('yourHand', (data) => {
+      dispatch({ type: 'YOUR_HAND', count: data?.count });
     });
 
     socket.on('cardPlayed', (data) => {
+      if (Number.isInteger(data?.result?.boardSeq)) boardSeqRef.current = data.result.boardSeq;
       emitFx('cardPlayed', data);
       dispatch({ type: 'CARD_PLAYED', ...data });
     });
 
     socket.on('gameState', (gs) => {
+      if (Number.isInteger(gs?.boardSeq)) boardSeqRef.current = gs.boardSeq;
       dispatch({ type: 'GAME_STATE', ...gs });
     });
 
     socket.on('halliGalliResult', (data) => {
+      if (Number.isInteger(data?.boardSeq)) boardSeqRef.current = data.boardSeq;
       // 성공 시 reducer 가 바닥 카드를 비우므로, 그 전에 이펙트가 카드 위치를 측정할 수 있게 먼저 알린다
       emitFx('halliResult', data);
       dispatch({ type: 'HALLI_RESULT', ...data });
       clearTimeout(halliResultTimer);
       halliResultTimer = setTimeout(() => dispatch({ type: 'CLEAR_HALLI_RESULT' }), 3000);
+    });
+
+    // 벨 누른 순서 (서버 도착 순). 마지막 갱신 후 2.5초 동안 보여준다
+    socket.on('bellOrder', (data) => {
+      if (!data || !Array.isArray(data.presses)) return;
+      emitFx('bellOrder', data);
+      dispatch({ type: 'BELL_ORDER', ...data });
+      clearTimeout(bellOrderTimer);
+      bellOrderTimer = setTimeout(() => dispatch({ type: 'CLEAR_BELL_ORDER', round: data.round }), 2500);
+    });
+
+    // 벨 거부(쿨타임·늦음·탈락)는 알림 대신 내 더미 위 글자로 보여준다
+    socket.on('halliGalliError', (message) => {
+      emitFx('bellError', { message: typeof message === 'string' ? message : '' });
     });
 
     socket.on('gameEnd', (data) => {
@@ -364,7 +398,7 @@ export function GameProvider({ children }) {
     // 서버 에러 이벤트 → 사용자 알림
     const errorEvents = [
       'createRoomError', 'roomListError', 'faildJoinRoom', 'readyError',
-      'playCardError', 'halliGalliError', 'gameStateError', 'name change error', 'chatError',
+      'playCardError', 'gameStateError', 'name change error', 'chatError',
     ];
     errorEvents.forEach(evt => {
       socket.on(evt, (message) => {
@@ -396,6 +430,8 @@ export function GameProvider({ children }) {
 
     return () => {
       clearTimeout(halliResultTimer);
+      clearTimeout(bellOrderTimer);
+      stopClockSync();
       socket.disconnect();
     };
   }, []);
@@ -404,10 +440,16 @@ export function GameProvider({ children }) {
     socketRef.current?.emit(event, ...args);
   }, []);
 
+  // 대기실·게임 화면에서만 핑/시계를 자주 잰다
+  useEffect(() => {
+    setClockActive(state.screen === 'waiting' || state.screen === 'game');
+  }, [state.screen]);
+
   const getSocketId = useCallback(() => socketRef.current?.id || null, []);
+  const getBoardSeq = useCallback(() => boardSeqRef.current, []);
 
   return (
-    <GameContext.Provider value={{ state, dispatch, emit, getSocketId }}>
+    <GameContext.Provider value={{ state, dispatch, emit, getSocketId, getBoardSeq }}>
       {children}
     </GameContext.Provider>
   );
