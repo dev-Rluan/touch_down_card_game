@@ -5,9 +5,23 @@
         "source": "github",
         "repo": "DietrichGebert/ponytail"
       }
+    },
+    "pm-skills": {
+      "source": {
+        "source": "github",
+        "repo": "lucas-flatwhite/pm-skills-ko"
+      }
     }
   },
   "enabledPlugins": {
-    "ponytail@ponytail": true
+    "ponytail@ponytail": true,
+    "pm-product-discovery@pm-skills": true,
+    "pm-product-strategy@pm-skills": true,
+    "pm-execution@pm-skills": true,
+    "pm-market-research@pm-skills": true,
+    "pm-data-analytics@pm-skills": true,
+    "pm-go-to-market@pm-skills": true,
+    "pm-marketing-growth@pm-skills": true,
+    "pm-toolkit@pm-skills": true
   }
 }
