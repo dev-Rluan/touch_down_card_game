@@ -194,7 +194,19 @@ const clientDist = path.join(__dirname, 'public/dist');
 if (fs.existsSync(clientDist)) {
   // 해시가 붙은 빌드 산출물(/assets/*)은 내용이 바뀌면 파일명도 바뀌므로 1년 immutable 캐시,
   // index.html 은 배포 직후 새 해시 파일을 바로 참조하도록 항상 재검증한다.
+  // index.html 은 아래에서 공유 미리보기 주소(__ORIGIN__)를 채워 보내므로 정적 서빙에서 뺀다
+  let indexHtml = null;
+  const sendIndex = (req, res) => {
+    indexHtml = indexHtml || fs.readFileSync(path.join(clientDist, 'index.html'), 'utf8');
+    const host = req.get('host') || '';
+    // Host 헤더는 클라이언트가 보내는 값이므로 도메인 문자만 허용
+    const origin = /^[a-z0-9.:-]+$/i.test(host) ? `${req.protocol}://${host}` : '';
+    res.setHeader('Cache-Control', 'no-cache');
+    res.type('html').send(indexHtml.split('__ORIGIN__').join(origin));
+  };
+
   app.use(express.static(clientDist, {
+    index: false,
     etag: true,
     setHeaders(res, filePath) {
       if (filePath.includes(`${path.sep}assets${path.sep}`)) {
@@ -215,8 +227,7 @@ if (fs.existsSync(clientDist)) {
       req.path === '/ads.txt' ||
       req.path.startsWith('/admin')
     ) return next();
-    res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(path.join(clientDist, 'index.html'));
+    sendIndex(req, res);
   });
 }
 

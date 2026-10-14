@@ -277,6 +277,12 @@ export function GameProvider({ children }) {
         socketId: socket.id,
         roomList: roomList || [],
       });
+      // 초대 링크(?room=방ID)로 들어왔으면 그 방에 바로 입장. 새로고침 때 다시 입장하지 않도록 주소에서 지운다
+      const invited = new URLSearchParams(window.location.search).get('room');
+      if (invited) {
+        window.history.replaceState(null, '', window.location.pathname);
+        socket.emit('joinRoom', invited);
+      }
     });
 
     socket.on('connect_error', () => {
