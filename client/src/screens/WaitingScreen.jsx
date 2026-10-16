@@ -8,7 +8,7 @@ import Icon from '../components/Icon.jsx';
 import HowToPlay from '../components/HowToPlay.jsx';
 
 export default function WaitingScreen() {
-  const { state, emit } = useGame();
+  const { state, emit, dispatch } = useGame();
   const { users, maxUserCnt, roomName, roomId, countdown, countdownSub, mySocketId } = state;
 
   const readyCount = users.filter(u => u.readyStatus === 'ready').length;
@@ -18,6 +18,25 @@ export default function WaitingScreen() {
 
   function handleReady() {
     emit('ready');
+  }
+
+  // 초대 링크: 폰은 공유 창(카톡 등), PC 는 복사. 둘 다 안 되면 직접 복사하도록 링크를 보여 준다
+  async function handleInvite() {
+    const url = `${window.location.origin}/?room=${roomId}`;
+    if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
+      try {
+        await navigator.share({ title: 'Touch Down', text: `"${roomName}" 방에서 같이 해요!`, url });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return; // 사용자가 공유 창을 닫음
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      dispatch({ type: 'SHOW_NOTIFICATION', message: '초대 링크를 복사했어요. 친구에게 붙여넣기 하세요.', notifType: 'success' });
+    } catch (_) {
+      window.prompt('이 링크를 복사해 친구에게 보내세요', url);
+    }
   }
 
   function handleLeave() {
@@ -40,9 +59,14 @@ export default function WaitingScreen() {
               <h4 className="mb-0 text-white fw-bold">{roomName}</h4>
               <span className="badge bg-primary">{totalCount} / {maxUserCnt}</span>
             </div>
-            <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
-              <Icon name="log-out" className="me-1" />나가기
-            </button>
+            <div className="d-flex gap-2">
+              <button className="btn btn-sm btn-primary" onClick={handleInvite} disabled={totalCount >= maxUserCnt}>
+                <Icon name="send" className="me-1" />친구 초대
+              </button>
+              <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
+                <Icon name="log-out" className="me-1" />나가기
+              </button>
+            </div>
           </div>
 
           {/* 대기 상태 바 */}
