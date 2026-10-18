@@ -10,15 +10,26 @@
 //    → 아무리 빠른 시각을 주장해도 "도착시각 − 보정"보다 앞설 수 없고, 미래 시각은 도착시각으로 자른다.
 //
 // 2) 모아서 판정
-//    방마다 첫 누름이 도착하면 JUDGE_WINDOW 동안 기다렸다가 그동안 들어온 누름을 보정시각 순으로 판정한다.
-//    창 길이 = 보정 상한이므로, 창이 닫힌 뒤 도착한 누름의 보정시각은 항상 창 안 누름보다 늦다
-//    (늦게 온 누름이 이미 끝난 판정을 뒤집는 일이 없다).
-const MAX_COMPENSATION_MS = 100;
+//    방마다 첫 누름이 도착하면 잠깐 기다렸다가 그동안 들어온 누름을 보정시각 순으로 판정한다.
+//    기다리는 시간 = 첫 누름 보정시각 + 방에서 가장 큰 보정 − 첫 누름 도착시각 (0 ~ 보정 상한)
+//    → 그 뒤에 도착한 누름은 최대 보정을 받아도 첫 누름보다 늦으므로 이미 끝난 판정을 뒤집지 못한다.
+//      지연이 비슷한 사람끼리면 거의 기다리지 않는다.
+const MAX_COMPENSATION_MS = 200;
 const MARGIN_MS = 20;
 
+function compensationFor(rtt) {
+  return Number.isFinite(rtt) && rtt > 0 ? Math.min(rtt / 2 + MARGIN_MS, MAX_COMPENSATION_MS) : 0;
+}
+
+/** 첫 누름 뒤 기다릴 시간. roomMaxComp = 방 안 모든 사람 중 가장 큰 보정 */
+function waitFor(press, roomMaxComp) {
+  return Math.max(0, Math.min(press.effective + roomMaxComp - press.arrivedAt, MAX_COMPENSATION_MS));
+}
+
+// 테스트용 고정 창 (설정 안 하면 null → 누름마다 계산한 대기 시간)
 function judgeWindowMs() {
   const v = Number(process.env.BELL_JUDGE_WINDOW_MS);
-  return Number.isFinite(v) && v >= 0 ? v : MAX_COMPENSATION_MS;
+  return process.env.BELL_JUDGE_WINDOW_MS !== undefined && Number.isFinite(v) && v >= 0 ? v : null;
 }
 
 /**
@@ -28,7 +39,7 @@ function judgeWindowMs() {
  * @returns {{effective: number, compensation: number}}
  */
 function effectiveTime(arrivedAt, claimed, rtt) {
-  const compensation = Number.isFinite(rtt) && rtt > 0 ? Math.min(rtt / 2 + MARGIN_MS, MAX_COMPENSATION_MS) : 0;
+  const compensation = compensationFor(rtt);
   const c = Number.isFinite(claimed) ? claimed : arrivedAt;
   const effective = Math.min(arrivedAt, Math.max(c, arrivedAt - compensation));
   return { effective, compensation: Math.round(arrivedAt - effective) };
@@ -44,7 +55,7 @@ function enqueue(roomId, press, judge) {
   let batch = batches.get(roomId);
   if (!batch) {
     batch = { presses: [] };
-    batch.done = new Promise(resolve => setTimeout(resolve, judgeWindowMs()))
+    batch.done = new Promise(resolve => setTimeout(resolve, judgeWindowMs() ?? press.wait ?? MAX_COMPENSATION_MS))
       .then(() => {
         batches.delete(roomId);
         // 보정시각 순, 같으면 도착 순
@@ -98,4 +109,4 @@ function shouldUsePrevBoard(press, gameState) {
   return press.effective < playedAt && press.arrivedAt - playedAt <= MAX_COMPENSATION_MS;
 }
 
-module.exports = { effectiveTime, enqueue, shouldUsePrevBoard, currentBoardFloor, noteReaction, suspiciousSummary, SUSPICIOUS_REACTION_MS, MAX_COMPENSATION_MS, MARGIN_MS, judgeWindowMs, _batches: batches };
+module.exports = { effectiveTime, compensationFor, waitFor, enqueue, shouldUsePrevBoard, currentBoardFloor, noteReaction, suspiciousSummary, SUSPICIOUS_REACTION_MS, MAX_COMPENSATION_MS, MARGIN_MS, judgeWindowMs, _batches: batches };

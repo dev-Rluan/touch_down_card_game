@@ -767,9 +767,17 @@ describe('벨 시간 보정 (2단계)', () => {
     expect(g.io.emitted.find(e => e.event === 'halliGalliResult').payload).toMatchObject({ success: false, judgedOnPrev: false });
   });
 
+  test('waitFor: 지연이 비슷하면 거의 안 기다리고, 느린 사람이 있으면 그만큼 기다린다', () => {
+    const p = bellTiming.effectiveTime(1000, 850, 300); // 편도 150 → 보정 170, 보정시각 850
+    const press = { arrivedAt: 1000, effective: p.effective };
+    expect(bellTiming.waitFor(press, 170)).toBe(20);                 // 모두 RTT 300
+    expect(bellTiming.waitFor(press, bellTiming.compensationFor(20))).toBe(0); // 나머지가 빠름
+    expect(bellTiming.waitFor({ arrivedAt: 1000, effective: 1000 }, 200)).toBe(200); // 상한
+  });
+
   test('effectiveTime: 보정 상한·미래 시각·측정값 없음', () => {
-    expect(bellTiming.effectiveTime(1000, 900, 400)).toEqual({ effective: 900, compensation: 100 }); // 상한 100
-    expect(bellTiming.effectiveTime(1000, 500, 400)).toEqual({ effective: 900, compensation: 100 }); // 거짓 시각은 잘림
+    expect(bellTiming.effectiveTime(1000, 900, 400)).toEqual({ effective: 900, compensation: 100 });
+    expect(bellTiming.effectiveTime(1000, 500, 400)).toEqual({ effective: 800, compensation: 200 }); // 상한 200, 거짓 시각은 잘림
     expect(bellTiming.effectiveTime(1000, 990, 40)).toEqual({ effective: 990, compensation: 10 });
     expect(bellTiming.effectiveTime(1000, 1500, 40)).toEqual({ effective: 1000, compensation: 0 }); // 미래 → 도착시각
     expect(bellTiming.effectiveTime(1000, 900, null)).toEqual({ effective: 1000, compensation: 0 }); // 측정 전 → 보정 없음

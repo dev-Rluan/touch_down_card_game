@@ -195,6 +195,10 @@ module.exports = function(socket, io) {
         socket, playerId: socket.id, arrivedAt, effective, compensation, ping,
         boardSeq: Number.isInteger(payload?.boardSeq) ? payload.boardSeq : null,
       };
+      // 방 안 소켓(관전자 포함)의 최대 보정만큼만 기다린다
+      const roomSockets = io.sockets?.adapter?.rooms?.get(roomId) || [];
+      const roomMaxComp = Math.max(0, ...[...roomSockets].map(id => bellTiming.compensationFor(latency.getLatency(id)?.rtt)));
+      press.wait = bellTiming.waitFor(press, roomMaxComp);
       await bellTiming.enqueue(roomId, press, presses => judgeBells(io, roomId, presses));
     } catch (error) {
       console.error('[halliGalli Error]', error);
