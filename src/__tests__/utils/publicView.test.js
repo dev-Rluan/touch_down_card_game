@@ -19,7 +19,7 @@ describe('publicView', () => {
 
   test('방: gameState(버림 더미·중앙 카드 내용)와 손패가 포함되지 않는다', () => {
     const pub = toPublicRoom(secretRoom());
-    expect(Object.keys(pub).sort()).toEqual(['id', 'maxUserCnt', 'name', 'status', 'users']);
+    expect(Object.keys(pub).sort()).toEqual(['id', 'maxUserCnt', 'name', 'private', 'status', 'users']);
     expect(JSON.stringify(pub)).not.toMatch(/cardPack|gameState|discardedCards|plum|lemon/);
     expect(pub.users.map(u => u.cardCount)).toEqual([2, 0]);
   });
@@ -37,5 +37,11 @@ describe('publicView', () => {
     expect(toPublicRooms(undefined)).toEqual([]);
     expect(toPublicUsers(null)).toEqual([]);
     expect(toPublicRoom(null)).toBeNull();
+  });
+
+  test('비공개 방은 목록에서 빠지지만, 방 자체 정보에는 표시된다', () => {
+    const hidden = { ...secretRoom(), id: 'r2', private: true };
+    expect(toPublicRooms([secretRoom(), hidden]).map(r => r.id)).toEqual(['r1']);
+    expect(toPublicRoom(hidden).private).toBe(true);
   });
 });

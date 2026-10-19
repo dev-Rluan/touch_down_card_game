@@ -28,12 +28,14 @@ function toPublicRoom(room) {
     name: room.name,
     status: room.status,
     maxUserCnt: room.maxUserCnt,
+    private: !!room.private,
     users: toPublicUsers(room.users),
   };
 }
 
 function toPublicRooms(rooms) {
-  return Array.isArray(rooms) ? rooms.map(toPublicRoom) : [];
+  // 목록용: 비공개 방은 빼고 보낸다
+  return Array.isArray(rooms) ? rooms.filter(r => r && !r.private).map(toPublicRoom) : [];
 }
 
 module.exports = { toPublicUser, toPublicUsers, toPublicRoom, toPublicRooms };

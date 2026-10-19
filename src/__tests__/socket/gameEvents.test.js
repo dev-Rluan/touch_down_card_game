@@ -61,7 +61,7 @@ function makeSocket(id, io) {
   return socket;
 }
 
-// 2~4명이 입장한 방을 만들고 게임을 시작한다
+// 2~6명이 입장한 방을 만들고 게임을 시작한다
 async function setupGame(playerCount = 2) {
   const io = makeIo();
   const ids = Array.from({ length: playerCount }, (_, i) => `sock${i}`);
@@ -278,6 +278,27 @@ describe('halliGalli 핸들러', () => {
   });
 });
 
+describe('방 만들기: 인원과 비공개', () => {
+  test('6명까지 만들 수 있고 7명은 거절한다', async () => {
+    await userService.connectUser('m6', 'M6'); await userService.connectUser('m7', 'M7');
+    expect((await roomService.createRoom('m6', '여섯명방', 6)).maxUserCnt).toBe(6);
+    await expect(roomService.createRoom('m7', '일곱명방', 7)).rejects.toThrow('6명 이하');
+  });
+
+  test('비공개 방은 목록에 안 나오지만 방 ID(초대 링크)로 들어갈 수 있다', async () => {
+    const io = makeIo();
+    await userService.connectUser('p1', 'P1'); await userService.connectUser('p2', 'P2');
+    const host = makeSocket('p1', io); const guest = makeSocket('p2', io);
+    await host.fire('createRoom', '비밀방', 4, true);
+    const created = host.own.find(e => e.event === 'roomCreated').payload;
+    expect(created.private).toBe(true);
+    const list = io.emitted.filter(e => e.event === 'roomList').at(-1).payload;
+    expect(list.some(r => r.id === created.id)).toBe(false);
+    await guest.fire('joinRoom', created.id);
+    expect((await roomService.getRoomById(created.id)).users.map(u => u.id)).toEqual(['p1', 'p2']);
+  });
+});
+
 describe('ready 핸들러', () => {
   test('준비 상태를 토글하고 updateReadyStatus 를 보낸다 (Redis 명령 3개)', async () => {
     const io = makeIo();
@@ -347,7 +368,7 @@ describe('정보 비공개 (숨겨진 카드가 클라이언트로 새지 않는
     expect(rooms.length).toBeGreaterThan(0);
     const created = x.own.find(e => e.event === 'roomCreated');
     await y.fire('joinRoom', created.payload.id);
-    expect(Object.keys(created.payload).sort()).toEqual(['id', 'maxUserCnt', 'name', 'status', 'users']);
+    expect(Object.keys(created.payload).sort()).toEqual(['id', 'maxUserCnt', 'name', 'private', 'status', 'users']);
     expect(leaks(io)).toEqual([]);
     expect(y.own.filter(e => secretKeys.test(JSON.stringify(e.payload)))).toEqual([]);
   });

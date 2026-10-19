@@ -14,6 +14,7 @@ const initialState = {
   roomName: '',
   users: [],
   maxUserCnt: 4,
+  isPrivate: false,
   roomList: [],
   isMyTurn: false,
   handCount: 0,            // 내 덱 장수 (서버는 내용 없이 장수만 보낸다)
@@ -64,6 +65,7 @@ function reducer(state, action) {
         roomName: action.room.name,
         users: action.room.users || [],
         maxUserCnt: action.room.maxUserCnt || 4,
+        isPrivate: !!action.room.private,
       };
 
     case 'ROOM_LEFT':

@@ -12,6 +12,7 @@ import HowToPlay from '../components/HowToPlay.jsx';
 function RoomsPanel({ emit }) {
   const [roomName, setRoomName] = useState('');
   const [maxUsers, setMaxUsers] = useState(4);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
 
   // 모달이 열려 있는 동안: Esc 로 닫기, 배경 스크롤 잠금 (Bootstrap JS 없이 직접 처리)
@@ -32,9 +33,10 @@ function RoomsPanel({ emit }) {
     e.preventDefault();
     const name = roomName.trim();
     if (!name) return;
-    emit('createRoom', name, maxUsers);
+    emit('createRoom', name, maxUsers, isPrivate);
     setRoomName('');
     setMaxUsers(4);
+    setIsPrivate(false);
     setShowCreate(false);
   }
 
@@ -113,7 +115,22 @@ function RoomsPanel({ emit }) {
                         <option value={2}>2명</option>
                         <option value={3}>3명</option>
                         <option value={4}>4명</option>
+                        <option value={5}>5명</option>
+                        <option value={6}>6명</option>
                       </select>
+                    </div>
+                    <div className="form-check">
+                      <input
+                        id="createRoomPrivate"
+                        className="form-check-input"
+                        type="checkbox"
+                        checked={isPrivate}
+                        onChange={e => setIsPrivate(e.target.checked)}
+                      />
+                      <label className="form-check-label" htmlFor="createRoomPrivate">
+                        비공개 방
+                        <span className="d-block small text-muted">방 목록에 안 보이고, 초대 링크로만 들어올 수 있어요.</span>
+                      </label>
                     </div>
                   </div>
                   <div className="modal-footer">
