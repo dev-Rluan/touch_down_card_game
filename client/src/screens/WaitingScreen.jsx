@@ -9,7 +9,7 @@ import HowToPlay from '../components/HowToPlay.jsx';
 
 export default function WaitingScreen() {
   const { state, emit, dispatch } = useGame();
-  const { users, maxUserCnt, roomName, roomId, countdown, countdownSub, mySocketId } = state;
+  const { users, maxUserCnt, isPrivate, roomName, roomId, countdown, countdownSub, mySocketId } = state;
 
   const readyCount = users.filter(u => u.readyStatus === 'ready').length;
   const totalCount = users.length;
@@ -58,6 +58,7 @@ export default function WaitingScreen() {
             <div className="d-flex align-items-center gap-2">
               <h4 className="mb-0 text-white fw-bold">{roomName}</h4>
               <span className="badge bg-primary">{totalCount} / {maxUserCnt}</span>
+              {isPrivate && <span className="badge bg-secondary" title="방 목록에 안 보여요. 초대 링크로만 들어올 수 있어요.">비공개</span>}
             </div>
             <div className="d-flex gap-2">
               <button className="btn btn-sm btn-primary" onClick={handleInvite} disabled={totalCount >= maxUserCnt}>

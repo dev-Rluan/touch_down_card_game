@@ -2748,6 +2748,12 @@ body,
   .stacks-many .stack-count { font-size: 1.5rem; }
   .stacks-many .player-stack-cards { min-height: 104px; }
   .stacks-many .player-stack { padding: 0.45rem 0.45rem 0.55rem; gap: 0.35rem; }
+  /* 5~6인: 3열로 두 줄 */
+  .stacks-crowd .player-stack { flex: 0 0 calc(33.333% - 0.4rem); max-width: calc(33.333% - 0.4rem); }
+  .stacks-crowd .stack-card { width: 56px; height: 78px; }
+  .stacks-crowd .stack-fruit { font-size: 1.9rem; }
+  .stacks-crowd .stack-count { font-size: 1.15rem; }
+  .stacks-crowd .player-stack-cards { min-height: 82px; }
   .player-stacks-area { gap: 0.5rem; }
   .discard-pile { width: 56px; height: 78px; }
 }
@@ -3103,7 +3109,7 @@ body,
     max-width: calc(var(--card-w) + 7rem);
     padding: 0.7rem 1rem 1rem; gap: 0.6rem;
   }
-  .game-board .player-stack-header { flex-wrap: nowrap; justify-content: center; min-width: 0; }
+  .game-board .player-stack-header { flex-wrap: nowrap; justify-content: center; min-width: 0; width: 100%; }
   .game-board .player-stack-name { font-size: clamp(0.8rem, calc(var(--card-h) * 0.048), 1.05rem); flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .game-board .player-stack-count,
   .game-board .turn-badge { flex-shrink: 0; white-space: nowrap; }

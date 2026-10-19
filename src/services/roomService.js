@@ -54,16 +54,16 @@ async function ensureRoomNameUnique(roomName) {
   }
 }
 
-async function createRoom(socketId, roomName, maxUserCnt) {
+async function createRoom(socketId, roomName, maxUserCnt, isPrivate = false) {
   const trimmedName = sanitizeRoomName(roomName);
   if (!socketId || !trimmedName) {
     throw new Error('필수 입력값이 누락되었습니다.');
   }
 
-  // 정수 2~4만 허용 (문자열·소수·큰 수로 인원 제한을 무력화하지 못하게)
+  // 정수 2~6만 허용 (문자열·소수·큰 수로 인원 제한을 무력화하지 못하게)
   if (maxUserCnt === undefined || maxUserCnt === null) maxUserCnt = 4;
-  if (!Number.isInteger(maxUserCnt) || maxUserCnt < 2 || maxUserCnt > 4) {
-    throw new Error('최대 인원수는 2명 이상 4명 이하여야 합니다.');
+  if (!Number.isInteger(maxUserCnt) || maxUserCnt < 2 || maxUserCnt > 6) {
+    throw new Error('최대 인원수는 2명 이상 6명 이하여야 합니다.');
   }
 
   await ensureRoomNameUnique(trimmedName);
@@ -93,6 +93,7 @@ async function createRoom(socketId, roomName, maxUserCnt) {
     }],
     status: 'waiting',
     maxUserCnt,
+    private: isPrivate === true, // 비공개: 방 목록에 안 보이고 초대 링크(방 ID)로만 입장
     upCardList: [],
     turn: 0,
     createdAt: new Date().toISOString(),
