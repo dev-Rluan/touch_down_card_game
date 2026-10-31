@@ -6,6 +6,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './styles/app.css';
 import './styles/brand.css';
+import './styles/table.css';
 import { getSavedTheme, applyTheme } from './theme/themes.js';
 import { unlockAudio } from './fx/sound.js';
 import { applyFxStyle } from './fx/style.js';

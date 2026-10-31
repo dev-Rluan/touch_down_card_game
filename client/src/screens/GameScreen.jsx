@@ -190,43 +190,63 @@ export default function GameScreen() {
   }, [players.length]);
 
   return (
-    <div className="game-board d-flex flex-column" style={{ minHeight: '100vh' }}>
-      {/* 상단 플레이어 스택 영역 */}
-      <div className="player-stacks-area flex-grow-1">
-        <div id="playerStacks" className={`d-flex flex-wrap justify-content-center ${players.length > 2 ? 'stacks-many' : ''} ${players.length > 4 ? 'stacks-crowd' : ''}`}>
-          {players.map((player, idx) => {
-            const stack = playerStacks[player.id] || { cards: [] };
-            const isCurrentTurn = idx === currentTurn;
-            const isMe = player.id === mySocketId;
-            return (
-              <PlayerStack
-                key={player.id}
-                playerId={player.id}
-                playerName={player.name}
-                cards={stack.cards}
-                isCurrentTurn={isCurrentTurn}
-                isMe={isMe}
-                cardCount={player.cardCount}
-                eliminated={isOut(player)}
-                bellRank={rankOf[player.id]}
-              />
-            );
-          })}
+    <div className="game-board table-layout" data-player-count={players.length}>
+      <header className="game-toolbar">
+        <div className="game-toolbar-brand">
+          <img src="/public/brand/pebblecraft-mark.svg" alt="" width="32" height="32" />
+          <span>Touch Down <small>{players.length}인 플레이</small></span>
+        </div>
+        <p className="game-toolbar-status">
+          {isMyTurn ? '내 차례입니다' : `${players[currentTurn]?.name ?? '친구'}님의 차례`}
+        </p>
+        <div className="game-toolbar-actions">
+          <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
+            <Icon name="log-out" className="me-1" />나가기
+          </button>
+          <button
+            className="btn btn-sm btn-outline-light chat-fab"
+            onClick={() => setShowChat(v => !v)}
+            aria-label="채팅 열기"
+          >
+            <Icon name="chat" /><span className="chat-fab-label">채팅</span>
+            {chatUnread > 0 && !showChat && <span className="chat-badge">{chatUnread > 9 ? '9+' : chatUnread}</span>}
+          </button>
+          <PingBadge />
+          <SoundToggle />
+          <ThemePicker />
+        </div>
+      </header>
+
+      <section className="game-table" aria-label="플레이 테이블">
+        <div className="player-stacks-area">
+          <div id="playerStacks" className={`${players.length > 2 ? 'stacks-many' : ''} ${players.length > 4 ? 'stacks-crowd' : ''}`}>
+            {players.map((player, idx) => {
+              const stack = playerStacks[player.id] || { cards: [] };
+              const isCurrentTurn = idx === currentTurn;
+              const isMe = player.id === mySocketId;
+              return (
+                <PlayerStack
+                  key={player.id}
+                  playerId={player.id}
+                  playerName={player.name}
+                  cards={stack.cards}
+                  isCurrentTurn={isCurrentTurn}
+                  isMe={isMe}
+                  cardCount={player.cardCount}
+                  eliminated={isOut(player)}
+                  bellRank={rankOf[player.id]}
+                />
+              );
+            })}
+          </div>
         </div>
 
-        {/* 버림 카드 더미 + 보조 버튼 (왼쪽: 나가기, 오른쪽: 채팅/테마) — 위쪽 헤더 줄을 없애 카드 영역을 올렸다 */}
         <div className="discard-area">
-          <div className="discard-side discard-side-left">
-            <button className="btn btn-sm btn-outline-light" onClick={handleLeave}>
-              <Icon name="log-out" className="me-1" />나가기
-            </button>
-          </div>
-
           <div className="discard-pile-container text-center">
             <BellOrder order={bellOrder} mySocketId={mySocketId} />
-            <div className="small text-muted mb-1">버림 카드 더미 <span id="discardCount">{discardedCount}장</span></div>
+            <div className="small text-muted mb-1">버림 <span id="discardCount">{discardedCount}장</span></div>
             {/* 버린 카드는 뒤집어 놓은 카드: 내용은 모르고 장수만 보인다 */}
-            <div id="discardPile" className={`discard-pile ${discardedCount > 0 ? 'face-down' : ''}`} data-count={Math.min(discardedCount, 3)}>
+            <div id="discardPile" className={`discard-pile ${discardedCount > 0 ? 'face-down' : 'empty-discard'}`} data-count={Math.min(discardedCount, 3)}>
               {discardedCount > 0 ? (
                 <>
                   <div className="card-back-pattern" />
@@ -237,36 +257,22 @@ export default function GameScreen() {
               )}
             </div>
           </div>
+        </div>
 
-          <div className="discard-side discard-side-right">
-            <button
-              className="btn btn-sm btn-outline-light chat-fab"
-              onClick={() => setShowChat(v => !v)}
-              aria-label="채팅 열기"
-            >
-              <Icon name="chat" /><span className="chat-fab-label">채팅</span>
-              {chatUnread > 0 && !showChat && <span className="chat-badge">{chatUnread > 9 ? '9+' : chatUnread}</span>}
-            </button>
-            <PingBadge />
-            <SoundToggle />
-            <ThemePicker />
+        {/* 하단 액션 영역 */}
+        <div className="player-section">
+          <div className="game-actions">
+            {/* 내 덱 */}
+            <div className="text-center">
+              <div className="small text-white-50 mb-1">내 덱</div>
+              <MyDeckCard count={handCount} onPlay={handlePlayCard} disabled={!isMyTurn} eliminated={meOut} />
+            </div>
+
+            {/* 벨 버튼 */}
+            <BellButton eliminated={meOut} />
           </div>
         </div>
-      </div>
-
-      {/* 하단 액션 영역 */}
-      <div className="player-section p-3">
-        <div className="d-flex justify-content-center align-items-end gap-4 flex-wrap">
-          {/* 내 덱 */}
-          <div className="text-center">
-            <div className="small text-white-50 mb-1">내 덱</div>
-            <MyDeckCard count={handCount} onPlay={handlePlayCard} disabled={!isMyTurn} eliminated={meOut} />
-          </div>
-
-          {/* 벨 버튼 */}
-          <BellButton eliminated={meOut} />
-        </div>
-      </div>
+      </section>
 
       {/* 벨 결과는 이펙트(더미 위 숫자, 카드 이동, 소리)로 보여준다. 화면 낭독기 사용자를 위한 안내만 남긴다 */}
       <div className="visually-hidden" aria-live="polite">
