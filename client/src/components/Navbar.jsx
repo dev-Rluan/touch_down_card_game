@@ -21,11 +21,12 @@ export default function Navbar() {
   return (
     <nav className="navbar navbar-expand-lg navbar-dark sticky-top">
       <div className="container-fluid">
-        <span className="navbar-brand fw-bold">
-          Touch Down
+        <span className="navbar-brand fw-bold td-brand">
+          <img src="/public/brand/pebblecraft-mark.svg" alt="" width="40" height="40" />
+          <span>Touch Down<small>by Pebblecraft</small></span>
         </span>
 
-        <div className="d-flex align-items-center gap-2 ms-auto">
+        <div className="d-flex align-items-center gap-2 ms-auto navbar-controls">
           {/* 닉네임 */}
           {editingNick ? (
             <form className="d-flex gap-1" onSubmit={handleNickSubmit}>

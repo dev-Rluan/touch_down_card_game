@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Touch Down by PebbleCraft</title>
+  <desc id="desc">A playful online bell card game for two to six friends, with PebbleCraft's sprout pebble mascot.</desc>
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0v40" fill="none" stroke="#f5edcf" stroke-opacity=".025"/></pattern>
+    <g id="star" fill="#f5edcf"><path d="M8 0h8v8h8v8h-8v8H8v-8H0V8h8z"/></g>
+    <g id="fruit"><path d="M-20-10h40v10h10v30H20v10H0V30h-20V20h-10V0h10z" fill="#dc8b8f"/><path d="M-10-30H0v10h20v10H0V0h-10v-10h-20v-10h20z" fill="#6eb59a"/><path d="M-10 0h6v6h-6zm20 10h6v6h-6zm-10 14h6v6H0z" fill="#f5edcf"/></g>
+  </defs>
+  <rect width="1200" height="630" fill="#29213f"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <path d="M0 574h1200v56H0z" fill="#231c36"/>
+  <path d="M24 24h1152v582H24z" fill="none" stroke="#66517f" stroke-width="2"/>
+  <g opacity=".75"><use href="#star" x="1095" y="62"/><use href="#star" x="645" y="97" transform="translate(323 49) scale(.5)"/><use href="#star" x="520" y="495" transform="translate(260 247) scale(.5)"/></g>
+  <path d="M110 498h6v6h-6zm561-261h6v6h-6zm425 248h6v6h-6zm-113-382h6v6h-6z" fill="#a99ac0"/>
+  <svg x="72" y="68" width="62" height="62" viewBox="0 0 128 128" shape-rendering="crispEdges">  <path fill="#29213f" d="M16 0h96v8h8v8h8v96h-8v8h-8v8H16v-8H8v-8H0V16h8V8h8z"/>
+  <path fill="#46365f" d="M16 8h96v8h8v96h-8v8H16v-8H8V16h8z"/>
+  <path fill="#f5edcf" d="M20 24h4v-4h4v4h4v4h-4v4h-4v-4h-4zm80 20h4v-4h4v4h4v4h-4v4h-4v-4h-4z"/>
+  <path fill="#a99ac0" d="M14 64h4v4h-4zm92-44h4v4h-4zm-6 82h4v4h-4z"/>
+  <path fill="#29213f" d="M60 30h8v30h-8zM60 26H42v6h-6v12h6v6h18v-6h8V32h-8zm8-8h18v6h6v12h-6v6H68v-6h-6V24h6z"/>
+  <path fill="#8ed3b0" d="M42 32h12v6h6v6H48v-6h-6zM68 26h12v-2h6v12H74v-4h-6z"/>
+  <path fill="#c3e6ba" d="M42 32h12v6H42zm32-6h12v6H74z"/>
+  <path fill="#6eb59a" d="M60 40h8v20h-8z"/>
+  <path fill="#29213f" d="M48 50h32v6h12v6h6v12h6v24h-6v12H86v6H42v-6H30V98h-6V80h6V68h6V56h12z"/>
+  <path fill="#f5edcf" d="M48 56h32v6h12v12h6v24h-6v6H80v6H44v-6H36V92h-6V80h6V68h6v-6h6z"/>
+  <path fill="#d9c9a5" d="M92 80h6v18h-6v6H80v6H44v-6H36v-6h12v6h30v-6h8V86h6z"/>
+  <path fill="#fff8e4" d="M48 62h20v6H48v6H42v12h-6V74h6v-6h6z"/>
+  <path fill="#29213f" d="M46 80h6v10h-6zm30 0h6v10h-6zM55 94h6v6h6v-6h6v6h-6v4h-6v-4h-6z"/>
+  <path fill="#dfa99a" d="M38 92h12v6H38zm42 0h12v6H80z"/>
+</svg>
+  <text x="151" y="93" font-family="Arial, sans-serif" font-size="17" font-weight="700" letter-spacing="3" fill="#f5edcf">PEBBLECRAFT</text>
+  <text x="151" y="119" font-family="Arial, sans-serif" font-size="15" fill="#b9a9cc">SMALL GAMES, BIG SMILES.</text>
+  <rect x="72" y="180" width="228" height="35" rx="17" fill="#46365f" stroke="#6c5b83"/>
+  <text x="186" y="203" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="2" fill="#b3e2c7">FRIENDS. CARDS. BELL!</text>
+  <text x="66" y="302" font-family="Arial, sans-serif" font-size="82" font-weight="900" letter-spacing="-4" fill="#f5edcf">Touch Down</text>
+  <text x="72" y="360" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="26" font-weight="600" fill="#d3c7e3">같은 과일이 딱 5개면, 먼저 벨!</text>
+  <rect x="72" y="410" width="300" height="58" rx="12" fill="#8ed3b0"/>
+  <text x="222" y="447" text-anchor="middle" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="21" font-weight="800" fill="#29213f">친구와 바로 시작해요 ↗</text>
+  <text x="74" y="518" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="18" fill="#b9a9cc">설치 없이 · 2~6인 · 온라인 벨 카드게임</text>
+  <ellipse cx="885" cy="486" rx="207" ry="32" fill="#171221" fill-opacity=".55"/>
+  <g transform="translate(751 292) rotate(-15)">
+    <rect x="-88" y="-136" width="176" height="244" rx="18" fill="#171221" fill-opacity=".35" transform="translate(8 13)"/>
+    <rect x="-88" y="-136" width="176" height="244" rx="18" fill="#f5edcf" stroke="#171221" stroke-width="6"/>
+    <rect x="-76" y="-124" width="152" height="220" rx="11" fill="none" stroke="#d9c9a5" stroke-width="2"/>
+    <text x="-62" y="-89" font-family="Arial, sans-serif" font-size="30" font-weight="900" fill="#29213f">2</text>
+    <use href="#fruit" transform="translate(-23 -34) scale(.8)"/><use href="#fruit" transform="translate(23 28) scale(.8)"/>
+  </g>
+  <g transform="translate(980 281) rotate(12)">
+    <rect x="-88" y="-136" width="176" height="244" rx="18" fill="#171221" fill-opacity=".35" transform="translate(8 13)"/>
+    <rect x="-88" y="-136" width="176" height="244" rx="18" fill="#b3e2c7" stroke="#171221" stroke-width="6"/>
+    <rect x="-76" y="-124" width="152" height="220" rx="11" fill="none" stroke="#6eb59a" stroke-width="2"/>
+    <text x="-62" y="-89" font-family="Arial, sans-serif" font-size="30" font-weight="900" fill="#29213f">3</text>
+    <use href="#fruit" transform="translate(-30 -27) scale(.7)"/><use href="#fruit" transform="translate(30 -27) scale(.7)"/><use href="#fruit" transform="translate(0 38) scale(.7)"/>
+  </g>
+  <g transform="translate(881 430)" stroke="#29213f" stroke-width="7" stroke-linejoin="round">
+    <path d="M-88 20c0-49 28-83 88-83s88 34 88 83z" fill="#f5edcf"/>
+    <path d="M-79 20h158v17H-79z" fill="#d9c9a5"/>
+    <path d="M-104 40h208v21h-208z" fill="#8ed3b0"/>
+    <path d="M-11-81h22v18h-22z" fill="#8ed3b0"/>
+    <path d="M-61-5c5-16 16-27 31-32" fill="none" stroke="#fff8e4" stroke-width="9"/>
+  </g>
+  <svg x="1035" y="423" width="100" height="100" viewBox="0 0 128 128" shape-rendering="crispEdges">  <path fill="#29213f" d="M16 0h96v8h8v8h8v96h-8v8h-8v8H16v-8H8v-8H0V16h8V8h8z"/>
+  <path fill="#46365f" d="M16 8h96v8h8v96h-8v8H16v-8H8V16h8z"/>
+  <path fill="#f5edcf" d="M20 24h4v-4h4v4h4v4h-4v4h-4v-4h-4zm80 20h4v-4h4v4h4v4h-4v4h-4v-4h-4z"/>
+  <path fill="#a99ac0" d="M14 64h4v4h-4zm92-44h4v4h-4zm-6 82h4v4h-4z"/>
+  <path fill="#29213f" d="M60 30h8v30h-8zM60 26H42v6h-6v12h6v6h18v-6h8V32h-8zm8-8h18v6h6v12h-6v6H68v-6h-6V24h6z"/>
+  <path fill="#8ed3b0" d="M42 32h12v6h6v6H48v-6h-6zM68 26h12v-2h6v12H74v-4h-6z"/>
+  <path fill="#c3e6ba" d="M42 32h12v6H42zm32-6h12v6H74z"/>
+  <path fill="#6eb59a" d="M60 40h8v20h-8z"/>
+  <path fill="#29213f" d="M48 50h32v6h12v6h6v12h6v24h-6v12H86v6H42v-6H30V98h-6V80h6V68h6V56h12z"/>
+  <path fill="#f5edcf" d="M48 56h32v6h12v12h6v24h-6v6H80v6H44v-6H36V92h-6V80h6V68h6v-6h6z"/>
+  <path fill="#d9c9a5" d="M92 80h6v18h-6v6H80v6H44v-6H36v-6h12v6h30v-6h8V86h6z"/>
+  <path fill="#fff8e4" d="M48 62h20v6H48v6H42v12h-6V74h6v-6h6z"/>
+  <path fill="#29213f" d="M46 80h6v10h-6zm30 0h6v10h-6zM55 94h6v6h6v-6h6v6h-6v4h-6v-4h-6z"/>
+  <path fill="#dfa99a" d="M38 92h12v6H38zm42 0h12v6H80z"/>
+</svg>
+  <text x="72" y="597" font-family="Arial, sans-serif" font-size="16" letter-spacing="1" fill="#a99ac0">touchdown.pebblecraft.io</text>
+  <text x="1128" y="597" text-anchor="end" font-family="Arial, sans-serif" font-size="14" letter-spacing="2" fill="#a99ac0">A LITTLE PEBBLECRAFT GAME</text>
+</svg>

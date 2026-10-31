@@ -56,6 +56,7 @@ export default function ResultScreen() {
       <div className="row justify-content-center">
         <div className="col-lg-6 col-md-8 result-layout">
           <div className="result-main">
+          <div className="result-brand"><img src="/public/brand/pebblecraft-mark.svg" alt="" width="32" height="32" /><span>Pebblecraft · Touch Down</span></div>
           <div className="card text-center mb-3">
             <div className="card-body py-4">
               <div style={{ fontSize: '4rem' }}>{isWinner ? '🏆' : '😢'}</div>

@@ -2582,19 +2582,19 @@ input, select, textarea {
 
 
 /* ══════════════════════════════════════════════════════════════════
-   테마: 카드 테이블 (단색 딥그린 + 호박색 포인트)
+   기본 테마: Pebblecraft 픽셀 정원
    위의 레거시 그라디언트 스타일을 덮어쓴다. 벨/스킨 상품 그라디언트는 유지.
    ══════════════════════════════════════════════════════════════════ */
 :root {
-  --bg: #0f2a22;
-  --bg-raised: #17382d;
-  --ink: #f3efe3;
-  --ink-dim: rgba(243, 239, 227, 0.68);
-  --accent: #f0b429;
-  --accent-strong: #d99a0b;
-  --accent-ink: #2a1d00;
-  --card-back: #7a1f2b;
-  --line: rgba(243, 239, 227, 0.14);
+  --bg: #302342;
+  --bg-raised: #3e3051;
+  --ink: #fff2d6;
+  --ink-dim: #cfc1db;
+  --accent: #b9e5c5;
+  --accent-strong: #9dd4ae;
+  --accent-ink: #241b38;
+  --card-back: #57406d;
+  --line: rgba(255, 242, 214, 0.2);
 }
 
 body,
@@ -2768,8 +2768,12 @@ body,
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   색 테마 — html[data-theme] 로 선택 (기본값은 위 :root = 딥그린)
+   색 테마 — html[data-theme] 로 선택 (기본값은 위 :root = Pebblecraft)
    ══════════════════════════════════════════════════════════════════ */
+[data-theme='pebble'] {
+  --bg: #302342; --bg-raised: #3e3051; --accent: #b9e5c5; --accent-strong: #9dd4ae;
+  --accent-ink: #241b38; --card-back: #57406d;
+}
 [data-theme='green'] {
   --bg: #0f2a22; --bg-raised: #17382d; --accent: #f0b429; --accent-strong: #d99a0b;
   --accent-ink: #2a1d00; --card-back: #7a1f2b;
