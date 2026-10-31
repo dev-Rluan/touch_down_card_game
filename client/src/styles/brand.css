@@ -19,49 +19,267 @@
 .welcome-tags span { padding: 3px 9px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink); font-size: .72rem; }
 .lobby-main, .lobby-aside { min-width: 0; }
 .lobby-main > .game-card { min-height: 320px; }
-.game-card, .result-main .card { background: #fffaf0; border: 1px solid #ded5e4; border-radius: 8px; color: #302541; box-shadow: 0 5px 0 rgb(18 12 28 / .3); backdrop-filter: none; }
+.game-card, .result-main .card { background: var(--brand-surface, #fffaf0); border: 1px solid var(--brand-line, #ded5e4); border-radius: 8px; color: var(--brand-ink, #302541); box-shadow: 0 5px 0 rgb(18 12 28 / .3); backdrop-filter: none; }
 .game-card:hover { transform: none; }
-.game-card .card-header, .result-main .card-header { background: #f3eddf; border-bottom: 1px solid #ded5e4; padding: 16px 20px; color: #302541; }
+.game-card .card-header, .result-main .card-header { background: var(--brand-raised, #f3eddf); border-bottom: 1px solid var(--brand-line, #ded5e4); padding: 16px 20px; color: var(--brand-ink, #302541); }
 .game-card .card-title { font-size: 1rem; font-weight: 800; }
-.game-card .text-muted, .result-main .card .text-muted { color: #706279 !important; }
-.game-card .list-group-item { background: #fffaf0; color: #302541; border-color: #ded5e4; }
-.game-card .list-group-item:hover { background: #f3eddf; transform: none; }
-.game-card .btn-primary { background: #326553; border-color: #326553; color: #fffaf0; }
-.game-card .btn-primary:hover { background: #254d40; }
-.game-card .badge.bg-primary { background: #e0f1df !important; color: #326553 !important; }
-.game-card .btn-outline-secondary { color: #665b72; border-color: #aa9bb5; }
-.game-card .btn-outline-secondary:hover { background: #eee5f5; color: #302541; }
+.game-card .text-muted, .result-main .card .text-muted { color: var(--brand-dim, #706279) !important; }
+.game-card .list-group-item { background: var(--brand-surface, #fffaf0); color: var(--brand-ink, #302541); border-color: var(--brand-line, #ded5e4); }
+.game-card .list-group-item:hover { background: var(--brand-raised, #f3eddf); transform: none; }
+.game-card .btn-primary { background: var(--brand-action, #326553); border-color: var(--brand-action, #326553); color: var(--brand-action-ink, #fffaf0); }
+.game-card .btn-primary:hover { background: var(--brand-action-hover, #254d40); }
+.game-card .badge.bg-primary { background: var(--brand-ready, #e0f1df) !important; color: var(--brand-ready-ink, #326553) !important; }
+.game-card .btn-outline-secondary { color: var(--brand-dim, #665b72); border-color: var(--brand-line, #aa9bb5); }
+.game-card .btn-outline-secondary:hover { background: var(--brand-raised, #eee5f5); color: var(--brand-ink, #302541); }
 .empty-room-mascot { display: block; margin: 4px auto 20px; }
-.howto .howto-list { color: #665b72; line-height: 1.75; }
-.howto-list b { color: #302541; }
-.howto-list li::marker { color: #326553; font-weight: 800; }
+.howto .howto-list { color: var(--brand-dim, #665b72); line-height: 1.75; }
+.howto-list b { color: var(--brand-ink, #302541); }
+.howto-list li::marker { color: var(--brand-action, #326553); font-weight: 800; }
 .lobby-footer { max-width: 1280px; margin: 0 auto; padding: 12px 32px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; color: var(--ink-dim); font-size: .75rem; }
 .lobby-footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
 .lobby-footer a { display: inline-flex; align-items: center; min-height: 32px; color: var(--ink); text-decoration: none; }
 .lobby-footer a:hover { color: var(--accent); text-decoration: underline; }
 .result-brand { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; color: var(--ink-dim); font-size: .8rem; }
-[data-theme='pebble'] .card-back-pattern { background: url('/public/brand/pebblecraft-mark.svg') center / 65% auto no-repeat; opacity: 1; }
-[data-theme='pebble'] .my-deck-card { justify-content: flex-end; padding-bottom: 8px; }
-[data-theme='pebble'] .my-deck-card .card-back-pattern { background-position: center 16%; background-size: 52% auto; }
-[data-theme='pebble'] .my-deck-card .deck-count { color: var(--ink); text-shadow: none; }
-[data-theme='pebble'] .my-deck-card .deck-hint { color: var(--accent); text-shadow: none; }
-[data-theme='pebble'] .discard-pile.face-down { justify-content: flex-end; padding-bottom: 5px; }
-[data-theme='pebble'] .discard-pile .card-back-pattern { background-position: center 12%; background-size: 52% auto; }
-[data-theme='pebble'] .discard-back-count { color: var(--ink); text-shadow: none; }
-[data-theme='pebble'] .room-header { border-color: var(--line); background: var(--bg-raised); }
-[data-theme='pebble'] .player-card { background: #fffaf0; border-color: #ded5e4; color: #302541; }
-[data-theme='pebble'] .player-card.empty { background: transparent; color: var(--ink-dim); border: 1px dashed var(--line); }
-[data-theme='pebble'] .player-card.empty .text-muted { color: var(--ink-dim) !important; }
-[data-theme='pebble'] .player-card.ready { background: #e0f1df; border-color: #9dd4ae; }
-[data-theme='pebble'] .player-card .player-avatar { background: #e0f1df; color: #326553; border-radius: 6px; }
-[data-theme='pebble'] .player-card .status-badge { background: #f3eddf; color: #665b72; }
-[data-theme='pebble'] .player-card .status-ready { background: #326553; color: #fffaf0; }
-[data-theme='pebble'] .halli-galli-bell { box-shadow: 0 6px 0 #5e9274, 0 10px 20px rgb(0 0 0 / .3); }
-[data-theme='pebble'] .halli-galli-bell .bell-label { color: #241b38; }
-[data-theme='pebble'] .halli-galli-bell.bell-out { box-shadow: none; }
-[data-theme='pebble'] .halli-galli-bell.bell-out .bell-label { color: #e5e7eb; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .card-back-pattern { background: url('/public/brand/pebblecraft-mark.svg') center / 65% auto no-repeat; opacity: 1; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .my-deck-card { justify-content: flex-end; padding-bottom: 8px; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .my-deck-card .card-back-pattern { background-position: center 16%; background-size: 52% auto; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .my-deck-card .deck-count { color: var(--ink); text-shadow: none; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .my-deck-card .deck-hint { color: var(--accent); text-shadow: none; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .discard-pile.face-down { justify-content: flex-end; padding-bottom: 5px; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .discard-pile .card-back-pattern { background-position: center 12%; background-size: 52% auto; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .discard-back-count { color: var(--ink); text-shadow: none; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .room-header { border-color: var(--line); background: var(--bg-raised); }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .player-card { background: var(--brand-surface, #fffaf0); border-color: var(--brand-line, #ded5e4); color: var(--brand-ink, #302541); }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .player-card.empty { background: transparent; color: var(--ink-dim); border: 1px dashed var(--line); }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .player-card.empty .text-muted { color: var(--ink-dim) !important; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .player-card.ready { background: var(--brand-ready, #e0f1df); border-color: var(--brand-ready-line, #9dd4ae); }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .player-card .player-avatar { background: var(--brand-ready, #e0f1df); color: var(--brand-ready-ink, #326553); border-radius: 6px; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .player-card .status-badge { background: var(--brand-raised, #f3eddf); color: var(--brand-dim, #665b72); }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .player-card .status-ready { background: var(--brand-action, #326553); color: var(--brand-action-ink, #fffaf0); }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .halli-galli-bell { box-shadow: 0 6px 0 var(--brand-bell-shadow, #5e9274), 0 10px 20px rgb(0 0 0 / .3); }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .halli-galli-bell .bell-label { color: var(--brand-bell-ink, #241b38); }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .halli-galli-bell.bell-out { box-shadow: none; }
+:is([data-theme='pebble'], [data-theme$='-day'], [data-theme='neon']) .halli-galli-bell.bell-out .bell-label { color: #e5e7eb; }
 .btn:focus-visible, .theme-picker-btn:focus-visible, .theme-option:focus-visible, .my-deck-card:focus-visible, .halli-galli-bell:focus-visible, .lobby-footer a:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
-.game-card .btn:focus-visible { outline-color: #326553; }
+.game-card .btn:focus-visible { outline-color: var(--brand-action, #326553); }
+
+/* Day palettes share readable controls; Pebble Day keeps its original values. */
+[data-theme$='-day'] {
+  color-scheme: light;
+  --bg: #fff7e8;
+  --bg-raised: #eee5f2;
+  --ink: #35294a;
+  --ink-dim: #6d5c7c;
+  --accent: #b9e5c5;
+  --accent-strong: #9dd4ae;
+  --accent-ink: #214936;
+  --card-back: #e9def4;
+  --line: #b7a4c4;
+  --fx-good: #326553;
+  --fx-bad: #b1353c;
+  --day-hover: #e2d4ec;
+  --day-active: #d9c9e5;
+  --day-active-line: #8b729e;
+  --day-action-hover: #254d40;
+  --day-shadow: #d8c9df;
+  --day-progress: #d1bfdc;
+  --day-stack: #f0e8f3;
+  --day-stack-count: #e0d2ea;
+  --turn-self: #327268;
+  --turn-other: #a35e31;
+  --table-bg: #e8f1e6;
+  --table-line: #a7c6b0;
+  --table-rim: #f3f6e9;
+  --table-shadow: #c5d9c5;
+  --table-seat-bg: #f3f3e94d;
+  --table-self-ring: #91bdb0;
+  --table-other-ring: #d6b194;
+}
+[data-theme$='-day'] .navbar-brand,
+[data-theme$='-day'] .room-header .text-white { color: var(--ink) !important; }
+[data-theme$='-day'] .text-white-50,
+[data-theme$='-day'] .text-white-75 { color: var(--ink-dim) !important; }
+[data-theme$='-day'] .brand-kicker,
+[data-theme$='-day'] .lobby-welcome h1 span,
+[data-theme$='-day'] .lobby-footer a:hover,
+[data-theme$='-day'] .my-deck-card .deck-hint { color: var(--fx-good); }
+[data-theme$='-day'] .intro-title { text-shadow: none; }
+[data-theme$='-day'] .loading-content { color: var(--ink); }
+[data-theme$='-day'] .intro-btn-guest { background: var(--accent); border-color: var(--accent-strong); color: var(--accent-ink); }
+[data-theme$='-day'] .intro-btn-guest:hover { background: var(--accent-strong); }
+[data-theme$='-day'] .btn-outline-light {
+  --bs-btn-color: var(--ink);
+  --bs-btn-border-color: var(--line);
+  --bs-btn-hover-color: var(--ink);
+  --bs-btn-hover-bg: var(--day-hover);
+  --bs-btn-hover-border-color: var(--day-active-line);
+  --bs-btn-active-color: var(--ink);
+  --bs-btn-active-bg: var(--day-active);
+  --bs-btn-active-border-color: var(--day-active-line);
+  --bs-btn-disabled-color: var(--ink-dim);
+  --bs-btn-disabled-border-color: var(--line);
+  border: 1px solid var(--line);
+}
+[data-theme$='-day'] .btn-success { background: var(--fx-good); border-color: var(--fx-good); color: #fffaf0; }
+[data-theme$='-day'] .btn-success:hover { background: var(--day-action-hover); border-color: var(--day-action-hover); }
+[data-theme$='-day'] .game-card,
+[data-theme$='-day'] .result-main .card { box-shadow: 0 4px 0 var(--day-shadow); }
+[data-theme$='-day'] .theme-picker-menu { box-shadow: 0 8px 24px rgb(53 41 74 / .16); }
+[data-theme$='-day'] .theme-option:hover { background: var(--day-hover); }
+[data-theme$='-day'] .theme-option.selected { background: var(--accent); color: var(--accent-ink); }
+[data-theme$='-day'] .theme-swatch,
+[data-theme$='-day'] .fx-style-dot { border-color: var(--line); }
+[data-theme$='-day'] .ready-progress-bar { background: var(--day-progress); }
+[data-theme$='-day'] .ready-progress-fill { background: var(--fx-good); }
+[data-theme$='-day'] .waiting-dot { background: #a56a19; }
+[data-theme$='-day'] .waiting-dot.all-ready { background: var(--fx-good); }
+[data-theme$='-day'] .chat-bubble { background: #fffaf0; }
+[data-theme$='-day'] .chat-msg.mine .chat-bubble { background: var(--accent); }
+[data-theme$='-day'] .chat-header .btn-close-white { filter: none; }
+[data-theme$='-day'] .player-stack { background: var(--day-stack); border-color: var(--line); }
+[data-theme$='-day'] .player-stack-name { color: var(--ink); }
+[data-theme$='-day'] .player-stack-count { background: var(--day-stack-count) !important; }
+[data-theme$='-day'] .player-stack.my-turn { border-color: var(--turn-self); box-shadow: 0 0 0 1px var(--turn-self); }
+[data-theme$='-day'] .player-stack.other-turn { border-color: var(--turn-other); box-shadow: 0 0 0 1px var(--turn-other); }
+[data-theme$='-day'] .my-turn-badge { background: var(--turn-self); }
+[data-theme$='-day'] .other-turn-badge { background: var(--turn-other); }
+[data-theme$='-day'] .stack-placeholder,
+[data-theme$='-day'] .discard-placeholder,
+[data-theme$='-day'] .deck-empty-label,
+[data-theme$='-day'] .deck-empty-sub { color: var(--ink-dim); }
+[data-theme$='-day'] .deck-card.deck-out .deck-empty-label { color: var(--ink); }
+[data-theme$='-day'] .deck-card.empty { background: var(--card-back); border-color: var(--line); }
+[data-theme$='-day'] .discard-pile.face-down,
+[data-theme$='-day'] .fx-card-back { border-color: var(--line); }
+[data-theme$='-day'] .bell-order { background: var(--bg-raised); border: 1px solid var(--line); }
+[data-theme$='-day'] .bell-order li { color: var(--ink); }
+[data-theme$='-day'] .bell-order-delta { color: var(--ink-dim); }
+[data-theme$='-day'] .ping-good { --ping: #286344; }
+[data-theme$='-day'] .ping-ok { --ping: #8b5c13; }
+[data-theme$='-day'] .ping-bad { --ping: #ad3542; }
+[data-theme$='-day'] .ping-badge.ping-bad { color: #ad3542; }
+[data-theme$='-day'] .ping-bars i { background: #c4b3cf; }
+[data-theme$='-day'] .countdown-sub { color: #fff2d6; }
+[data-theme$='-day'] :is(.btn, .theme-picker-btn, .theme-option, .my-deck-card, .halli-galli-bell, .sound-toggle, .lobby-footer a):focus-visible { outline-color: var(--fx-good); }
+
+/* New palettes also tint the lobby and waiting room without changing older themes. */
+:is([data-theme='peach-day'], [data-theme='soda-day'], [data-theme='neon']) {
+  --brand-ink: var(--ink);
+  --brand-dim: var(--ink-dim);
+  --brand-line: var(--line);
+  --brand-action: var(--fx-good);
+  --brand-action-hover: var(--day-action-hover);
+  --brand-ready-line: var(--accent-strong);
+  --brand-ready-ink: var(--ink);
+  --brand-bell-ink: var(--accent-ink);
+}
+[data-theme='peach-day'] {
+  --bg: #fff3eb;
+  --bg-raised: #f5e0d8;
+  --ink: #4d2d35;
+  --ink-dim: #79565c;
+  --accent: #e6a18a;
+  --accent-strong: #d68b74;
+  --accent-ink: #4b2924;
+  --card-back: #f1c9b9;
+  --line: #be9388;
+  --fx-good: #88503e;
+  --fx-bad: #ac3547;
+  --brand-surface: #fff9f4;
+  --brand-raised: #fae9df;
+  --brand-ready: #f3d9c8;
+  --brand-bell-shadow: #b76d58;
+  --day-hover: #efd1c5;
+  --day-active: #eac2b2;
+  --day-active-line: #a26d60;
+  --day-action-hover: #6f3f2f;
+  --day-shadow: #e5c6ba;
+  --day-progress: #d8b1a5;
+  --day-stack: #f5e3da;
+  --day-stack-count: #edc9bb;
+  --turn-self: #88503e;
+  --turn-other: #735483;
+  --table-bg: #f9e0cc;
+  --table-line: #d19d80;
+  --table-rim: #fff0df;
+  --table-shadow: #dab49c;
+  --table-seat-bg: #fff5e84d;
+  --table-self-ring: #c88f79;
+  --table-other-ring: #b99ac7;
+}
+[data-theme='soda-day'] {
+  --bg: #eff9ff;
+  --bg-raised: #daeef7;
+  --ink: #173d55;
+  --ink-dim: #4d6b80;
+  --accent: #96d6ee;
+  --accent-strong: #72bfdc;
+  --accent-ink: #153f52;
+  --card-back: #c2e5f3;
+  --line: #8dafc1;
+  --fx-good: #23627f;
+  --fx-bad: #ab3547;
+  --brand-surface: #f6fcff;
+  --brand-raised: #e5f1f7;
+  --brand-ready: #cce9f4;
+  --brand-bell-shadow: #579cb8;
+  --day-hover: #c8e4f1;
+  --day-active: #b9dce9;
+  --day-active-line: #648fa6;
+  --day-action-hover: #184c66;
+  --day-shadow: #bad8e6;
+  --day-progress: #a5cbdc;
+  --day-stack: #deeff7;
+  --day-stack-count: #beddea;
+  --turn-self: #23627f;
+  --turn-other: #886039;
+  --table-bg: #d5edf5;
+  --table-line: #87bbcf;
+  --table-rim: #eaf9ff;
+  --table-shadow: #aacddc;
+  --table-seat-bg: #effaff4d;
+  --table-self-ring: #79b5cf;
+  --table-other-ring: #c7a982;
+}
+[data-theme='neon'] {
+  color-scheme: dark;
+  --bg: #11182b;
+  --bg-raised: #1d2942;
+  --ink: #f4f5ff;
+  --ink-dim: #b5c0dc;
+  --accent: #f08ac9;
+  --accent-strong: #d669af;
+  --accent-ink: #35172f;
+  --card-back: #293658;
+  --line: #607198;
+  --fx-good: #7de2e0;
+  --fx-bad: #ff9ab0;
+  --brand-surface: #1d2942;
+  --brand-raised: #263550;
+  --brand-ready: #253e52;
+  --brand-action-ink: #112f39;
+  --brand-bell-shadow: #85436f;
+  --day-action-hover: #a5efed;
+  --turn-self: #7de2e0;
+  --turn-other: #f08ac9;
+  --table-bg: #18243e;
+  --table-line: #69c5d4;
+  --table-rim: #20334d;
+  --table-shadow: #0a101e;
+  --table-seat-bg: #293b5659;
+  --table-self-ring: #3d8a99;
+  --table-other-ring: #a05f96;
+}
+[data-theme='neon'] .brand-kicker,
+[data-theme='neon'] .lobby-welcome h1 span,
+[data-theme='neon'] .my-deck-card .deck-hint { color: var(--fx-good); }
+[data-theme='neon'] .player-stack-count { background: #334765 !important; }
+[data-theme='neon'] .my-turn-badge { background: #7de2e0; color: #112f39; }
+[data-theme='neon'] .other-turn-badge { background: #f08ac9; color: #35172f; }
+[data-theme='neon'] .theme-option.selected { background: #354768; }
+[data-theme='neon'] .btn-success { background: var(--fx-good); border-color: var(--fx-good); color: var(--brand-action-ink); }
+[data-theme='neon'] .btn-success:is(:hover, :focus-visible, :active, .active) { background: var(--day-action-hover); border-color: var(--day-action-hover); color: var(--brand-action-ink); }
+.theme-picker-menu { max-height: calc(100dvh - 120px); overflow-y: auto; overscroll-behavior: contain; }
 
 /* The same face is copied into the card-collection animation. */
 .card-face { position: relative; width: 100%; height: 100%; border-radius: inherit; background: #fffaf0; color: #302541; }
