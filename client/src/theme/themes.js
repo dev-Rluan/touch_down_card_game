@@ -1,7 +1,8 @@
-// 색 테마 정의 — 실제 색상 값은 app.css 의 [data-theme] 블록에 있고,
+// 색 테마 정의 — 실제 색상 값은 styles 의 [data-theme] 블록에 있고,
 // 여기서는 선택 UI 에 필요한 이름/미리보기 색만 가진다.
 export const THEMES = [
   { id: 'pebble',   name: '페블크래프트', bg: '#302342', accent: '#b9e5c5' },
+  { id: 'pebble-day', name: '페블 데이', bg: '#fff7e8', accent: '#b9e5c5' },
   { id: 'green',    name: '딥그린',   bg: '#0f2a22', accent: '#f0b429' },
   { id: 'midnight', name: '미드나잇', bg: '#0e1626', accent: '#4fd1c5' },
   { id: 'wine',     name: '와인',     bg: '#2a0f1a', accent: '#ff9f6b' },

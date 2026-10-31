@@ -40,28 +40,110 @@
 .lobby-footer a { display: inline-flex; align-items: center; min-height: 32px; color: var(--ink); text-decoration: none; }
 .lobby-footer a:hover { color: var(--accent); text-decoration: underline; }
 .result-brand { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; color: var(--ink-dim); font-size: .8rem; }
-[data-theme='pebble'] .card-back-pattern { background: url('/public/brand/pebblecraft-mark.svg') center / 65% auto no-repeat; opacity: 1; }
-[data-theme='pebble'] .my-deck-card { justify-content: flex-end; padding-bottom: 8px; }
-[data-theme='pebble'] .my-deck-card .card-back-pattern { background-position: center 16%; background-size: 52% auto; }
-[data-theme='pebble'] .my-deck-card .deck-count { color: var(--ink); text-shadow: none; }
-[data-theme='pebble'] .my-deck-card .deck-hint { color: var(--accent); text-shadow: none; }
-[data-theme='pebble'] .discard-pile.face-down { justify-content: flex-end; padding-bottom: 5px; }
-[data-theme='pebble'] .discard-pile .card-back-pattern { background-position: center 12%; background-size: 52% auto; }
-[data-theme='pebble'] .discard-back-count { color: var(--ink); text-shadow: none; }
-[data-theme='pebble'] .room-header { border-color: var(--line); background: var(--bg-raised); }
-[data-theme='pebble'] .player-card { background: #fffaf0; border-color: #ded5e4; color: #302541; }
-[data-theme='pebble'] .player-card.empty { background: transparent; color: var(--ink-dim); border: 1px dashed var(--line); }
-[data-theme='pebble'] .player-card.empty .text-muted { color: var(--ink-dim) !important; }
-[data-theme='pebble'] .player-card.ready { background: #e0f1df; border-color: #9dd4ae; }
-[data-theme='pebble'] .player-card .player-avatar { background: #e0f1df; color: #326553; border-radius: 6px; }
-[data-theme='pebble'] .player-card .status-badge { background: #f3eddf; color: #665b72; }
-[data-theme='pebble'] .player-card .status-ready { background: #326553; color: #fffaf0; }
-[data-theme='pebble'] .halli-galli-bell { box-shadow: 0 6px 0 #5e9274, 0 10px 20px rgb(0 0 0 / .3); }
-[data-theme='pebble'] .halli-galli-bell .bell-label { color: #241b38; }
-[data-theme='pebble'] .halli-galli-bell.bell-out { box-shadow: none; }
-[data-theme='pebble'] .halli-galli-bell.bell-out .bell-label { color: #e5e7eb; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .card-back-pattern { background: url('/public/brand/pebblecraft-mark.svg') center / 65% auto no-repeat; opacity: 1; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .my-deck-card { justify-content: flex-end; padding-bottom: 8px; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .my-deck-card .card-back-pattern { background-position: center 16%; background-size: 52% auto; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .my-deck-card .deck-count { color: var(--ink); text-shadow: none; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .my-deck-card .deck-hint { color: var(--accent); text-shadow: none; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .discard-pile.face-down { justify-content: flex-end; padding-bottom: 5px; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .discard-pile .card-back-pattern { background-position: center 12%; background-size: 52% auto; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .discard-back-count { color: var(--ink); text-shadow: none; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .room-header { border-color: var(--line); background: var(--bg-raised); }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .player-card { background: #fffaf0; border-color: #ded5e4; color: #302541; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .player-card.empty { background: transparent; color: var(--ink-dim); border: 1px dashed var(--line); }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .player-card.empty .text-muted { color: var(--ink-dim) !important; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .player-card.ready { background: #e0f1df; border-color: #9dd4ae; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .player-card .player-avatar { background: #e0f1df; color: #326553; border-radius: 6px; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .player-card .status-badge { background: #f3eddf; color: #665b72; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .player-card .status-ready { background: #326553; color: #fffaf0; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .halli-galli-bell { box-shadow: 0 6px 0 #5e9274, 0 10px 20px rgb(0 0 0 / .3); }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .halli-galli-bell .bell-label { color: #241b38; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .halli-galli-bell.bell-out { box-shadow: none; }
+:is([data-theme='pebble'], [data-theme='pebble-day']) .halli-galli-bell.bell-out .bell-label { color: #e5e7eb; }
 .btn:focus-visible, .theme-picker-btn:focus-visible, .theme-option:focus-visible, .my-deck-card:focus-visible, .halli-galli-bell:focus-visible, .lobby-footer a:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
 .game-card .btn:focus-visible { outline-color: #326553; }
+
+/* An optional daytime palette; the saved theme and nighttime default stay intact. */
+[data-theme='pebble-day'] {
+  color-scheme: light;
+  --bg: #fff7e8;
+  --bg-raised: #eee5f2;
+  --ink: #35294a;
+  --ink-dim: #6d5c7c;
+  --accent: #b9e5c5;
+  --accent-strong: #9dd4ae;
+  --accent-ink: #214936;
+  --card-back: #e9def4;
+  --line: #b7a4c4;
+  --fx-good: #326553;
+  --fx-bad: #b1353c;
+}
+[data-theme='pebble-day'] .navbar-brand,
+[data-theme='pebble-day'] .room-header .text-white { color: var(--ink) !important; }
+[data-theme='pebble-day'] .text-white-50,
+[data-theme='pebble-day'] .text-white-75 { color: var(--ink-dim) !important; }
+[data-theme='pebble-day'] .brand-kicker,
+[data-theme='pebble-day'] .lobby-welcome h1 span,
+[data-theme='pebble-day'] .lobby-footer a:hover,
+[data-theme='pebble-day'] .my-deck-card .deck-hint { color: #326553; }
+[data-theme='pebble-day'] .intro-title { text-shadow: none; }
+[data-theme='pebble-day'] .loading-content { color: var(--ink); }
+[data-theme='pebble-day'] .intro-btn-guest { background: var(--accent); border-color: var(--accent-strong); color: var(--accent-ink); }
+[data-theme='pebble-day'] .intro-btn-guest:hover { background: var(--accent-strong); }
+[data-theme='pebble-day'] .btn-outline-light {
+  --bs-btn-color: var(--ink);
+  --bs-btn-border-color: var(--line);
+  --bs-btn-hover-color: var(--ink);
+  --bs-btn-hover-bg: #e2d4ec;
+  --bs-btn-hover-border-color: #8b729e;
+  --bs-btn-active-color: var(--ink);
+  --bs-btn-active-bg: #d9c9e5;
+  --bs-btn-active-border-color: #8b729e;
+  --bs-btn-disabled-color: var(--ink-dim);
+  --bs-btn-disabled-border-color: var(--line);
+  border: 1px solid var(--line);
+}
+[data-theme='pebble-day'] .btn-success { background: #326553; border-color: #326553; color: #fffaf0; }
+[data-theme='pebble-day'] .btn-success:hover { background: #254d40; border-color: #254d40; }
+[data-theme='pebble-day'] .game-card,
+[data-theme='pebble-day'] .result-main .card { box-shadow: 0 4px 0 #d8c9df; }
+[data-theme='pebble-day'] .theme-picker-menu { box-shadow: 0 8px 24px rgb(53 41 74 / .16); }
+[data-theme='pebble-day'] .theme-option:hover { background: #e2d4ec; }
+[data-theme='pebble-day'] .theme-option.selected { background: var(--accent); color: var(--accent-ink); }
+[data-theme='pebble-day'] .theme-swatch,
+[data-theme='pebble-day'] .fx-style-dot { border-color: var(--line); }
+[data-theme='pebble-day'] .ready-progress-bar { background: #d1bfdc; }
+[data-theme='pebble-day'] .ready-progress-fill { background: #326553; }
+[data-theme='pebble-day'] .waiting-dot { background: #a56a19; }
+[data-theme='pebble-day'] .waiting-dot.all-ready { background: #326553; }
+[data-theme='pebble-day'] .chat-bubble { background: #fffaf0; }
+[data-theme='pebble-day'] .chat-msg.mine .chat-bubble { background: var(--accent); }
+[data-theme='pebble-day'] .chat-header .btn-close-white { filter: none; }
+[data-theme='pebble-day'] .player-stack { background: #f0e8f3; border-color: var(--line); }
+[data-theme='pebble-day'] .player-stack-name { color: var(--ink); }
+[data-theme='pebble-day'] .player-stack-count { background: #e0d2ea !important; }
+[data-theme='pebble-day'] .player-stack.my-turn { border-color: #327268; box-shadow: 0 0 0 1px #327268; }
+[data-theme='pebble-day'] .player-stack.other-turn { border-color: #a35e31; box-shadow: 0 0 0 1px #a35e31; }
+[data-theme='pebble-day'] .my-turn-badge { background: #327268; }
+[data-theme='pebble-day'] .other-turn-badge { background: #a35e31; }
+[data-theme='pebble-day'] .stack-placeholder,
+[data-theme='pebble-day'] .discard-placeholder,
+[data-theme='pebble-day'] .deck-empty-label,
+[data-theme='pebble-day'] .deck-empty-sub { color: var(--ink-dim); }
+[data-theme='pebble-day'] .deck-card.deck-out .deck-empty-label { color: var(--ink); }
+[data-theme='pebble-day'] .deck-card.empty { background: #e9def4; border-color: var(--line); }
+[data-theme='pebble-day'] .discard-pile.face-down,
+[data-theme='pebble-day'] .fx-card-back { border-color: var(--line); }
+[data-theme='pebble-day'] .bell-order { background: var(--bg-raised); border: 1px solid var(--line); }
+[data-theme='pebble-day'] .bell-order li { color: var(--ink); }
+[data-theme='pebble-day'] .bell-order-delta { color: var(--ink-dim); }
+[data-theme='pebble-day'] .ping-good { --ping: #286344; }
+[data-theme='pebble-day'] .ping-ok { --ping: #8b5c13; }
+[data-theme='pebble-day'] .ping-bad { --ping: #ad3542; }
+[data-theme='pebble-day'] .ping-badge.ping-bad { color: #ad3542; }
+[data-theme='pebble-day'] .ping-bars i { background: #c4b3cf; }
+[data-theme='pebble-day'] .countdown-sub { color: #fff2d6; }
+[data-theme='pebble-day'] :is(.btn, .theme-picker-btn, .theme-option, .my-deck-card, .halli-galli-bell, .sound-toggle, .lobby-footer a):focus-visible { outline-color: #326553; }
 
 /* The same face is copied into the card-collection animation. */
 .card-face { position: relative; width: 100%; height: 100%; border-radius: inherit; background: #fffaf0; color: #302541; }
