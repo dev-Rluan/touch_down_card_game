@@ -1,4 +1,4 @@
-/* The brand frames the table; fruit faces and game controls keep their geometry. */
+/* Brand artwork keeps the table and game controls at their existing sizes. */
 .td-brand { display: inline-flex; align-items: center; gap: 9px; line-height: 1.1; }
 .td-brand img, .intro-mascot, .lobby-welcome > img, .empty-room-mascot, .result-brand img { image-rendering: pixelated; flex-shrink: 0; }
 .td-brand small { display: block; margin-top: 4px; color: var(--ink-dim); font-size: .6rem; font-weight: 500; letter-spacing: .02em; }
@@ -62,6 +62,18 @@
 [data-theme='pebble'] .halli-galli-bell.bell-out .bell-label { color: #e5e7eb; }
 .btn:focus-visible, .theme-picker-btn:focus-visible, .theme-option:focus-visible, .my-deck-card:focus-visible, .halli-galli-bell:focus-visible, .lobby-footer a:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
 .game-card .btn:focus-visible { outline-color: #326553; }
+
+/* The same face is copied into the card-collection animation. */
+.card-face { position: relative; width: 100%; height: 100%; border-radius: inherit; background: #fffaf0; color: #302541; }
+.card-corner { position: absolute; top: 2%; left: 6%; font-size: clamp(8px, 1vw, 12px); font-weight: 800; line-height: 1; }
+.card-fruits { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 5%; padding: 17% 9% 10%; }
+.card-fruit { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; margin: 0; object-fit: contain; image-rendering: pixelated; }
+.card-fruits-1 { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); padding: 24% 17%; }
+.card-fruits-2 { grid-template-columns: minmax(0, 1fr); padding-inline: 25%; }
+.card-fruits-3 > :first-child { grid-column: span 2; width: 47.5%; justify-self: center; }
+.card-fruits-5 { grid-template-rows: repeat(3, minmax(0, 1fr)); padding-top: 15%; }
+.card-fruits-5 > :nth-child(3) { grid-column: span 2; width: 47.5%; justify-self: center; }
+
 @media (min-width: 992px) {
   .lobby-main > .game-card { min-height: 360px; }
   .lobby-aside { top: 24px; }

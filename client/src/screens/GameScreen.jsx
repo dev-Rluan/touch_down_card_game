@@ -7,20 +7,10 @@ import CountdownOverlay from '../components/CountdownOverlay.jsx';
 import Icon from '../components/Icon.jsx';
 import SoundToggle from '../components/SoundToggle.jsx';
 import PingBadge, { pingLevel } from '../components/PingBadge.jsx';
+import CardFace from '../components/CardFace.jsx';
 import { onFx } from '../fx/fxBus.js';
 import { playSound, vibrate } from '../fx/sound.js';
 import { deckToStack, sweepTo, failToDiscard, floatText, flash } from '../fx/effects.js';
-
-const FRUIT_EMOJI = {
-  strawberry: '🍓',
-  banana: '🍌',
-  plum: '🍇',
-  lemon: '🍋',
-};
-
-function getFruitEmoji(fruit) {
-  return FRUIT_EMOJI[fruit] || '🃏';
-}
 
 function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCount, eliminated, bellRank }) {
   return (
@@ -45,9 +35,8 @@ function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCou
           <div className="stack-placeholder">{eliminated ? '탈락' : '대기중'}</div>
         ) : (
           cards.map((card, i) => (
-            <div key={card._k ?? i} className="stack-card" style={{ zIndex: i }}>
-              <div className="stack-fruit">{getFruitEmoji(card.fruit)}</div>
-              <div className="stack-count">{card.count}</div>
+            <div key={card._k ?? i} className="stack-card" style={{ zIndex: i }} aria-hidden={i !== cards.length - 1}>
+              <CardFace fruit={card.fruit} count={card.count} />
             </div>
           ))
         )}
