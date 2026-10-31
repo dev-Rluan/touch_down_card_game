@@ -9,6 +9,8 @@ export default function LoadingScreen() {
     <div className="intro-screen">
       <div className="intro-content">
         <div className="intro-logo">
+          <img className="intro-mascot" src="/public/brand/pebblecraft-mark.svg" alt="" width="128" height="128" />
+          <p className="brand-kicker">PEBBLECRAFT</p>
           <h1 className="intro-title">Touch Down</h1>
           <p className="intro-subtitle">온라인 멀티플레이 카드게임</p>
         </div>

@@ -17,7 +17,7 @@ export default function RoomList() {
   if (!roomList || roomList.length === 0) {
     return (
       <div className="text-center py-4">
-        <Icon name="people" size="3rem" className="text-muted" />
+        <img className="empty-room-mascot" src="/public/brand/pebblecraft-mark.svg" alt="" width="80" height="80" />
         <h6 className="text-muted mt-2">현재 생성된 방이 없습니다</h6>
         <p className="text-muted small">새로운 방을 만들어보세요!</p>
         <button className="btn btn-sm btn-outline-secondary" onClick={handleRefresh}>

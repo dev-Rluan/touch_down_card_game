@@ -157,7 +157,23 @@ export default function LobbyScreen() {
     <div className="lobby-layout">
       <Navbar />
       <div className="lobby-tab-content">
+        <header className="lobby-welcome">
+          <div>
+            <p className="brand-kicker">PEBBLECRAFT · TOUCH DOWN</p>
+            <h1>친구랑 모여, <span>터치다운!</span></h1>
+            <p>같은 과일이 딱 5개면 먼저 벨!<br className="d-sm-none" /> 작은 테이블에서 시작하는 즐거운 한 판.</p>
+            <div className="welcome-tags"><span>2~6인</span><span>설치·가입 없이</span><span>링크로 초대</span></div>
+          </div>
+          <img src="/public/brand/pebblecraft-mark.svg" alt="새싹이 난 조약돌, Pebblecraft 마스코트" width="128" height="128" />
+        </header>
         <RoomsPanel emit={emit} />
+        <footer className="lobby-footer">
+          <span>작은 게임, 반짝이는 순간.</span>
+          <nav aria-label="Pebblecraft 안내">
+            <a href="https://pebblecraft.io/" target="_blank" rel="noopener noreferrer">Pebblecraft의 다른 게임 ↗</a>
+            <a href="https://pebblecraft.io/privacy" target="_blank" rel="noopener noreferrer">개인정보처리방침</a>
+          </nav>
+        </footer>
       </div>
     </div>
   );

@@ -1,4 +1,20 @@
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' width='512' height='512'>
-  <rect width='512' height='512' rx='80' fill='#6366f1'/>
-  <text x='256' y='340' font-size='280' text-anchor='middle' fill='white'>🔔</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Touch Down by PebbleCraft</title>
+  <desc id="desc">A cream pixel pebble with a mint sprout on a purple night sky.</desc>
+  <rect width="512" height="512" fill="#29213f"/>
+  <svg x="80" y="80" width="352" height="352" viewBox="0 0 128 128" shape-rendering="crispEdges">  <path fill="#29213f" d="M16 0h96v8h8v8h8v96h-8v8h-8v8H16v-8H8v-8H0V16h8V8h8z"/>
+  <path fill="#46365f" d="M16 8h96v8h8v96h-8v8H16v-8H8V16h8z"/>
+  <path fill="#f5edcf" d="M20 24h4v-4h4v4h4v4h-4v4h-4v-4h-4zm80 20h4v-4h4v4h4v4h-4v4h-4v-4h-4z"/>
+  <path fill="#a99ac0" d="M14 64h4v4h-4zm92-44h4v4h-4zm-6 82h4v4h-4z"/>
+  <path fill="#29213f" d="M60 30h8v30h-8zM60 26H42v6h-6v12h6v6h18v-6h8V32h-8zm8-8h18v6h6v12h-6v6H68v-6h-6V24h6z"/>
+  <path fill="#8ed3b0" d="M42 32h12v6h6v6H48v-6h-6zM68 26h12v-2h6v12H74v-4h-6z"/>
+  <path fill="#c3e6ba" d="M42 32h12v6H42zm32-6h12v6H74z"/>
+  <path fill="#6eb59a" d="M60 40h8v20h-8z"/>
+  <path fill="#29213f" d="M48 50h32v6h12v6h6v12h6v24h-6v12H86v6H42v-6H30V98h-6V80h6V68h6V56h12z"/>
+  <path fill="#f5edcf" d="M48 56h32v6h12v12h6v24h-6v6H80v6H44v-6H36V92h-6V80h6V68h6v-6h6z"/>
+  <path fill="#d9c9a5" d="M92 80h6v18h-6v6H80v6H44v-6H36v-6h12v6h30v-6h8V86h6z"/>
+  <path fill="#fff8e4" d="M48 62h20v6H48v6H42v12h-6V74h6v-6h6z"/>
+  <path fill="#29213f" d="M46 80h6v10h-6zm30 0h6v10h-6zM55 94h6v6h6v-6h6v6h-6v4h-6v-4h-6z"/>
+  <path fill="#dfa99a" d="M38 92h12v6H38zm42 0h12v6H80z"/>
+</svg>
 </svg>
