@@ -105,10 +105,10 @@
 @media (max-width: 767px), (max-height: 560px) {
   .table-layout .player-stack-count { position: absolute; right: 0; bottom: -4px; z-index: 2; }
 }
-[data-theme='pebble-day'] .table-layout .game-table { background: #e8f1e6; border-color: #a7c6b0; box-shadow: inset 0 0 0 5px #f3f6e9, 0 6px 0 #c5d9c5; }
-[data-theme='pebble-day'] .table-layout .player-stack { background: #f3f3e94d; }
-[data-theme='pebble-day'] .table-layout .player-stack.my-turn { border-color: #327268; box-shadow: 0 0 0 2px #91bdb0; }
-[data-theme='pebble-day'] .table-layout .player-stack.other-turn { border-color: #a35e31; box-shadow: 0 0 0 1px #d6b194; }
+:is([data-theme$='-day'], [data-theme='neon']) .table-layout .game-table { background: var(--table-bg); border-color: var(--table-line); box-shadow: inset 0 0 0 5px var(--table-rim), 0 6px 0 var(--table-shadow); }
+:is([data-theme$='-day'], [data-theme='neon']) .table-layout .player-stack { background: var(--table-seat-bg); }
+:is([data-theme$='-day'], [data-theme='neon']) .table-layout .player-stack.my-turn { border-color: var(--turn-self); box-shadow: 0 0 0 2px var(--table-self-ring); }
+:is([data-theme$='-day'], [data-theme='neon']) .table-layout .player-stack.other-turn { border-color: var(--turn-other); box-shadow: 0 0 0 1px var(--table-other-ring); }
 
 @media (min-width: 768px) {
   .game-board.table-layout { --table-card-h: clamp(70px, calc(var(--table-height) * .47 - 153px), 160px); --table-inset: 20px; --table-height: min(720px, calc(100dvh - 100px)); --seat-edge: 18%; --bell-size: 88px; }

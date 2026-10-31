@@ -7,6 +7,9 @@ export const THEMES = [
   { id: 'midnight', name: '미드나잇', bg: '#0e1626', accent: '#4fd1c5' },
   { id: 'wine',     name: '와인',     bg: '#2a0f1a', accent: '#ff9f6b' },
   { id: 'charcoal', name: '차콜',     bg: '#16181d', accent: '#ff6b4a' },
+  { id: 'peach-day', name: '피치 가든', bg: '#fff3eb', accent: '#e6a18a' },
+  { id: 'soda-day', name: '블루 소다', bg: '#eff9ff', accent: '#96d6ee' },
+  { id: 'neon', name: '네온 아케이드', bg: '#11182b', accent: '#f08ac9' },
 ];
 
 export const DEFAULT_THEME = 'pebble';
