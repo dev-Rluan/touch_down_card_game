@@ -130,6 +130,7 @@
   .game-toolbar-actions { grid-column: auto; }
 }
 @media (max-width: 767px) and (max-height: 680px) {
+  .table-layout .deck-hint { display: none; }
   .game-board.table-layout { --table-inset: 8px; --stack-inset: 4px; --stack-heading: 20px; --table-deck-h: 96px; --discard-row: 48px; --action-caption: 0px; --toolbar-space: 68px; gap: 8px; }
   .table-layout .game-table { gap: 4px; border-radius: 14px; }
   .table-layout .player-section .small { display: none; }
@@ -142,6 +143,7 @@
   .game-toolbar-brand small { font-size: .6rem; }
 }
 @media (min-width: 768px) and (max-height: 560px) {
+  .table-layout .deck-hint { display: none; }
   .table-layout .chat-sheet { max-height: calc(100dvh - 32px); }
   .game-board.table-layout { --board-inset: 8px; --table-inset: 8px; --stack-inset: 4px; --stack-heading: 20px; --table-deck-h: 92px; --discard-row: 48px; --action-caption: 0px; --toolbar-space: 40px; gap: 8px; }
   .table-layout .game-toolbar { grid-template-columns: minmax(110px, 1fr) auto minmax(0, 1fr); min-height: 32px; }
