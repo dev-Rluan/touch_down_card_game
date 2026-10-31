@@ -12,7 +12,7 @@ import { onFx } from '../fx/fxBus.js';
 import { playSound, vibrate } from '../fx/sound.js';
 import { deckToStack, sweepTo, failToDiscard, floatText, flash } from '../fx/effects.js';
 
-function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCount, eliminated, bellRank }) {
+function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCount, eliminated, bellRank, children }) {
   return (
     <div
       className={`player-stack ${isCurrentTurn ? (isMe ? 'my-turn' : 'other-turn') : ''} ${eliminated ? 'eliminated' : ''}`}
@@ -30,16 +30,19 @@ function PlayerStack({ playerId, playerName, cards, isCurrentTurn, isMe, cardCou
         )}
       </div>
       {bellRank && <span className={`bell-rank bell-rank-${Math.min(bellRank, 4)}`} aria-label={`벨 ${bellRank}번째`}>{bellRank}</span>}
-      <div className="player-stack-cards">
-        {cards.length === 0 ? (
-          <div className="stack-placeholder">{eliminated ? '탈락' : '대기중'}</div>
-        ) : (
-          cards.map((card, i) => (
-            <div key={card._k ?? i} className="stack-card" style={{ zIndex: i }} aria-hidden={i !== cards.length - 1}>
-              <CardFace fruit={card.fruit} count={card.count} />
-            </div>
-          ))
-        )}
+      <div className="player-stack-content">
+        <div className="player-stack-cards">
+          {cards.length === 0 ? (
+            <div className="stack-placeholder">{eliminated ? '탈락' : '대기중'}</div>
+          ) : (
+            cards.map((card, i) => (
+              <div key={card._k ?? i} className="stack-card" style={{ zIndex: i }} aria-hidden={i !== cards.length - 1}>
+                <CardFace fruit={card.fruit} count={card.count} />
+              </div>
+            ))
+          )}
+        </div>
+        {children}
       </div>
     </div>
   );
@@ -162,6 +165,7 @@ export default function GameScreen() {
 
   // 플레이어 목록: gameStatePlayers 우선, fallback users
   const players = gameStatePlayers.length > 0 ? gameStatePlayers : users.map(u => ({ ...u, cardCount: 0 }));
+  const mySeat = Math.max(0, players.findIndex(player => player.id === mySocketId));
 
   // 카드를 모두 잃은 플레이어 = 탈락 (서버도 벨/차례에서 제외한다)
   const inGame = gameStatePlayers.length > 0;
@@ -225,51 +229,52 @@ export default function GameScreen() {
               const isCurrentTurn = idx === currentTurn;
               const isMe = player.id === mySocketId;
               return (
-                <PlayerStack
-                  key={player.id}
-                  playerId={player.id}
-                  playerName={player.name}
-                  cards={stack.cards}
-                  isCurrentTurn={isCurrentTurn}
-                  isMe={isMe}
-                  cardCount={player.cardCount}
-                  eliminated={isOut(player)}
-                  bellRank={rankOf[player.id]}
-                />
+                <div className="table-seat" data-seat={(idx - mySeat + players.length) % players.length} data-self={isMe} key={player.id}>
+                  <PlayerStack
+                    playerId={player.id}
+                    playerName={player.name}
+                    cards={stack.cards}
+                    isCurrentTurn={isCurrentTurn}
+                    isMe={isMe}
+                    cardCount={player.cardCount}
+                    eliminated={isOut(player)}
+                    bellRank={rankOf[player.id]}
+                  >
+                    {isMe && (
+                      <div className="player-section">
+                        <div className="game-actions">
+                          <div className="text-center">
+                            <div className="small text-white-50 mb-1">내 덱</div>
+                            <MyDeckCard count={handCount} onPlay={handlePlayCard} disabled={!isMyTurn} eliminated={meOut} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </PlayerStack>
+                </div>
               );
             })}
           </div>
         </div>
 
-        <div className="discard-area">
-          <div className="discard-pile-container text-center">
-            <BellOrder order={bellOrder} mySocketId={mySocketId} />
-            <div className="small text-muted mb-1">버림 <span id="discardCount">{discardedCount}장</span></div>
-            {/* 버린 카드는 뒤집어 놓은 카드: 내용은 모르고 장수만 보인다 */}
-            <div id="discardPile" className={`discard-pile ${discardedCount > 0 ? 'face-down' : 'empty-discard'}`} data-count={Math.min(discardedCount, 3)}>
-              {discardedCount > 0 ? (
-                <>
-                  <div className="card-back-pattern" />
-                  <div className="discard-back-count">{discardedCount}</div>
-                </>
-              ) : (
-                <div className="discard-placeholder">비어 있음</div>
-              )}
+        <div className="table-center">
+          <BellOrder order={bellOrder} mySocketId={mySocketId} />
+          <BellButton eliminated={meOut} />
+          <div className="discard-area">
+            <div className="discard-pile-container text-center">
+              <div className="small text-muted mb-1">버림 <span id="discardCount">{discardedCount}장</span></div>
+              {/* 버린 카드는 뒤집어 놓은 카드: 내용은 모르고 장수만 보인다 */}
+              <div id="discardPile" className={`discard-pile ${discardedCount > 0 ? 'face-down' : 'empty-discard'}`} data-count={Math.min(discardedCount, 3)}>
+                {discardedCount > 0 ? (
+                  <>
+                    <div className="card-back-pattern" />
+                    <div className="discard-back-count">{discardedCount}</div>
+                  </>
+                ) : (
+                  <div className="discard-placeholder">비어 있음</div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* 하단 액션 영역 */}
-        <div className="player-section">
-          <div className="game-actions">
-            {/* 내 덱 */}
-            <div className="text-center">
-              <div className="small text-white-50 mb-1">내 덱</div>
-              <MyDeckCard count={handCount} onPlay={handlePlayCard} disabled={!isMyTurn} eliminated={meOut} />
-            </div>
-
-            {/* 벨 버튼 */}
-            <BellButton eliminated={meOut} />
           </div>
         </div>
       </section>
